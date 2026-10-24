@@ -54,6 +54,9 @@ Opt-in only. Only people with contributor access to the page can see them, and y
 **Is it really live?**
 Yes. The globe reads the USGS feed of M4.5+ quakes from the last 30 days every two minutes. Opening a quake downloads its catalogue, ShakeMap and PAGER report straight from USGS, and the catalogue is re-checked while it's open. Only quakes with a ShakeMap (usually M5.5+) get a forecast, ground-failure maps are not loaded for live quakes yet, and it is not an official USGS forecast.
 
+**Can I trust the chatbot?**
+It's Gemini, but it doesn't make numbers up: it can only answer by calling our forecast (the same model as the panel), and under each answer it lists exactly what it checked. Its instructions forbid saying a building is safe to enter. It can still phrase things badly, which is why the checks are shown.
+
 **What would you build next?**
 Ground-failure maps for live quakes, finer city soil maps, building data from OpenStreetMap, SMS/WhatsApp alerts when your re-entry time arrives, and multiple languages.
 
@@ -62,6 +65,8 @@ Ground-failure maps for live quakes, finer city soil maps, building data from Op
 Numbers changed after fixing discarded posterior probability and aligning the simulations with the formula. Use the current screen values. The 13 case studies are a retrospective snapshot, not an as-issued hindcast; the live globe uses current USGS data but is not an official forecast. See [the model audit](docs/model-audit.md).
 
 ## Optional 3.1 feature demonstration
+
+0. In **Ask about this forecast**, click "What if I'm only inside for 20 minutes?". Gemini runs the forecast for a 20-minute stay and answers; point out the "Checked:" line under the answer.
 
 1. Change the exposure from 10 minutes to 8 hours. The estimate, parameter range, projected start and curve update for that whole interval.
 2. Select **Choose B on map**, then click another place. A stays fixed; the blue B pin is compared at the same intensity threshold and replay time. These are model comparisons, not verified shelters.

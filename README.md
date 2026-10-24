@@ -35,6 +35,7 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 - **200 simulated futures.** Monte Carlo runs from the same posterior and marked Poisson process as the displayed formula. This model does not simulate secondary triggering (ETAS).
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
 - **People.** Population near you, people at risk this week, and the official count of people who felt each shaking level.
+- **Ask about this forecast.** A question box in the Your spot tab, answered by Google Gemini. Gemini doesn't guess: it calls the page's own forecast as tools (forecast at a place or for a different stay, how the risk changes over time, danger factors, aftershocks so far, people at risk, method and limits), and each answer lists what it checked. It never clears a building for entry. Runs on the hosted site only (see [the assistant](#the-assistant)).
 - **Opt-in safety check-ins.** Mark yourself safe or in need of help. This needs a shared database (see [Limitations](#limitations)).
 - **Sources and accuracy tabs.** Source links, processing dates and model assumptions, with regional occurrence checks where complete outcome windows exist.
 
@@ -86,12 +87,15 @@ src/shake.js               shaking, uncertainty ranges and consistent Monte Carl
 src/validation.js          regional occurrence checks shared by the UI and CLI
 src/scenario.js            duration estimates and saved-check change explanations
 src/planner.js             browser controls for comparison pins and local saved checks
+src/assistant.js           "Ask about this forecast": the tools Gemini calls, run on the page's own model
+api/chat.js                Vercel serverless function: holds the Gemini key, safety rules and tool list, rate-limits
 src/globe.js               world view: canvas globe drawn with d3-geo
 src/live.js                live USGS feed and per-quake loader for the browser (mirrors fetch_usgs.mjs)
 tests/forecast.test.js      numerical, simulation and data-integrity regression tests
 tests/scenario.test.js      exposure windows, threshold crossings and change attribution
 tests/planner.test.js       controller workflows with DOM/map/storage test doubles
 tests/live.test.js          live loader: grid parsing, 180° handling, coast clipping, PAGER
+tests/chat.test.js          assistant endpoint: input validation, tool list, error handling, rate limit
 data/                      everything the app embeds
   sequences.json           catalogue + ShakeMap grids (MMI, Vs30) for 13 quakes
   ground-failure-and-pager.json  liquefaction/landslide grids, PAGER exposure and building notes
@@ -112,6 +116,19 @@ docs/map.jpg               case-study map view
 docs/DESIGN.md             design direction and the AI-template patterns it avoids
 docs/globe.jpg             live world view
 ```
+
+## The assistant
+
+`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling, default model `gemini-3.8-flash`; set `GEMINI_MODEL` to change it). Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
+
+It needs a Gemini API key (free from [Google AI Studio](https://aistudio.google.com/apikey)) stored as a Vercel environment variable, never in the code:
+
+```bash
+npx vercel@65.2.0 env add GEMINI_API_KEY production   # paste the key when asked
+npx vercel@65.2.0 deploy --prod                       # redeploy so the function sees it
+```
+
+Opened from a file or the local Python server, the box says the assistant only works on the hosted site; everything else still works.
 
 ## Rebuild from scratch
 

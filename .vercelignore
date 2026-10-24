@@ -1,4 +1,5 @@
-# The site is the single prebuilt index.html (npm run build). Upload only that.
+# The site is the single prebuilt index.html (npm run build), plus the assistant's serverless function.
 /*
 !index.html
 !vercel.json
+!api

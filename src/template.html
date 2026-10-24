@@ -195,6 +195,17 @@ details summary{cursor:pointer;font-weight:600}
 .changes-list li+li{margin-top:4px}
 #map.picking-comparison,#map.picking-comparison .leaflet-interactive{cursor:crosshair}
 #pickComparison[aria-pressed="true"]{background:var(--link);border-color:var(--link);color:#fff}
+.askrow{display:flex;gap:8px}
+.askrow input{flex:1}
+#askSuggest .btn{font-size:13px;padding:3px 8px;text-align:left}
+#askLog{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto}
+#askLog:empty{display:none}
+.ask-entry{border-top:1px solid var(--line2);padding-top:8px}
+.ask-entry:first-child{border-top:0;padding-top:0}
+.ask-q{margin:0 0 3px;font-weight:600}
+.ask-a{margin:0;font-size:14.5px;color:var(--ink2)}
+.ask-err{color:var(--warn)}
+.ask-checked{margin:4px 0 0;font-size:12.5px;color:var(--mute)}
 
 /* world view: the globe sits over the map, and a list panel replaces the tabs */
 #globeWrap{position:absolute;inset:0;z-index:1100;display:none;background:#dfe4e8}
@@ -306,6 +317,13 @@ body:not(.world) .wpane{display:none}
           <select id="tol" hidden><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select>
           <span class="muted" id="tolHint"></span></div>
         <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Standard equation</option><option value="1">Adjusted to past ShakeMaps (in-sample)</option></select></div>
+      </div>
+      <div class="card" id="askCard">
+        <h2>Ask about this forecast</h2>
+        <div id="askLog" aria-live="polite"></div>
+        <form class="askrow" id="askForm"><input type="text" id="askInput" maxlength="300" autocomplete="off" placeholder="Ask a question about this spot" aria-label="Question about this forecast"><button class="btn primary" id="askBtn">Ask</button></form>
+        <div class="row" id="askSuggest"><button type="button" class="btn">What if I'm only inside for 20 minutes?</button><button type="button" class="btn">Why is the risk at this level here?</button><button type="button" class="btn">When does it drop below my limit?</button></div>
+        <p class="muted">Answered by Google Gemini using this page's forecast; what it checked is listed under each answer. It can be wrong, and it cannot clear a building for entry.</p>
       </div>
       <div class="card" id="comparisonCard">
         <h2>Compare two places</h2>
@@ -526,7 +544,7 @@ const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:
 // i: index into SEQ, or a live sequence registered by registerLive()
 function pickSeq(i){
   enterDetail(false);resetComparison();checkFeedback='';
-  S=typeof i==='number'?SEQ[i]:i;B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
+  S=typeof i==='number'?SEQ[i]:i;B=BASE[S.key];resetAsk();TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
   const bytes=v=>typeof v==='string'?b64(v):v;   // bundled grids are base64; live ones arrive as byte arrays
   G={...sm,mmi:bytes(sm.mmi),vs:bytes(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
   G.lon1=G.lon0+(G.nc-1)*G.dlon;G.lat1=G.lat0-(G.nr-1)*G.dlat;
@@ -883,6 +901,7 @@ addEventListener('keydown',e=>{const typing=/INPUT|SELECT|TEXTAREA/.test(e.targe
   else if(tourOn&&(e.key==='ArrowLeft'||e.key==='PageUp')){e.preventDefault();showStep(tourI-1)}
   else if(e.key===' '&&!tourOn&&mode==='detail'&&e.target===document.body){e.preventDefault();$('play').click()}});
 __PLANNER__
+__ASSISTANT__
 
 // ---------- world view: live USGS earthquakes on a globe ----------
 const WORLD=J('d-world'),WTOWNS=J('d-towns'),POLL_MS=120e3;

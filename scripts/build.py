@@ -51,6 +51,7 @@ out = (template
        .replace('__VALIDATION__', validation)
        .replace('__SCENARIO__', scenario)
        .replace('__PLANNER__', read('src', 'planner.js'))
+       .replace('__ASSISTANT__', read('src', 'assistant.js'))
        .replace('__SITEFIT__', read('data', 'site-term-fit.json')))
 with open(p('index.html'), 'w', encoding='utf-8', newline='\n') as f:  # same bytes on Windows and Linux
     f.write(out)
