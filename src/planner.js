@@ -71,7 +71,7 @@ let savedChecks=Object.create(null),checkFeedback='';
 try{
   const stored=JSON.parse(localStorage.getItem(CHECKS_KEY)||'{}');
   if(stored&&typeof stored==='object'&&!Array.isArray(stored)){
-    for(const key of SEQ.map(s=>s.key))if(SCENARIO.validSnapshot(stored[key])&&stored[key].sequence===key)savedChecks[key]=stored[key];
+    for(const key of Object.keys(stored))if((key.startsWith('live:')||SEQ.some(s=>s.key===key))&&SCENARIO.validSnapshot(stored[key])&&stored[key].sequence===key)savedChecks[key]=stored[key];
   }
 }catch(e){/* Storage may be blocked for a standalone file. Session-only checks still work. */}
 function persistChecks(){
@@ -84,7 +84,8 @@ function currentCheck(){
   return SCENARIO.capture({sequence:S.key,location:loc,now:cur.now,minutes:cur.exposure.minutes,
     probability:cur.exposure.probability,q:cur.sp.qv,threshold:cur.sp.thr,
     building:$('bld').value,calibrated:cur.calib,tolerance:cur.tol,savedAt:Date.now(),
-    dataVersion:D.fetchedAt,gridVersion:JSON.stringify([G.version,G.processed,(EX[S.key]||{}).gfInfo||null]),
+    // Live catalogues refresh every 2 minutes; new events show up through the events comparison instead.
+    dataVersion:S.live?'live USGS':D.fetchedAt,gridVersion:JSON.stringify([G.version,G.processed,(EX[S.key]||{}).gfInfo||null]),
     modelVersion,events:S.events});
 }
 function renderChanges(){

@@ -10,7 +10,7 @@ Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
 ## Try it
 
-Open `index.html` in a browser. It's one self-contained file (about 6 MB, with the data and map library inside), so it works offline. Only the fonts need internet, and they fall back to system fonts without it.
+Open `index.html` in a browser. It's one self-contained file (about 10 MB, with the data, map libraries and world outlines inside). The 13 case studies work offline; the live world view needs internet to reach USGS. The fonts also need internet, and fall back to system fonts without it.
 
 - **▶ Story** (top right) runs a 7-step guided demo of the Türkiye 2023 sequence. Use **→ / ←** or a presentation clicker to move between steps, and **Esc** to exit.
 - **?** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
@@ -20,6 +20,7 @@ To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Dep
 
 ## What it does
 
+- **Live world view.** The page opens on a globe of every M4.5+ earthquake in the last 30 days, from the USGS feed and checked every 2 minutes. Drag to spin, scroll to zoom, click a quake. Any quake with a USGS ShakeMap opens the same forecast, built in the browser from its live catalogue, ShakeMap and PAGER report; while it's open, the catalogue is re-checked every 2 minutes. The 13 case studies are the red stars.
 - **Story mode.** A guided 2-minute demo of the Türkiye 2023 sequence, built for pitching.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
 - **Exposure duration.** Choose 5, 10 or 30 minutes, 1 hour, 8 hours or 24 hours. The probability, parameter range, projected start and curve use that entire interval. The 24-hour, 7-day and 30-day context figures remain available.
@@ -80,21 +81,25 @@ src/shake.js               shaking, uncertainty ranges and consistent Monte Carl
 src/validation.js          regional occurrence checks shared by the UI and CLI
 src/scenario.js            duration estimates and saved-check change explanations
 src/planner.js             browser controls for comparison pins and local saved checks
+src/globe.js               world view: canvas globe drawn with d3-geo
+src/live.js                live USGS feed and per-quake loader for the browser (mirrors fetch_usgs.mjs)
 tests/forecast.test.js      numerical, simulation and data-integrity regression tests
 tests/scenario.test.js      exposure windows, threshold crossings and change attribution
 tests/planner.test.js       controller workflows with DOM/map/storage test doubles
+tests/live.test.js          live loader: grid parsing, 180° handling, coast clipping, PAGER
 data/                      everything the app embeds
   sequences.json           catalogue + ShakeMap grids (MMI, Vs30) for 13 quakes
   ground-failure-and-pager.json  liquefaction/landslide grids, PAGER exposure and building notes
   basemap.json             coastlines, borders, town names per area
-  population.json          town populations, PAGER country fatality curves
+  population.json          town populations, PAGER country fatality curves (all countries)
+  world-towns.json         towns of 5,000+ people worldwide, for live earthquakes
   aftershock-shakemap-check.json  equation vs ShakeMap gaps for 26 aftershocks
   site-term-fit.json       fitted soil coefficient
 scripts/
   fetch_usgs.mjs           download catalogue, ShakeMaps, ground failure and PAGER from USGS
   fit_site_term.py         fit the soil term to the ShakeMaps
   prep_basemap.js          clip Natural Earth + GeoNames to each area
-  prep_population.js       town populations + PAGER curves
+  prep_population.js       town populations + PAGER curves + world towns
   build.py                 assemble index.html (inlines the fitted soil term into src/shake.js)
   python.mjs               run Python as python3, python or py, whichever the machine has
   backtest.js              score the aftershock model
@@ -121,7 +126,8 @@ To rebuild only the page after editing `src/`, run `npm install` and then `npm r
 ## Limitations
 
 - **Prototype, not safety advice.** Whether a building is safe to enter is decided by a structural inspection and local authorities. This tool only covers the chance of more shaking.
-- **Snapshot, not live data.** Catalogue entries include later revisions, and mainshock ShakeMaps may have been processed years after the replay time. Filtering by origin time does not reconstruct the data available then.
+- **Live quakes have less data.** Ground-failure maps (liquefaction, landslides) are not loaded for live earthquakes, the coastline is 1:50m Natural Earth, and towns are limited to 5,000+ people. A ShakeMap only exists for some quakes, usually M5.5+, and is often an automatic first version. A live forecast is not an official USGS aftershock forecast.
+- **Case studies are snapshots.** Catalogue entries include later revisions, and mainshock ShakeMaps may have been processed years after the replay time. Filtering by origin time does not reconstruct the data available then.
 - **Model scope.** A single prior is used globally. Shaking uses a fixed 10 km depth, an active-crust equation, an experimental soil term, M5 to below M8.5, and a 400 km source-distance cutoff. Smaller aftershocks can still cause damage.
 - **Resolution** follows each ShakeMap grid: about 1 km for Türkiye and 1.8–3.7 km elsewhere. It's neighbourhood-scale, not street-by-street.
 - **No global data** for nearby trees, walls, power lines or dams. The app asks the user instead, and that only changes the advice on where to wait.
@@ -135,4 +141,4 @@ To rebuild only the page after editing `src/`, run `npm install` and then `npm r
 - Intensity equation: Allen, Wald & Worden (2012), via [OpenQuake](https://github.com/gem/oq-engine).
 - Coastlines and borders: [Natural Earth](https://www.naturalearthdata.com) via `world-atlas` (public domain).
 - Places and populations: [GeoNames](https://www.geonames.org) via `cities.json` and `all-the-cities` (CC BY 4.0).
-- Map library: [Leaflet](https://leafletjs.com) (BSD-2-Clause), bundled into `index.html` by the build.
+- Map library: [Leaflet](https://leafletjs.com) (BSD-2-Clause); globe: [d3-geo](https://d3js.org/d3-geo) (ISC) and [topojson-client](https://github.com/topojson/topojson-client) (ISC). All bundled into `index.html` by the build.

@@ -1,4 +1,4 @@
-"""Assemble the single-file app: src/template.html + src/*.js + data/*.json + Leaflet CSS -> index.html
+"""Assemble the single-file app: src/template.html + src/*.js + data/*.json + Leaflet, d3-geo and world outlines -> index.html
 Run from the repo root after `npm install`:  npm run build
 """
 import json, os
@@ -14,6 +14,13 @@ SITE_K = "require('../data/site-term-fit.json').k"
 shake = read('src', 'shake.js').replace("if(typeof module!=='undefined')module.exports=SHAKE;", '')
 assert SITE_K in shake, 'src/shake.js no longer reads K from data/site-term-fit.json'
 shake = shake.replace(SITE_K, repr(json.loads(read('data', 'site-term-fit.json'))['k']))
+live = read('src', 'live.js').replace("if (typeof module !== 'undefined') module.exports = LIVE;", '')
+assert 'module.exports' not in live, 'src/live.js export line changed'
+# World view: d3-geo draws the globe, topojson-client decodes Natural Earth outlines (1:110m globe, 1:50m live detail maps)
+geolibs = ''.join('<script>' + read('node_modules', *f.split('/')).replace('</script', '<\\/script') + '</script>\n'
+                  for f in ['d3-array/dist/d3-array.min.js', 'd3-geo/dist/d3-geo.min.js', 'topojson-client/dist/topojson-client.min.js'])
+world = '{' + ','.join(f'"{k}":' + read('node_modules', 'world-atlas', f + '.json')
+                       for k, f in [('land110', 'land-110m'), ('countries110', 'countries-110m'), ('land50', 'land-50m'), ('countries50', 'countries-50m')]) + '}'
 validation = read('src', 'validation.js').replace("if (typeof module !== 'undefined') module.exports = VALIDATION;", '')
 scenario = read('src', 'scenario.js').replace("if (typeof module !== 'undefined') module.exports = SCENARIO;", '')
 extra = json.loads(read('data', 'ground-failure-and-pager.json'))
@@ -34,6 +41,11 @@ out = (template
        .replace('__BASE__', esc(read('data', 'basemap.json')))
        .replace('__POP__', esc(read('data', 'population.json')))
        .replace('__AFT__', read('data', 'aftershock-shakemap-check.json'))
+       .replace('__WORLD__', esc(world))
+       .replace('__TOWNS__', esc(read('data', 'world-towns.json')))
+       .replace('__GEOLIBS__', geolibs)
+       .replace('__LIVE__', live)
+       .replace('__GLOBE__', read('src', 'globe.js'))
        .replace('__MODEL__', model)
        .replace('__SHAKE__', shake)
        .replace('__VALIDATION__', validation)
