@@ -6,7 +6,7 @@
 
 ## Before you go on
 
-- [ ] Open `index.html` in Chrome (works offline; no Wi-Fi needed).
+- [ ] Open `index.html` in Chrome. It opens on the live globe, which needs Wi-Fi to reach USGS. The Story and the 13 case studies work offline; without Wi-Fi the globe says so and still shows the case-study stars.
 - [ ] Press **Fullscreen**, then **▶ Story**. Use **→** (or a presentation clicker) to advance and **←** to go back.
 - [ ] Zoom the browser to 110–125% if the screen is large or far away.
 - [ ] Backup: the hosted link on a phone, and `docs/screenshot.png`.
@@ -24,7 +24,7 @@
 | **2:40–3:10** | Story 5: Japan | "USGS PAGER models population fatality rates by country and shaking intensity. Our prototype converts those modelled rates into different intensity thresholds. This is a heuristic, not an individual building assessment or a measured level of preparedness." |
 | **3:10–3:50** | Story 6: Accuracy tab | "Does it work? We scored 93 complete regional forecast windows across 12 sequences using a revised catalogue. M5+ skill is 0.55 against a reference estimated from the other sequences. M6+ skill is -0.01, slightly worse than that reference. These checks do not validate point shaking, damage or safe entry." |
 | **3:50–4:25** | Story 7: People tab | "It's built for the people waiting outside: who's at risk this week, town by town, and opt-in 'I'm safe' / 'I need help' check-ins on a shared map." |
-| **4:25–5:00** | Back to the map | "Under the hood: the USGS earthquake catalogue, ShakeMaps, ground-failure maps and PAGER casualty models, all free and public, plus a simplified model from the Reasenberg-Jones family. USGS operational forecasts use regional parameters and more detailed handling of missing early events. Live ingestion and operational validation remain future work. Every number on screen links to its source. Aftershock Re-entry: from data to a decision you can act on." |
+| **4:25–5:00** | Back to the globe (**◀ World map**) | "And this isn't just history. This globe is live from USGS, checked every two minutes. Click any recent quake with a ShakeMap and you get the same forecast for it, right now. Under the hood: the USGS earthquake catalogue, ShakeMaps, ground-failure maps and PAGER casualty models, all free and public, plus a simplified model from the Reasenberg-Jones family. USGS operational forecasts use regional parameters and more detailed handling of missing early events. Operational validation remains future work. Every number on screen links to its source. Aftershock Re-entry: from data to a decision you can act on." |
 
 If you're running long, cut step 7 and say its line over step 6.
 
@@ -51,12 +51,15 @@ Emergency agencies and NGOs deciding when to send people home or where to put sh
 **What about privacy for check-ins?**
 Opt-in only. Only people with contributor access to the page can see them, and you can delete yours at any time.
 
+**Is it really live?**
+Yes. The globe reads the USGS feed of M4.5+ quakes from the last 30 days every two minutes. Opening a quake downloads its catalogue, ShakeMap and PAGER report straight from USGS, and the catalogue is re-checked while it's open. Only quakes with a ShakeMap (usually M5.5+) get a forecast, ground-failure maps are not loaded for live quakes yet, and it is not an official USGS forecast.
+
 **What would you build next?**
-Live ingestion of new earthquakes, finer city soil maps, building data from OpenStreetMap, SMS/WhatsApp alerts when your re-entry time arrives, and multiple languages.
+Ground-failure maps for live quakes, finer city soil maps, building data from OpenStreetMap, SMS/WhatsApp alerts when your re-entry time arrives, and multiple languages.
 
 ## Accuracy note
 
-Numbers changed after fixing discarded posterior probability and aligning the simulations with the formula. Use the current screen values. The recorded data is a retrospective snapshot, not live ingestion or an as-issued hindcast. See [the model audit](docs/model-audit.md).
+Numbers changed after fixing discarded posterior probability and aligning the simulations with the formula. Use the current screen values. The 13 case studies are a retrospective snapshot, not an as-issued hindcast; the live globe uses current USGS data but is not an official forecast. See [the model audit](docs/model-audit.md).
 
 ## Optional 3.1 feature demonstration
 

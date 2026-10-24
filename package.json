@@ -2,7 +2,7 @@
   "name": "aftershock-reentry",
   "version": "3.1.0",
   "private": true,
-  "description": "Retrospective aftershock shaking estimates with explicit uncertainty, source provenance and model validation limits.",
+  "description": "Aftershock shaking estimates for live USGS earthquakes and recorded case studies, with explicit uncertainty, source provenance and model validation limits.",
   "scripts": {
     "fetch": "node scripts/fetch_usgs.mjs",
     "prep": "node scripts/prep_basemap.js && node scripts/prep_population.js",
