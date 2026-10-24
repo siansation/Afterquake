@@ -1,6 +1,6 @@
 // World view: an orthographic globe drawn on a canvas with d3-geo. Drag to spin, scroll or pinch to zoom,
 // click an earthquake to select it. Drawn flat, like a printed map: no glow, shading or animation. Coastlines and borders are Natural Earth (world-atlas), like the detail map:
-// 1:110m when zoomed out or moving, 1:50m when zoomed in and still.
+// 1:110m when zoomed out, 1:50m when zoomed in.
 const GLOBE = (() => {
   const DEG = 180 / Math.PI, SEA = '#cfdce5', LAND = '#f4f4f1', COAST = '#8a959e', ACCENT = '#c80000';
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -13,7 +13,7 @@ const GLOBE = (() => {
     const ctx = canvas.getContext('2d'), base = document.createElement('canvas'), bctx = base.getContext('2d');
     const proj = d3.geoOrthographic().clipAngle(90).precision(0.4), path = d3.geoPath(proj), grat = d3.geoGraticule10();
     let w = 0, h = 0, dpr = 1, R0 = 1, k = 1, rot = [-30, -18, 0], items = [], selected = null, hovered = null, baseKey = '';
-    let running = false, raf = 0, last = 0, fly = null, vel = null, moving = false;
+    let running = false, raf = 0, last = 0, fly = null, vel = null;
     const accent = opts.accent || ACCENT;
     const pointers = new Map(); let drag = null, pinch = null;
 
@@ -27,7 +27,7 @@ const GLOBE = (() => {
     const sizeOf = it => radius(it.M) * Math.min(2, Math.pow(k, 0.35));
 
     function drawBase() {
-      const fine = k >= 1.6 && !moving, key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
+      const fine = k >= 1.6, key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
       if (key === baseKey) return; baseKey = key;
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
@@ -66,7 +66,6 @@ const GLOBE = (() => {
       if (fly) { const p = Math.max(0, Math.min(1, (now - fly.t0) / fly.ms)), e = ease(p); rot = [fly.r0[0] + (fly.r1[0] - fly.r0[0]) * e, fly.r0[1] + (fly.r1[1] - fly.r0[1]) * e, 0];
         k = Math.exp(Math.log(fly.k0) + (Math.log(fly.k1) - Math.log(fly.k0)) * e); if (p >= 1) { const done = fly.done; fly = null; if (done) done() } }
       else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); vel = [vel[0] * .93, vel[1] * .93]; if (Math.hypot(vel[0], vel[1]) < 0.002) vel = null }
-      moving = !!(drag || pinch || fly || vel);
       draw();
       if (fly || (vel && !drag)) kick(); else last = 0;   // keep going only while something is animating
     }
