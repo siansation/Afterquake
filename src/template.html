@@ -118,13 +118,15 @@ td.num,th.num{text-align:right}
 .leaflet-container{font-family:var(--sans);background:var(--sea)}
 /* overlays match Leaflet's own controls: white, 4px radius, the same shadow */
 .ctl{background:#fff;border-radius:4px;box-shadow:0 1px 5px rgba(0,0,0,.4);font-size:13.5px}
-.layers{position:absolute;top:10px;right:max(10px,env(safe-area-inset-right,0px));z-index:500;padding:8px 10px;display:flex;flex-direction:column;gap:3px;max-width:230px}
+.layers{position:absolute;top:10px;right:max(10px,env(safe-area-inset-right,0px));z-index:500;display:flex;flex-direction:column;max-width:300px}
 .layers h4{margin:0 0 2px;font-size:13.5px;font-weight:700}
 .layers label{display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap}
 .layers hr{border:0;border-top:1px solid var(--line2);margin:4px 0}
-.layers .tgl{display:none}
-.layers .body{display:flex;flex-direction:column;gap:3px}
-@media (max-width:860px){.layers .body{display:none}.layers.open .body{display:flex}.layers .tgl{display:block}}
+.layers .tgl{border:0;background:none;text-align:left;padding:7px 10px;font-size:13.5px;border-radius:4px;white-space:nowrap}
+.layers .tgl:hover{background:#f1f3f5}
+.layers.open .tgl{border-bottom:1px solid var(--line2);border-radius:4px 4px 0 0}
+.layers .body{display:none;flex-direction:column;gap:3px;padding:6px 10px 9px}
+.layers.open .body{display:flex}
 .legend{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:76px;z-index:500;padding:7px 9px;max-width:260px}
 .legend .ramp{display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--mute)}
 .legend canvas{width:150px;height:10px;border:1px solid var(--line)}
@@ -153,13 +155,6 @@ details summary{cursor:pointer;font-weight:600}
 .seg button small{display:block;font-size:12px;color:var(--mute);margin-top:1px}
 .seg button[aria-pressed="true"]{background:var(--link);border-color:var(--link);color:#fff;position:relative}
 .seg button[aria-pressed="true"] small{color:#d4e5f3}
-.mapcard{position:absolute;top:10px;left:56px;z-index:600;width:290px;padding:9px 12px;cursor:pointer}
-.mapcard .mc-place{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mapcard .mc-big{font-size:17px;font-weight:700;line-height:1.25;margin:2px 0 4px;color:var(--warn)}
-.mapcard.ok .mc-big{color:var(--good)}
-.mapcard .mc-odds{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13.5px;color:var(--ink2)}
-.mapcard .mc-odds b{color:var(--ink)}
-.mapcard .mc-hint{font-size:12.5px;color:var(--mute);margin-top:3px}
 .tour{position:absolute;left:56px;bottom:96px;z-index:700;width:min(420px,calc(100% - 80px));padding:12px 15px}
 .tour .tstep{font-size:13px;color:var(--mute)}
 .tour h3{font-size:18px;line-height:1.25;margin:2px 0 6px;font-weight:700}
@@ -180,7 +175,7 @@ details summary{cursor:pointer;font-weight:600}
 .wbox .wbtns .btn{padding:7px 14px}
 .wbox .fine{font-size:13px;color:var(--mute);margin:14px 0 0}
 .kbd{font-size:12px;border:1px solid #8d98a3;border-radius:2px;padding:0 4px;background:#f5f6f7}
-@media (max-width:860px){.mapcard{display:none}.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
+@media (max-width:860px){.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
 @media (max-width:860px){.legend .keys{display:none}.legend{bottom:auto;top:10px;right:auto;left:56px;max-width:190px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
 .method p{font-size:14px;color:var(--ink2);margin:6px 0}
 .ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line2)}
@@ -212,7 +207,7 @@ details summary{cursor:pointer;font-weight:600}
 body.world #globeWrap{display:block}
 #globe{position:absolute;inset:0;width:100%;height:100%;touch-action:none;outline:none}
 #globe:focus-visible{outline:2px solid #2491ff;outline-offset:-3px}
-body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .mapcard,body.world .tour,body.world #hMag,body.world #worldBtn{display:none!important}
+body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .tour,body.world #hMag,body.world #worldBtn{display:none!important}
 .wpane{overflow:auto;flex:1;padding:12px 14px 20px;padding-left:max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:9px}
 body:not(.world) .wpane{display:none}
 .wfilter{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px}
@@ -439,8 +434,8 @@ body:not(.world) .wpane{display:none}
   <div class="mapwrap">
     <div id="map" role="application" aria-label="Map. Click to choose your location."></div>
     <div class="ctl layers" id="layers">
-      <button class="btn tgl" id="layTgl" aria-expanded="false">Layers</button>
-      <div class="body">
+      <button class="tgl" id="layTgl" aria-expanded="false" aria-controls="layBody" title="Show or hide the map layers">Map layers</button>
+      <div class="body" id="layBody">
         <h4>Shade the map by</h4>
         <label><input type="radio" name="lay" value="risk" checked> Damaging shaking, 7 days</label>
         <label><input type="radio" name="lay" value="mmi"> Mainshock shaking</label>
@@ -455,7 +450,6 @@ body:not(.world) .wpane{display:none}
         <label><input type="checkbox" id="showC" checked> Check-ins</label>
       </div>
     </div>
-    <div class="ctl mapcard" id="mapcard" role="button" tabindex="0" aria-label="Open the forecast for your spot"></div>
     <div class="ctl tour" id="tour" hidden aria-live="polite"></div>
     <div id="globeWrap">
       <canvas id="globe" tabindex="0" role="application" aria-label="Globe of recent earthquakes. Drag or use the arrow keys to spin, scroll or press plus and minus to zoom, click an earthquake to select it. The list beside the globe has the same earthquakes."></canvas>
@@ -574,7 +568,7 @@ function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('
 function countryAt(lat,lon){let best=null,bd=40;for(const t of TOWNS.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lon)*111.32*G.c);if(d<bd){bd=d;best=t}}return best&&POP.fatality[best[4]]?best[4]:POP.seqCountry[S.key]}
 function pinCountry(){return loc?countryAt(loc.lat,loc.lon):POP.seqCountry[S.key]}
 function setLoc(lat,lon,name,doUpdate=true){loc={lat,lon,name};$('town').value=name&&!/^(Dropped|Near)/.test(name)?name:'';if(doUpdate){buildBuildingOptions();update()}}
-map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng)){if(comparisonPicking)$('comparisonStatus').textContent='Choose B inside the modelled map area.';return}let best=null,bd=4;for(const t of B.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lng)*111.32*G.c);if(d<bd){bd=d;best=t}}const name=best?`Near ${best[0]}`:'Dropped pin';if(comparisonPicking){chooseComparison(lat,lng,name);return}setLoc(lat,lng,name);openPinPopup()});
+map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng)){if(comparisonPicking)$('comparisonStatus').textContent='Choose B inside the modelled map area.';return}let best=null,bd=4;for(const t of B.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lng)*111.32*G.c);if(d<bd){bd=d;best=t}}const name=best?`Near ${best[0]}`:'Dropped pin';if(comparisonPicking){chooseComparison(lat,lng,name);return}setLoc(lat,lng,name)});
 
 // ---------- forecast ----------
 function sources(now){const out=[];const ev=S.events.filter(e=>e[0]>=-0.001&&e[0]<=now);const step=Math.max(1,Math.ceil(ev.length/700));for(let i=0;i<ev.length;i+=step){const [x,y]=km(ev[i][2],ev[i][3]);out.push(x,y)}return out}
@@ -620,7 +614,7 @@ function update(){
   $('uncertainty').textContent=`Next 24 hours: ${pct(range.low)} to ${pct(range.high)} from the aftershock-rate uncertainty alone. Ground, building and model errors would widen it.`;
   const qAlt=SHAKE.q(src,sp.x,sp.y,sp.gv.vs,sp.thr,!calib),p7alt=SHAKE.probQ(f,cp,qAlt,0,7);
   $('alt').innerHTML=`With the ${calib?'standard':'adjusted'} shaking equation: ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
-  renderMapCard();renderFactors();renderAround();
+  renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
   drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();bindSrc();
@@ -705,13 +699,15 @@ let pinMarker=null;
 function drawPin(){if(pinMarker&&pinLayer.hasLayer(pinMarker)){pinMarker.setLatLng([loc.lat,loc.lon]);const el=pinMarker.getElement();if(el)el.title='Your spot A: '+loc.name;pinMarker.setPopupContent(pinPopupHtml);return}
   pinLayer.clearLayers();pinMarker=L.marker([loc.lat,loc.lon],{icon:pinIcon,title:'Your spot A: '+loc.name,keyboard:true}).addTo(pinLayer);pinMarker.bindPopup(pinPopupHtml)}
 function pinPopupHtml(){const c=cur;return `<div class="pp-h">A: ${esc(loc.name)}</div>Intensity ${R(c.sp.thr)}+ shaking from M5+ aftershocks:<br><b>${chance(c.exposure.probability)}</b> over ${exposureLabel()}<br><b>${pct(c.p24)}</b> next 24 h, <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Below your limit':c.re===Infinity?'Above your limit for 400+ days':'Below your limit from '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
-function openPinPopup(){if(pinMarker)pinMarker.openPopup()}
 function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]?$('bld').selectedOptions[0].text.split(/ \(|,/)[0].toLowerCase():'';
   const spec={risk:[`Chance of damaging shaking, next 7 days (${bld})`,['0.3%','2%','10%','40%']],mmi:['Mainshock intensity (USGS ShakeMap)',['IV','VI','VIII','IX']],vs:['Vs30: lower = softer ground, more shaking',['150','400','900 m/s']],liq:['Liquefaction in the mainshock (USGS ground failure)',['2%','8%','20%+']],ls:['Landslides in the mainshock (USGS ground failure)',['1%','4%','12%+']],none:null}[layer];
   L0.innerHTML=(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div>`:'')+
    `<div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span><span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>town (size = people)</span>${$('reveal').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div>`;
   if(!spec)return;const rc=$('rampc').getContext('2d');for(let i=0;i<150;i++){const t=i/149,v=layer==='risk'?Math.pow(10,-2.5+t*2.1):layer==='mmi'?4+t*5:layer==='vs'?150+t*750:layer==='liq'?Math.pow(10,-2+t*1.4):Math.pow(10,-2.3+t*1.4);const c=rampAt(layer,v);rc.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(c[3],.35)})`;rc.fillRect(i,0,1,10)}}
-document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;drawOverlay();drawLegend()});
+// The collapsed layers button names the current shading, so you can see what's shown without opening it.
+function renderLayTgl(){const r=document.querySelector('input[name=lay]:checked'),b=document.createElement('b');b.textContent='Map layers';$('layTgl').replaceChildren(b,': '+(r?r.parentElement.textContent.trim():''))}
+document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;drawOverlay();drawLegend();renderLayTgl()});
+renderLayTgl();
 ['showQ','showT'].forEach(id=>$(id).onchange=()=>update());$('showC').onchange=renderCheckins;
 $('layTgl').onclick=()=>{const o=$('layers').classList.toggle('open');$('layTgl').setAttribute('aria-expanded',String(o))};
 
@@ -829,10 +825,6 @@ $('play').onclick=()=>{playing=!playing;$('playIcon').setAttribute('d',playing?'
   else{clearTimeout(playT);heatKey='';update()}};
 let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.invalidateSize();update()},150)});
 
-// ---------- big verdict card on the map ----------
-function renderMapCard(){const c=cur,mc=$('mapcard');const ok=c.re===0;mc.className='ctl mapcard'+(ok?' ok':'');
-  mc.innerHTML=`<div class="mc-place">A: ${esc(loc.name)}, ${exposureLabel()}</div><div class="mc-big">${ok?'Below your limit':c.re===Infinity?'Above your limit for 400+ days':'Below your limit from '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</div><div class="mc-odds">${c.exposure.minutes===1440?'':`<span>${exposureLabel()} <b>${chance(c.exposure.probability)}</b></span>`}<span>24 h <b>${pct(c.p24)}</b></span><span>7 days <b>${pct(c.p7)}</b></span></div><div class="mc-hint">Details in the side panel</div>`}
-$('mapcard').onclick=()=>selectTab('spot');$('mapcard').onkeydown=e=>{if(e.key==='Enter')selectTab('spot')};
 
 // ---------- plain-English risk buttons ----------
 function setTol(v){$('tol').value=v;document.querySelectorAll('#tolSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===String(v))))}
@@ -843,7 +835,7 @@ function seqIndex(key){return SEQ.findIndex(s=>s.key===key)}
 function goSeq(key){const i=seqIndex(key);if(S&&S.key===key){enterDetail();return}pickSeq(i)}
 function setDays(d){$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
 function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
-function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v)}
+function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v);renderLayTgl()}
 function resetChoices(){$('bld').value='local';setTol('0.01');$('shk').value='0';$('exposure').value='1440';$('reveal').checked=true;resetComparison()}
 function animateDays(from,to,ms){return new Promise(res=>{const t0=performance.now(),a=Math.log(from),b=Math.log(to);playing=true;
   const step=now=>{const k=Math.min(1,(now-t0)/ms);setDays(Math.exp(a+(b-a)*k));update();if(k<1&&tourOn)requestAnimationFrame(step);else{playing=false;heatKey='';update();res()}};requestAnimationFrame(step)})}
@@ -857,7 +849,7 @@ const STEPS=[
   b:()=>`<p>The purple is how hard the ground shook. About <b>${fmtN(pagerAtLeast(8))} people</b> felt severe shaking or worse.</p><p>Within hours, millions are outside in winter, asking one question: <b>when is it safe to go back in?</b> Nobody can tell them.</p>`},
  {t:'Pick a spot. Get an answer.',
   go(){setLayer('risk');setDays(0.3);goTown('Kahramanmaraş');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>Seven hours in, for a typical local building in <b>${esc(loc.name)}</b>: a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>The shading is that 7-day chance everywhere. The card gives a <b>projected time</b> when modelled shaking drops below your limit; an inspection still determines re-entry.</p>`},
+  b:()=>`<p>Seven hours in, for a typical local building in <b>${esc(loc.name)}</b>: a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>The shading is that 7-day chance everywhere. The panel on the left gives a <b>projected time</b> when modelled shaking drops below your limit; an inspection still determines re-entry.</p>`},
  {t:'Then, nine hours after the first quake…',
   async go(){setLayer('risk');goTown('Elbistan');setDays(0.3);update();map.flyTo([38.1,37.15],8,{duration:.6});
     await animateDays(0.3,0.5,2600);
