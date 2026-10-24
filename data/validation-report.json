@@ -1,0 +1,99 @@
+{
+  "datasetFetchedAt": "2026-10-24T17:32:53.517Z",
+  "scope": "Retrospective regional M5+/M6+ occurrence, next 7 days. Not validation of local shaking, damage or re-entry.",
+  "limitations": [
+    "Catalogue magnitudes and locations include later revisions; origin-time filtering is not an as-issued hindcast.",
+    "Overlapping forecast windows within a sequence are correlated.",
+    "The reference excludes the target sequence but is not a chronological holdout.",
+    "A single prototype prior is used across tectonic regimes; no time-dependent completeness model or ETAS.",
+    "Local shaking uses later ShakeMaps, fixed depth, a fitted soil coefficient and heuristic damage thresholds."
+  ],
+  "metrics": [
+    {
+      "magnitude": 5,
+      "forecasts": 93,
+      "sequences": 12,
+      "occurrences": 45,
+      "observed": 0.4838709677419355,
+      "meanForecast": 0.5727099441934783,
+      "brier": 0.12138246518136703,
+      "pooledBrier": 0.24973985431841828,
+      "pooledSkill": 0.5139643790029428,
+      "heldOutBrier": 0.27007947995874654,
+      "heldOutSkill": 0.5505676136524416,
+      "reliability": [
+        {
+          "low": 0,
+          "high": 0.1,
+          "count": 12,
+          "meanForecast": 0.053555863166856656,
+          "observed": 0.08333333333333333
+        },
+        {
+          "low": 0.1,
+          "high": 0.3,
+          "count": 15,
+          "meanForecast": 0.19408594158555825,
+          "observed": 0.06666666666666667
+        },
+        {
+          "low": 0.3,
+          "high": 0.6,
+          "count": 20,
+          "meanForecast": 0.4346580819935186,
+          "observed": 0.15
+        },
+        {
+          "low": 0.6,
+          "high": 1,
+          "count": 46,
+          "meanForecast": 0.8916283410508143,
+          "observed": 0.8695652173913043
+        }
+      ]
+    },
+    {
+      "magnitude": 6,
+      "forecasts": 93,
+      "sequences": 12,
+      "occurrences": 14,
+      "observed": 0.15053763440860216,
+      "meanForecast": 0.1935056526365704,
+      "brier": 0.1399619907288904,
+      "pooledBrier": 0.12787605503526428,
+      "pooledSkill": -0.09451289133288632,
+      "heldOutBrier": 0.1379087076202977,
+      "heldOutSkill": -0.014888712569520957,
+      "reliability": [
+        {
+          "low": 0,
+          "high": 0.1,
+          "count": 48,
+          "meanForecast": 0.03661537431751349,
+          "observed": 0.041666666666666664
+        },
+        {
+          "low": 0.1,
+          "high": 0.3,
+          "count": 21,
+          "meanForecast": 0.1789750276458497,
+          "observed": 0.2857142857142857
+        },
+        {
+          "low": 0.3,
+          "high": 0.6,
+          "count": 16,
+          "meanForecast": 0.42944874287195267,
+          "observed": 0.25
+        },
+        {
+          "low": 0.6,
+          "high": 1,
+          "count": 8,
+          "meanForecast": 0.7011040326807885,
+          "observed": 0.25
+        }
+      ]
+    }
+  ]
+}

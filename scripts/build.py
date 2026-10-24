@@ -14,6 +14,7 @@ SITE_K = "require('../data/site-term-fit.json').k"
 shake = read('src', 'shake.js').replace("if(typeof module!=='undefined')module.exports=SHAKE;", '')
 assert SITE_K in shake, 'src/shake.js no longer reads K from data/site-term-fit.json'
 shake = shake.replace(SITE_K, repr(json.loads(read('data', 'site-term-fit.json'))['k']))
+validation = read('src', 'validation.js').replace("if (typeof module !== 'undefined') module.exports = VALIDATION;", '')
 extra = json.loads(read('data', 'ground-failure-and-pager.json'))
 for v in extra.values():
     if v.get('pager'):
@@ -34,6 +35,7 @@ out = (template
        .replace('__AFT__', read('data', 'aftershock-shakemap-check.json'))
        .replace('__MODEL__', model)
        .replace('__SHAKE__', shake)
+       .replace('__VALIDATION__', validation)
        .replace('__SITEFIT__', read('data', 'site-term-fit.json')))
 with open(p('index.html'), 'w', encoding='utf-8', newline='\n') as f:  # same bytes on Windows and Linux
     f.write(out)

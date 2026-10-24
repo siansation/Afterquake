@@ -1,8 +1,8 @@
 # Aftershock Re-entry
 
-**After a big earthquake, when is it reasonable to go back inside?**
+**After a big earthquake, how does the estimated risk of further shaking change?**
 
-Aftershock Re-entry forecasts the chance of *damaging shaking at a spot you choose* over the next 24 hours, 7 days and 30 days, then turns it into a time when re-entry fits the level of risk you'll accept. It runs on real USGS data for 13 earthquakes, from Türkiye 2023 to sequences still going in 2026, and you can rewind each one to see what the model would have said and what actually happened next.
+Aftershock Re-entry estimates the chance of shaking above a chosen intensity at a location over the next 24 hours, 7 days and 30 days, then projects when its next-24-hour probability falls below a chosen limit. It uses bundled USGS data for 13 earthquakes and a simplified Reasenberg-Jones model. It is a retrospective prototype; building inspection and local authorities determine whether entry is safe.
 
 Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
@@ -22,18 +22,18 @@ To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Dep
 
 - **Story mode.** A guided 2-minute demo of the Türkiye 2023 sequence, built for pitching.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
-- **Forecast at your spot.** The chance of shaking strong enough to damage your type of building, a re-entry time at your risk limit, and a curve of how the risk fades.
-- **200 simulated futures.** Monte Carlo runs of the next 30 days, in which big simulated aftershocks trigger their own.
-- **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, the country's building vulnerability (USGS PAGER), and distance to the coast (tsunami).
+- **Forecast at your spot.** Modelled intensity exceedance from M5+ aftershocks, a projected threshold-crossing time, and a curve of how the estimate changes. A 90% parameter range describes fitted rate uncertainty, excluding other model errors.
+- **200 simulated futures.** Monte Carlo runs from the same posterior and marked Poisson process as the displayed formula. This model does not simulate secondary triggering (ETAS).
+- **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
 - **People.** Population near you, people at risk this week, and the official count of people who felt each shaking level.
 - **Opt-in safety check-ins.** Mark yourself safe or in need of help. This needs a shared database (see [Limitations](#limitations)).
-- **Sources and accuracy tabs.** Every number links to where it came from, and the model is backtested on all 13 sequences.
+- **Sources and accuracy tabs.** Source links, processing dates and model assumptions, with regional occurrence checks where complete outcome windows exist.
 
 ## How the forecast works
 
 | Step | Method | Source |
 |---|---|---|
-| How many aftershocks | Reasenberg–Jones (1989) model, updated by Bayes' rule with the sequence's own M5+ aftershocks | Global starting values from Page et al. (2016), the basis of USGS operational aftershock forecasts |
+| How many aftershocks | Reasenberg–Jones (1989) model, updated by Bayes' rule with the sequence's own M5+ aftershocks | Prototype prior from the same model family; USGS operational forecasts use tectonic-region-specific parameters |
 | Where | Future aftershocks cluster around past ones (6 km smoothing, 10 km depth) | USGS ComCat catalogue |
 | How hard at your spot | Allen, Wald & Worden (2012) intensity equation, including its scatter | As implemented in OpenQuake |
 | Your ground | Soil term `ΔMMI = -1.76 × log10(Vs30/760)`, fitted by us to 86,234 ShakeMap cells (90% range -1.99 to -1.25) | USGS ShakeMap Vs30 grids |
@@ -44,10 +44,27 @@ The rules marked "our rule" in the app (the PAGER-based threshold, the 10% lique
 
 ## How accurate is it?
 
-- **Aftershock counts (93 seven-day forecasts):** skill 0.51 for M5+ compared with always guessing the average rate (0 = no better, 1 = perfect). For M6+ it is roughly calibrated but no better than the average (-0.09); big aftershocks are rare and hard to forecast.
-- **Shaking (26 aftershock ShakeMaps):** USGS ShakeMaps average 0.9 intensity *below* the felt-report equation. The best-reported aftershock (Türkiye M6.3, 449 citizen reports) shook *harder* than the equation close in. The app defaults to the cautious equation and shows the ShakeMap-calibrated figure beside it.
+On the bundled catalogue, 93 complete seven-day forecast windows can be scored across 12 of the 13 sequences. The newest sequence has insufficient follow-up. These checks concern regional occurrence, not point shaking or building damage.
 
-Run `npm run backtest` to reproduce the first check.
+| Target | Model Brier score | Other-sequence reference Brier | Skill |
+|---|---:|---:|---:|
+| M5+ in the next 7 days | 0.121 | 0.270 | 0.55 |
+| M6+ in the next 7 days | 0.140 | 0.138 | -0.01 |
+
+Lower Brier is better; negative skill means worse than the reference. For each forecast, the reference frequency excludes its entire earthquake sequence. This is a retrospective comparison, not a chronological holdout; overlapping windows are correlated. The old pooled baseline gives skills 0.51 and -0.09 but uses the evaluated outcomes to estimate the reference frequency.
+
+The 26 aftershock ShakeMap comparisons are in-sample diagnostics, not independent calibration. The optional -0.90 intensity offset is an event-average gap; it is not evidence that the unadjusted equation is always conservative. The soil term was fitted to mainshock grids using a different distance formulation and then transferred to the aftershock equation.
+
+See [the model audit](docs/model-audit.md) for numerical fixes, evidence, sources and remaining scientific limits. The CLI and the Accuracy tab share the validation implementation.
+
+```bash
+npm test
+npm run backtest
+npm run backtest -- --json   # write data/validation-report.json
+npm run audit:data          # read-only comparison with current USGS records
+npm run build
+npm run check
+```
 
 ## Repo layout
 
@@ -56,7 +73,9 @@ index.html                 built app, ready to open or host (works offline)
 PITCH.md                   5-minute pitch script and Q&A
 src/template.html          app UI and logic (placeholders filled by the build)
 src/model.js               aftershock rate model (Reasenberg–Jones + Bayesian update)
-src/shake.js               shaking at a point: intensity equation, soil term, probabilities
+src/shake.js               shaking, uncertainty ranges and consistent Monte Carlo futures
+src/validation.js          regional occurrence checks shared by the UI and CLI
+tests/forecast.test.js      numerical, simulation and data-integrity regression tests
 data/                      everything the app embeds
   sequences.json           catalogue + ShakeMap grids (MMI, Vs30) for 13 quakes
   ground-failure-and-pager.json  liquefaction/landslide grids, PAGER exposure and building notes
@@ -77,7 +96,7 @@ docs/screenshot.png
 
 ## Rebuild from scratch
 
-Needs Node 18+ and Python 3 with numpy. Works on Windows, macOS and Linux: the npm scripts find Python whether it's installed as `python3`, `python` or `py`.
+Needs Node 20+ and Python 3 with numpy. Works on Windows, macOS and Linux: the npm scripts find Python whether it's installed as `python3`, `python` or `py`.
 
 ```bash
 npm install
@@ -95,6 +114,8 @@ To rebuild only the page after editing `src/`, run `npm install` and then `npm r
 ## Limitations
 
 - **Prototype, not safety advice.** Whether a building is safe to enter is decided by a structural inspection and local authorities. This tool only covers the chance of more shaking.
+- **Snapshot, not live data.** Catalogue entries include later revisions, and mainshock ShakeMaps may have been processed years after the replay time. Filtering by origin time does not reconstruct the data available then.
+- **Model scope.** A single prior is used globally. Shaking uses a fixed 10 km depth, an active-crust equation, an experimental soil term, M5 to below M8.5, and a 400 km source-distance cutoff. Smaller aftershocks can still cause damage.
 - **Resolution** follows each ShakeMap grid: about 1 km for Türkiye and 1.8–3.7 km elsewhere. It's neighbourhood-scale, not street-by-street.
 - **No global data** for nearby trees, walls, power lines or dams. The app asks the user instead, and that only changes the advice on where to wait.
 - **Check-ins** use the shared database of the Claude-hosted version. A standalone copy (e.g. GitHub Pages) shows them as unavailable until it's given its own backend.

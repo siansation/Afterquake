@@ -2,13 +2,16 @@
   "name": "aftershock-reentry",
   "version": "3.0.0",
   "private": true,
-  "description": "Forecasts damaging aftershock shaking at a chosen spot and turns it into a time when going back inside is reasonable.",
+  "description": "Retrospective aftershock shaking estimates with explicit uncertainty, source provenance and model validation limits.",
   "scripts": {
     "fetch": "node scripts/fetch_usgs.mjs",
     "prep": "node scripts/prep_basemap.js && node scripts/prep_population.js",
     "fit": "node scripts/python.mjs scripts/fit_site_term.py",
     "build": "node scripts/python.mjs scripts/build.py",
-    "backtest": "node scripts/backtest.js"
+    "backtest": "node scripts/backtest.js",
+    "test": "node --test",
+    "check": "node scripts/check-build.js",
+    "audit:data": "node scripts/audit-data.mjs"
   },
   "devDependencies": {
     "all-the-cities": "3.1.0",

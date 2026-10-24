@@ -846,8 +846,8 @@ details summary{cursor:pointer;font-weight:600}
 </header>
 <div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
   <div class="wbox">
-    <h1 id="wTitle">After the quake, <b>when is it safe to go back in?</b></h1>
-    <p class="lead">Millions of people sleep outside after a big earthquake because nobody can tell them how long the danger lasts. This tool turns live USGS data into an answer for their exact spot.</p>
+    <h1 id="wTitle">After the quake, <b>how does aftershock risk change?</b></h1>
+    <p class="lead">Explore recorded USGS earthquake sequences and estimates of further shaking near a chosen location. A forecast can inform decisions; building entry still needs an inspection and local authority guidance.</p>
     <ol>
       <li><b>Pick a spot</b> on the map, or search a town.</li>
       <li><b>Say how careful you are</b> and what kind of building it is.</li>
@@ -874,6 +874,7 @@ details summary{cursor:pointer;font-weight:600}
         <datalist id="towns"></datalist>
       </div>
       <div><p class="place" id="place"></p><span class="coords" id="coords"></span></div>
+      <p class="muted" id="dataStatus"></p>
       <div class="verdict" id="verdict" aria-live="polite"></div>
       <div class="fields">
         <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
@@ -886,11 +887,12 @@ details summary{cursor:pointer;font-weight:600}
           </div>
           <select id="tol" hidden><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select>
           <span class="muted">The chance of damaging shaking you'd accept while inside for 24 hours.</span></div>
-        <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Felt-report (cautious)</option><option value="1">ShakeMap-calibrated</option></select></div>
+        <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Unadjusted intensity equation</option><option value="1">Empirical offset (in sample)</option></select></div>
       </div>
       <div class="card">
         <h2 id="oddsTitle">Chance of damaging shaking here</h2>
         <div class="odds" id="odds"></div>
+        <p class="muted" id="uncertainty"></p>
         <p class="muted" id="alt"></p>
       </div>
       <div class="card">
@@ -899,7 +901,7 @@ details summary{cursor:pointer;font-weight:600}
       </div>
       <div class="card">
         <h2>200 simulated futures at this spot</h2>
-        <p class="muted">Each row is one possible next 30 days. Every simulated aftershock can set off its own. Red = damaging shaking here that day; grey = an M6+ somewhere in the area.</p>
+        <p class="muted">Each row is one possible next 30 days from the same model as the probabilities above. Red = threshold shaking from M5+ aftershocks here that day; grey = an M6+ somewhere in the area.</p>
         <div class="chart" id="sims"></div>
         <p class="muted" id="simNote"></p>
       </div>
@@ -959,19 +961,20 @@ details summary{cursor:pointer;font-weight:600}
       <p class="muted">What each source is, and what this tool does with it.</p>
       <table class="ledger" id="ledger"></table>
       <details class="method"><summary>How the forecast at your spot works</summary>
-        <p>1. <b>How many.</b> Reasenberg–Jones aftershock model, fitted to the sequence so far, starting from global average settings.</p>
-        <p>2. <b>Where.</b> Every quake so far counts as a possible source of the next one, smoothed by 6 km and placed 10 km deep.</p>
-        <p>3. <b>How hard.</b> The Allen–Wald–Worden (2012) intensity equation for each source and magnitude (M5 to 8.5), including its scatter.</p>
+        <p>1. <b>How many.</b> Reasenberg–Jones aftershock model fitted to events at or before the selected time. This prototype uses one prior everywhere; USGS operational forecasts use regional parameters and more detailed completeness handling.</p>
+        <p>2. <b>Where.</b> Past epicentres are source proxies with a 6 km distance smoothing term and fixed 10 km depth. This is a simplified spatial model.</p>
+        <p>3. <b>How hard.</b> The Allen–Wald–Worden (2012) active-crust intensity equation, including scatter, integrated over a normalised M5–8.5 magnitude distribution. Smaller aftershocks and sources beyond 400 km are excluded.</p>
         <p>4. <b>Your ground.</b> A soil term fitted to ShakeMaps: <code>ΔMMI = <span class="kv"></span> × log10(Vs30/760)</code>.</p>
         <p>5. <b>Your building.</b> Damage threshold from the Modified Mercalli scale, or for "typical local building", from the USGS PAGER casualty model for that country. It drops one level if this spot already shook at that level, or if the ground-failure model gives at least 10% liquefaction.</p>
-        <p>6. <b>Simulated futures.</b> 200 Monte Carlo runs of the next 30 days. Each simulated M5.5+ triggers its own aftershocks using global average settings. That's why the simulation can run a little above the formula.</p>
+        <p>6. <b>Simulated futures.</b> 200 Monte Carlo runs from the same posterior and shaking model as the formula. Their frequencies vary because the sample is small. This Reasenberg–Jones implementation does not model secondary triggering (ETAS).</p>
+        <p><b>Replay limits.</b> The catalogue contains later revisions, the mainshock ShakeMap may have been processed years later, and the soil coefficient was fitted using these sequences. This is a retrospective illustration, not a real-time hindcast or independent validation of local shaking.</p>
         <p><b>Prototype only, not safety advice.</b> Whether a building is safe to enter is decided by a structural inspection and local authorities.</p>
       </details>
     </section>
 
     <section class="pane" id="pane-accuracy" hidden>
       <div class="card"><h2>Does it forecast how many aftershocks?</h2>
-        <p class="muted">At 0.5–60 days after each mainshock, the model forecast the next 7 days using only data available then. Each forecast was checked against what happened.</p>
+        <p class="muted">At 0.5–60 days after each mainshock, forecast regional M5+/M6+ occurrence over the next 7 days using events whose origin times precede that moment. Uses a revised catalogue; overlapping windows are not independent. This does not validate local shaking or building damage.</p>
         <table id="bt"></table><p class="muted" id="btNote"></p></div>
       <div class="card"><h2>Does it predict how hard they shake?</h2>
         <p class="muted">The felt-report equation compared with USGS ShakeMaps of 26 real aftershocks. A negative gap means the equation predicted stronger shaking.</p>
@@ -1024,7 +1027,8 @@ details summary{cursor:pointer;font-weight:600}
 <script>// Aftershock forecast model (Reasenberg & Jones 1989, with a Bayesian update like USGS's operational forecasts).
 // Rate of aftershocks with magnitude >= M at t days after the largest shock so far:
 //   lambda(t, M) = 10^(a + b*(Mmain - M)) * (t + c)^(-p)
-// Generic global prior (active crustal regions, Page et al. 2016): a ~ N(-2.42, 0.5), b = 1, p = 0.98, c = 0.018 d.
+// Prototype prior: a ~ N(-2.42, 0.5), b = 1, p ~ N(0.98, 0.08), c = 0.018 d.
+// One prior is used everywhere; this is NOT USGS's tectonic-region-specific operational forecast.
 // The sequence's own aftershocks update a and p on a grid; forecasts are averaged over that posterior,
 // and Monte Carlo draws (parameter draw + Poisson count) give the spread.
 const MODEL = (() => {
@@ -1038,30 +1042,39 @@ const MODEL = (() => {
   // integral of (t+c)^-p dt from t1 to t2
   function I(t1, t2, p) {
     if (t2 <= t1) return 0;
-    if (Math.abs(p - 1) < 1e-6) return Math.log((t2 + C) / (t1 + C));
-    return (Math.pow(t2 + C, 1 - p) - Math.pow(t1 + C, 1 - p)) / (1 - p);
+    // Avoid cancellation for short windows or p close to 1; use the log limit at p=1.
+    const logRatio = Math.log1p((t2 - t1) / (t1 + C));
+    if (Math.abs(p - 1) < 1e-10) return logRatio;
+    return Math.pow(t1 + C, 1 - p) * Math.expm1((1 - p) * logRatio) / (1 - p);
   }
 
-  // Fit using only events known at time `now` (days since the original mainshock).
+  // Filter by event origin time, in days since the original mainshock. The downloaded
+  // catalogue can contain later revisions, so this is not an as-issued hindcast.
   function fit(events, now) {
+    if (!Number.isFinite(now) || now < 0) throw new RangeError('Forecast time must be non-negative days.');
     const known = events.filter(e => e[0] <= now);
-    // largest shock so far restarts the clock (USGS practice)
+    // Prototype rule: a new largest shock restarts the clock.
     let main = known.filter(e => e[0] >= -0.001).reduce((m, e) => (e[1] > m[1] ? e : m), [0, 0]);
+    if (main[1] === 0) throw new RangeError('No mainshock is available at the forecast time.');
     const tm = main[0], Mm = main[1];
     const T = now - tm;
     const obs = known.filter(e => e[0] > tm + TSTART && e[1] >= MC).map(e => e[0] - tm);
     const n = obs.length;
+    // These are sufficient statistics for the event-time likelihood: calculate them
+    // once rather than looping over the same observations for every grid point.
+    const sumLogTime = obs.reduce((sum, t) => sum + Math.log(t + C), 0);
     const post = [];
     let max = -Infinity;
     for (const a of AG) for (const p of PG) {
       const k = Math.pow(10, a + B * (Mm - MC));
       let ll = -k * I(TSTART, Math.max(TSTART, T), p);
-      for (const t of obs) ll += Math.log(k) - p * Math.log(t + C);
+      ll += n * Math.log(k) - p * sumLogTime;
       ll += -0.5 * ((a - A0) / ASD) ** 2 - 0.5 * ((p - P0) / PSD) ** 2;
       post.push([a, p, ll]);
       if (ll > max) max = ll;
     }
     let z = 0;
+    // Subtracting the maximum log weight prevents underflow while preserving ratios.
     for (const q of post) { q[2] = Math.exp(q[2] - max); z += q[2]; }
     for (const q of post) q[2] /= z;
     let ma = 0, mp = 0;
@@ -1071,13 +1084,14 @@ const MODEL = (() => {
 
   // Expected number of shocks >= M in [now+t1, now+t2] (days from now) for one parameter pair
   function expected(f, a, p, M, t1, t2) {
+    if (!Number.isFinite(t1) || !Number.isFinite(t2) || t1 < 0 || t2 < t1) throw new RangeError('Invalid forecast interval.');
     const s = f.now - f.tm;
     return Math.pow(10, a + B * (f.Mm - M)) * I(s + t1, s + t2, p);
   }
   // Probability of at least one shock >= M, averaged over the posterior
   function prob(f, M, t1, t2) {
     let pr = 0;
-    for (const [a, p, w] of f.post) if (w > 1e-7) pr += w * (1 - Math.exp(-expected(f, a, p, M, t1, t2)));
+    for (const [a, p, w] of f.post) pr += w * -Math.expm1(-expected(f, a, p, M, t1, t2));
     return pr;
   }
   // Monte Carlo: draw parameters from the posterior, then a Poisson count
@@ -1107,7 +1121,7 @@ const MODEL = (() => {
     for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (prob(f, M, mid, mid + 1) < tol) hi = mid; else lo = mid; }
     return hi;
   }
-  return { fit, prob, simulate, reentry, MC, params: { B, C, A0, ASD, P0, PSD, TSTART } };
+  return { fit, prob, simulate, reentry, expected, integral: I, MC, params: { B, C, A0, ASD, P0, PSD, TSTART } };
 })();
 
 </script>
@@ -1117,7 +1131,8 @@ const MODEL = (() => {
 //   sigma = 0.82 + 0.37 / (1 + (R/22.9)^2)
 // Soil term fitted by us to USGS ShakeMap grids: dMMI = K * log10(Vs30/760). K comes from data/site-term-fit.json
 // (npm run fit); build.py swaps the require for the number so the browser build needs no file access.
-// Optional "ShakeMap calibration": USGS ShakeMaps of 26 aftershocks averaged BIAS below the equation.
+// Optional in-sample offset: the event-average gap from 26 aftershock ShakeMaps.
+// This comparison reuses fitted data and does not independently validate the model.
 const SHAKE=(()=>{
   const K=-1.757, BIAS=-0.90, H=10, KERNEL=6, MMAX=8.5;
   function mu(M,R){return 2.085+1.428*M-1.402*Math.log(Math.sqrt(R*R+(-0.209+2.042*Math.exp(M-5))**2))+(R>50?0.078*Math.log(R/50):0)}
@@ -1126,18 +1141,100 @@ const SHAKE=(()=>{
   function Phi(z){const t=1/(1+0.2316419*Math.abs(z)),d=0.3989423*Math.exp(-z*z/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p}
   // table: chance that one M>=5 aftershock (magnitude drawn from Gutenberg-Richter, b=1) at distance R exceeds effective threshold
   const T0=2,T1=12,TS=0.05,RS=0.5,RMAX=400,NT=Math.round((T1-T0)/TS)+1,NR=RMAX/RS+1;
-  const mags=[],wts=[];for(let m=5.0;m<MMAX;m+=0.1){mags.push(m+0.05);wts.push(Math.pow(10,-(m-5))-Math.pow(10,-(m+0.1-5)))}
-  const tab=new Float32Array(NT*NR);
-  for(let i=0;i<NT;i++){const thr=T0+i*TS;for(let j=0;j<NR;j++){const d=j*RS,R=Math.sqrt(d*d+H*H+KERNEL*KERNEL);let s=0;for(let k=0;k<mags.length;k++)s+=wts[k]*(1-Phi((thr-mu(mags[k],R))/sig(R)));tab[i*NR+j]=s}}
-  function g(thrEff,d){let i=Math.round((thrEff-T0)/TS);if(i<0)i=0;if(i>=NT)return 0;let j=Math.round(d/RS);if(j>=NR)return 0;return tab[i*NR+j]}
+  // Integer indices keep floating-point addition from accidentally including a bin above MMAX.
+  const mags=[],wts=[];for(let k=0;k<Math.round((MMAX-5)*10);k++){const m=5+k/10;mags.push(m+0.05);wts.push(Math.pow(10,-(m-5))-Math.pow(10,-(m+0.1-5)))}
+  // Normalise the explicitly truncated M5 <= M < 8.5 distribution.
+  const magMass=wts.reduce((a,b)=>a+b,0);for(let k=0;k<wts.length;k++)wts[k]/=magMass;
+  const m6Rate=wts.reduce((s,w,k)=>s+(mags[k]>=6?w:0),0);
+  // tab6 is the JOINT probability of damage and M6+, not damage conditional on M6+.
+  // Keeping that intersection lets the simulation colour M6+ events without double counting damage.
+  const tab=new Float32Array(NT*NR),tab6=new Float32Array(NT*NR);
+  for(let i=0;i<NT;i++){const thr=T0+i*TS;for(let j=0;j<NR;j++){const d=j*RS,R=Math.sqrt(d*d+H*H+KERNEL*KERNEL);let s=0,s6=0;for(let k=0;k<mags.length;k++){const v=wts[k]*(1-Phi((thr-mu(mags[k],R))/sig(R)));s+=v;if(mags[k]>=6)s6+=v}tab[i*NR+j]=s;tab6[i*NR+j]=s6}}
+  function g(thrEff,d,table=tab){let i=Math.round((thrEff-T0)/TS);if(i<0)i=0;if(i>=NT)return 0;let j=Math.round(d/RS);if(j>=NR)return 0;return table[i*NR+j]}
   // q = chance that a random future M>=5 aftershock produces shaking >= thr at (x,y), averaged over where aftershocks are expected
-  function q(src,x,y,vs,thr,calib){const te=thr-site(vs)-(calib?BIAS:0);let s=0;for(let k=0;k<src.length;k+=2){const dx=src[k]-x,dy=src[k+1]-y;s+=g(te,Math.sqrt(dx*dx+dy*dy))}return s/(src.length/2)}
-  // collapse the forecast posterior to (weight, a, p) list carrying most of the mass
-  function compact(f){const l=f.post.filter(p=>p[2]>1e-5).sort((a,b)=>b[2]-a[2]);let z=0;for(const p of l)z+=p[2];return l.map(p=>[p[2]/z,p[0],p[1]])}
-  function n5(f,a,p,t1,t2){const s=f.now-f.tm,c=0.018,I=(Math.abs(p-1)<1e-6)?Math.log((s+t2+c)/(s+t1+c)):(Math.pow(s+t2+c,1-p)-Math.pow(s+t1+c,1-p))/(1-p);return Math.pow(10,a+(f.Mm-5))*I}
-  function probQ(f,cp,qv,t1,t2){if(qv<=0)return 0;let P=0;for(const [w,a,p] of cp)P+=w*(1-Math.exp(-n5(f,a,p,t1,t2)*qv));return P}
+  function marks(src,x,y,vs,thr,calib){if(!src.length||src.length%2)throw new RangeError('At least one source coordinate pair is required.');const te=thr-site(vs)-(calib?BIAS:0);let damage=0,damageM6=0;for(let k=0;k<src.length;k+=2){const d=Math.hypot(src[k]-x,src[k+1]-y);damage+=g(te,d);damageM6+=g(te,d,tab6)}return{damage:damage/(src.length/2),damageM6:damageM6/(src.length/2),m6:m6Rate}}
+  function q(src,x,y,vs,thr,calib){return marks(src,x,y,vs,thr,calib).damage}
+  // Keep EVERY posterior weight. A fixed-length slice loses uncertainty mass and understates risk.
+  function compact(f){return f.post.map(([a,p,w])=>[w,a,p])}
+  function n5(f,a,p,t1,t2){const s=f.now-f.tm,c=0.018;if(t2<=t1)return 0;const lr=Math.log1p((t2-t1)/(s+t1+c)),I=Math.abs(p-1)<1e-10?lr:Math.pow(s+t1+c,1-p)*Math.expm1((1-p)*lr)/(1-p);return Math.pow(10,a+(f.Mm-5))*I}
+  // Reuse interval rates when shading thousands of map cells with one forecast.
+  // Both the posterior array and forecast identity matter: the same parameters at a
+  // later replay time have different rates. Bound the cache as the curve samples intervals.
+  const rateCache=new WeakMap();
+  function intervalRates(f,cp,t1,t2){let entry=rateCache.get(cp);if(!entry||entry.forecast!==f){entry={forecast:f,intervals:new Map()};rateCache.set(cp,entry)}const cache=entry.intervals,key=t1+'|'+t2;let rates=cache.get(key);if(!rates){rates=cp.map(([,a,p])=>n5(f,a,p,t1,t2));if(cache.size>=128)cache.delete(cache.keys().next().value);cache.set(key,rates)}return rates}
+  function probQ(f,cp,qv,t1,t2){if(qv<=0)return 0;const rates=intervalRates(f,cp,t1,t2);let P=0;for(let i=0;i<cp.length;i++)P+=cp[i][0]*-Math.expm1(-rates[i]*qv);return P}
+  // Quantiles are weighted by posterior mass, not by the number of grid cells.
+  // They describe parameter uncertainty only, rather than all uncertainty in local shaking.
+  function parameterRange(f,cp,qv,t1,t2){const pairs=cp.map(([w,a,p])=>[-Math.expm1(-n5(f,a,p,t1,t2)*qv),w]).sort((a,b)=>a[0]-b[0]);const quantile=target=>{let w=0;for(const [v,weight] of pairs){w+=weight;if(w>=target)return v}return pairs[pairs.length-1][0]};return{low:quantile(.05),high:quantile(.95)}}
   function reentryQ(f,cp,qv,tol){if(probQ(f,cp,qv,0,1)<tol)return 0;let lo=0,hi=400;if(probQ(f,cp,qv,hi,hi+1)>=tol)return Infinity;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(probQ(f,cp,qv,m,m+1)<tol)hi=m;else lo=m}return hi}
-  return {mu,sig,site,q,compact,probQ,reentryQ,n5,K,BIAS,H,KERNEL};
+  // Marked Poisson process from the SAME RJ model as probQ. Counts for disjoint
+  // marks are independent conditional on a,p; sampling whether each is nonzero
+  // is exact for the daily colour chart and needs no count approximation.
+  // RJ is not ETAS: adding a second branching process would change the model.
+  function simulateFutures(f,cp,mark,days=30,n=200,rng=Math.random){
+    if(!Number.isInteger(days)||days<1||!Number.isInteger(n)||n<1)throw new RangeError('Positive integer days and simulations are required.');
+    const mass=cp.reduce((s,c)=>s+c[0],0);if(Math.abs(mass-1)>1e-10)throw new RangeError('Posterior weights must sum to one.');
+    const cdf=[];let acc=0;for(const c of cp){acc+=c[0];cdf.push(acc)}
+    const rows=[];let hits=0;
+    // Draw a,p once per future, preserving uncertainty shared across all its days.
+    // Red uses all damaging events; grey uses the disjoint M6+ AND non-damaging category.
+    // A Poisson process has P(at least one event)=1-exp(-rate), so daily flags are exact
+    // for this model without approximating Poisson counts or enumerating every event.
+    for(let i=0;i<n;i++){const u=rng();let lo=0,hi=cp.length-1;while(lo<hi){const mid=(lo+hi)>>1;if(cdf[mid]<u)lo=mid+1;else hi=mid}const [,a,p]=cp[lo],row=[];
+      for(let d=0;d<days;d++){const rate=n5(f,a,p,d,d+1),damage=rng()<-Math.expm1(-rate*mark.damage),large=rng()<-Math.expm1(-rate*Math.max(0,mark.m6-mark.damageM6));row.push(damage?2:large?1:0)}
+      if(row.includes(2))hits++;rows.push(row)}
+    return{rows,hits,n};
+  }
+  return {mu,sig,site,q,marks,compact,probQ,parameterRange,reentryQ,n5,simulateFutures,K,BIAS,H,KERNEL,MMAX};
+})();
+
+</script>
+<script>// Retrospective checks against the downloaded, revised catalogue. These checks
+// validate regional M5+/M6+ occurrence, not local shaking, damage or safe entry.
+const VALIDATION = (() => {
+  const CHECKS = [0.5, 1, 2, 3, 7, 14, 30, 60];
+  function backtest(sequences, model) {
+    const rows = [];
+    for (const s of sequences) for (const t of CHECKS) {
+      if (t + 7 > s.daysAvailable) continue; // never score a partial outcome window
+      const f = model.fit(s.events, t);
+      for (const magnitude of [5, 6]) rows.push({
+        sequence: s.key, day: t, magnitude,
+        probability: model.prob(f, magnitude, 0, 7),
+        occurred: s.events.some(e => e[0] > t && e[0] <= t + 7 && e[1] >= magnitude)
+      });
+    }
+    return rows;
+  }
+  function summarize(rows, magnitude) {
+    const r = rows.filter(x => x.magnitude === magnitude);
+    if (!r.length) return null;
+    const observed = r.reduce((sum, x) => sum + Number(x.occurred), 0) / r.length;
+    const brier = r.reduce((sum, x) => sum + (x.probability - Number(x.occurred)) ** 2, 0) / r.length;
+    // Descriptive only: this pooled baseline uses the same outcomes being scored.
+    const pooledBrier = r.reduce((sum, x) => sum + (observed - Number(x.occurred)) ** 2, 0) / r.length;
+    // Exclude the entire target sequence when estimating the reference frequency.
+    // Holding out individual windows would leak outcomes from overlapping windows.
+    // Other sequences may occur later, so this reference is not a chronological test.
+    const reference = r.map(x => {
+      const train = r.filter(y => y.sequence !== x.sequence);
+      return train.length ? train.reduce((sum, y) => sum + Number(y.occurred), 0) / train.length : null;
+    });
+    const heldOutBrier = reference.every(x => x !== null)
+      ? r.reduce((sum, x, i) => sum + (reference[i] - Number(x.occurred)) ** 2, 0) / r.length : null;
+    return { magnitude, forecasts: r.length, sequences: new Set(r.map(x => x.sequence)).size,
+      occurrences: Math.round(observed * r.length), observed,
+      meanForecast: r.reduce((sum, x) => sum + x.probability, 0) / r.length,
+      brier, pooledBrier, pooledSkill: pooledBrier > 0 ? 1 - brier / pooledBrier : null,
+      heldOutBrier, heldOutSkill: heldOutBrier > 0 ? 1 - brier / heldOutBrier : null,
+      reliability: [[0, .1], [.1, .3], [.3, .6], [.6, 1.01]].map(([low, high]) => {
+        const bin = r.filter(x => x.probability >= low && x.probability < high);
+        return { low, high: Math.min(1, high), count: bin.length,
+          meanForecast: bin.length ? bin.reduce((s, x) => s + x.probability, 0) / bin.length : null,
+          observed: bin.length ? bin.reduce((s, x) => s + Number(x.occurred), 0) / bin.length : null };
+      }) };
+  }
+  return { CHECKS, backtest, summarize };
 })();
 
 </script>
@@ -1207,7 +1304,8 @@ function pickSeq(i){
 }
 function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('bld').value||'local';
   $('bld').innerHTML=`<option value="local">Typical local building, ${CNAME[cc]||cc} (${ct?R(ct):'VIII'})</option><option value="9">Modern, built to seismic code (IX)</option><option value="8">Reinforced concrete (VIII)</option><option value="7">Older brick, stone or adobe (VII)</option><option value="6">Already cracked or damaged (VI)</option>`;$('bld').value=keep}
-function pinCountry(){if(!loc)return POP.seqCountry[S.key];let best=null,bd=40;for(const t of TOWNS.towns){const d=Math.hypot((t[1]-loc.lat)*110.57,(t[2]-loc.lon)*111.32*G.c);if(d<bd){bd=d;best=t}}return best&&POP.fatality[best[4]]?best[4]:POP.seqCountry[S.key]}
+function countryAt(lat,lon){let best=null,bd=40;for(const t of TOWNS.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lon)*111.32*G.c);if(d<bd){bd=d;best=t}}return best&&POP.fatality[best[4]]?best[4]:POP.seqCountry[S.key]}
+function pinCountry(){return loc?countryAt(loc.lat,loc.lon):POP.seqCountry[S.key]}
 function setLoc(lat,lon,name,doUpdate=true){loc={lat,lon,name};$('town').value=name&&!/^(Dropped|Near)/.test(name)?name:'';if(doUpdate){buildBuildingOptions();update()}}
 map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng))return;let best=null,bd=4;for(const t of B.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lng)*111.32*G.c);if(d<bd){bd=d;best=t}}setLoc(lat,lng,best?`Near ${best[0]}`:'Dropped pin');openPinPopup()});
 
@@ -1224,25 +1322,31 @@ function update(){
   const now=sliderToT(+$('now').value),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
   const t0=Date.parse(S.t0),nowDate=new Date(t0+now*864e5);
   $('clock').innerHTML=`<b>${dur(now)}</b> after · ${fmtDT(nowDate)}`;
-  $('hNote').textContent=`Forecast as of ${fmtDT(nowDate)}`;
-  const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f).slice(0,160),src=sources(now);
+  $('hNote').textContent=`Replay: ${fmtDT(nowDate)}`;
+  $('dataStatus').textContent=`Retrospective snapshot · downloaded ${fmtDate(new Date(D.fetchedAt))} · grid spacing ${(G.dlat*111).toFixed(1)} km. Not a live forecast or street-level survey.`;
+  // Keep the complete posterior here: a fixed-length slice silently understates every
+  // point probability and can move the projected threshold-crossing time too early.
+  const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f),src=sources(now);
   const sp=spot(loc.lat,loc.lon,thrB,calib,src);
   const p24=SHAKE.probQ(f,cp,sp.qv,0,1),p7=SHAKE.probQ(f,cp,sp.qv,0,7),p30=SHAKE.probQ(f,cp,sp.qv,0,30),re=SHAKE.reentryQ(f,cp,sp.qv,tol);
   cur={key:S.key,now,f,cp,src,sp,p24,p7,p30,re,thrB,tol,calib,nowDate};
   $('place').textContent=loc.name;$('coords').textContent=`${loc.lat.toFixed(3)}°, ${loc.lon.toFixed(3)}° · ${Math.round(Math.hypot(sp.x,sp.y))} km from the epicentre`;
   // verdict
   const v=$('verdict'),tolTxt=$('tol').selectedOptions[0].text,lvl=R(sp.thr);
-  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Within your limit</span><p class="big">Reasonable to go back in now</p><p>Chance of intensity ${lvl}+ shaking here in the next 24 h: ${oneIn(p24)}. Your limit is ${tolTxt}.</p>`}
-  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Not within the next year</p><p>The chance stays above ${tolTxt} per day.</p>`}
-  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Wait until ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>${dur(re)} from now. Chance of intensity ${lvl}+ shaking here in the next 24 h: ${oneIn(p24)} (your limit: ${tolTxt}).</p>`}
+  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Model below your limit</span><p class="big">Shaking threshold met at this replay time</p><p>Chance of intensity ${lvl}+ shaking from M5+ aftershocks here in the next 24 h: ${oneIn(p24)}. Your limit is ${tolTxt}.</p>`}
+  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Model above your limit</span><p class="big">Beyond the 400-day search</p><p>The model stays above ${tolTxt} in each 24-hour window.</p>`}
+  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Model above your limit</span><p class="big">Projected threshold: ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>${dur(re)} after the replay time. Chance of intensity ${lvl}+ shaking from M5+ aftershocks here in the next 24 h: ${oneIn(p24)} (your limit: ${tolTxt}).</p>`}
   if(reveal){const near=S.events.filter(e=>e[0]>now&&e[1]>=5).map(e=>{const [x,y]=km(e[2],e[3]);const d=Math.hypot(x-sp.x,y-sp.y);return{e,d,mmi:SHAKE.mu(e[1],Math.sqrt(d*d+100))+SHAKE.site(sp.gv.vs)+(calib?SHAKE.BIAS:0)}}).filter(o=>o.mmi>=sp.thr-0.5).sort((a,b)=>a.e[0]-b.e[0]);
-    v.insertAdjacentHTML('beforeend',`<p><b>What actually happened:</b> ${near.length?`an M${near[0].e[1]} hit ${Math.round(near[0].d)} km away ${dur(near[0].e[0]-now)} later, estimated at intensity ${near[0].mmi.toFixed(1)} here.`:`nothing came close to intensity ${lvl} here in the next ${dur(S.daysAvailable-now)} of data.`}</p>`)}
-  v.insertAdjacentHTML('beforeend',`<p style="font-size:12px;border-top:1px dashed #d8c8b0;padding-top:5px">Covers the chance of more shaking only. A structural check still decides whether the building is safe.</p>`);
+    const remaining=Math.max(0,S.daysAvailable-now);
+    v.insertAdjacentHTML('beforeend',`<p><b>Later catalogue (shaking estimated):</b> ${near.length?`an M${near[0].e[1]} hit ${Math.round(near[0].d)} km away ${dur(near[0].e[0]-now)} later, with modelled intensity ${near[0].mmi.toFixed(1)} here.`:remaining<.001?'No follow-up after this replay time in the snapshot.':`no later M5+ event has estimated shaking near intensity ${lvl} here in the remaining ${dur(remaining)} of data. This does not establish that no damage occurred.`}</p>`)}
+  v.insertAdjacentHTML('beforeend',`<p style="font-size:12px;border-top:1px dashed #d8c8b0;padding-top:5px">This is not permission to enter. An inspection and local authorities determine building safety. The projected time assumes this model continues unchanged; new earthquakes can change it.</p>`);
   // odds
-  $('oddsTitle').textContent=`Chance of intensity ${lvl}+ shaking here`;
+  $('oddsTitle').textContent=`Intensity ${lvl}+ shaking from M5+ aftershocks`;
   $('odds').innerHTML=[['next 24 h',p24],['next 7 days',p7],['next 30 days',p30]].map(([k,p])=>`<div class="odd"><span class="v">${pct(p)}</span><span class="k">${k}</span><span class="bar"><i style="width:${Math.max(1,p*100)}%"></i></span></div>`).join('');
+  const range=SHAKE.parameterRange(f,cp,sp.qv,0,1);
+  $('uncertainty').textContent=`90% parameter range for the next 24 h: ${pct(range.low)}–${pct(range.high)}. Covers fitted rate parameters only; ground, building and model errors add uncertainty.`;
   const qAlt=SHAKE.q(src,sp.x,sp.y,sp.gv.vs,sp.thr,!calib),p7alt=SHAKE.probQ(f,cp,qAlt,0,7);
-  $('alt').innerHTML=`With the ${calib?'felt-report':'ShakeMap-calibrated'} model instead: ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
+  $('alt').innerHTML=`With ${calib?'the unadjusted equation':'the empirical offset'} instead: ${pct(p7alt)} over 7 days. The offset is an in-sample comparison. <button class="src" data-src="shake">source</button>`;
   renderMapCard();renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
@@ -1251,7 +1355,7 @@ function update(){
 function computeHeat(f,cp,src,calib){
   const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=G.lat0-(r+0.5)/rows*(G.lat0-G.lat1),lon=G.lon0+(c+0.5)/cols*(G.lon1-G.lon0);
-    const tb=local?(countryThr(POP.seqCountry[S.key])||8):+$('bld').value;const s=spot(lat,lon,tb,calib,src);P[r*cols+c]=SHAKE.probQ(f,cp,s.qv,0,7)}
+    const tb=local?(countryThr(countryAt(lat,lon))||8):+$('bld').value;const s=spot(lat,lon,tb,calib,src);P[r*cols+c]=SHAKE.probQ(f,cp,s.qv,0,7)}
   return{cols,rows,P}}
 function factorsList(){const sp=cur.sp,gv=sp.gv,cc=pinCountry(),ct=countryThr(cc),amp=SHAKE.site(gv.vs),[cls,clsN]=vsClass(gv.vs);
   let nearest=Infinity;for(let k=0;k<cur.src.length;k+=2)nearest=Math.min(nearest,Math.hypot(cur.src[k]-sp.x,cur.src[k+1]-sp.y));
@@ -1263,9 +1367,9 @@ function factorsList(){const sp=cur.sp,gv=sp.gv,cc=pinCountry(),ct=countryThr(cc
   L.push(['Mainshock shaking here',`${R(gv.mmi)} · ${MMI_NAME[Math.round(gv.mmi)]||''}`,sp.why.includes('mainshock')?'<span class="flag">Likely damaged</span> At or near your building\'s damage level, so the threshold drops one level.':'Below your building\'s damage level.','shakemap']);
   if(gv.liq!=null)L.push(['Liquefaction (mainshock)',pct(gv.liq),gv.liq>=0.1?'<span class="flag">High</span> Ground that liquefies can tilt or sink foundations, so the building is treated as weakened. Common near rivers, coasts and on soft soil.':'Share of nearby ground the USGS model expects to have liquefied. Low here.','gf']);
   if(gv.ls!=null)L.push(['Landslides (mainshock)',pct(gv.ls),gv.ls>=0.05?'<span class="flag">High</span> Slopes here are prone to sliding. Aftershocks can trigger more.':'Share of nearby ground the USGS model expects to have slid. Low here.','gf']);
-  L.push(['How prepared the country is',`${CNAME[cc]||cc}`,fr!=null?`In past earthquakes here, about ${oneIn(fr).replace('about ','')} people exposed to intensity VIII died (USGS PAGER). Typical buildings start failing around ${R(ct)}.`:'No PAGER model for this country.','pager']);
+  L.push(['Country vulnerability proxy',`${CNAME[cc]||cc}`,fr!=null?`USGS PAGER models an intensity VIII fatality rate of ${oneIn(fr)} among exposed people. The prototype maps this model to intensity ${R(ct)} (our rule), not a measured building damage threshold.`:'No PAGER model for this country.','pager']);
   if(EX[S.key]&&EX[S.key].pager&&EX[S.key].pager.struct)L.push(['Common building types','PAGER',EX[S.key].pager.struct.replace(/^Overall, /,'').replace(/\s+/g,' '),'pager']);
-  L.push(['Distance to coast',coast<400?`${coast<1?coast.toFixed(1):Math.round(coast)} km`:'inland',coast<5?`<span class="flag">Tsunami</span> An M7+ aftershock offshore could cause a tsunami. Chance of an M7+ anywhere in the area this week: ${pct(p7M7)}. If you feel strong shaking, move inland or uphill.`:'Far enough from the sea that tsunami isn\'t a concern.','catalogue']);
+  L.push(['Distance to coast',coast<400?`${coast<1?coast.toFixed(1):Math.round(coast)} km`:'inland',coast<5?`<span class="flag">Tsunami</span> This is coastal proximity, not a tsunami forecast. Regional M7+ probability over 7 days (not tsunami probability): ${pct(p7M7)}. After strong or long coastal shaking, move inland or uphill once shaking stops.`:'Distance alone cannot rule out tsunami exposure. Use official inundation maps and warnings.','catalogue']);
   return L}
 function renderFactors(){$('factors').innerHTML=factorsList().map(([k,v,d,s])=>`<li><span class="fk">${k}</span><span class="fv">${v}</span><span class="fd">${d} <button class="src" data-src="${s}">source</button></span></li>`).join('')}
 function renderAround(){const sel=[...document.querySelectorAll('#around input:checked')].map(i=>i.value);
@@ -1314,7 +1418,7 @@ function drawTowns(){townLayer.clearLayers();if(!$('showT').checked||!cur.f||cur
 map.on('zoomend',()=>{if(S)drawTowns()});
 let pinMarker=null;
 function drawPin(){pinLayer.clearLayers();pinMarker=L.marker([loc.lat,loc.lon],{icon:pinIcon,keyboard:false}).addTo(pinLayer);pinMarker.bindPopup(pinPopupHtml)}
-function pinPopupHtml(){const c=cur;return `<div class="pp-h">${loc.name}</div>Damaging shaking (intensity ${R(c.sp.thr)}+):<br><b>${pct(c.p24)}</b> next 24 h · <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Re-entry within your limit now':c.re===Infinity?'Not within a year at your limit':'Re-entry: '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
+function pinPopupHtml(){const c=cur;return `<div class="pp-h">${loc.name}</div>Damaging shaking (intensity ${R(c.sp.thr)}+):<br><b>${pct(c.p24)}</b> next 24 h · <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Model below your limit; not building clearance':c.re===Infinity?'Beyond the 400-day search':'Projected model threshold: '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
 function openPinPopup(){if(pinMarker)pinMarker.openPopup()}
 function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]?$('bld').selectedOptions[0].text.split(/ \(|,/)[0].toLowerCase():'';
   const spec={risk:[`Chance of damaging shaking, next 7 days (${bld})`,['0.3%','2%','10%','40%']],mmi:['Mainshock intensity (USGS ShakeMap)',['IV','VI','VIII','IX']],vs:['Vs30: lower = softer ground, more shaking',['150','400','900 m/s']],liq:['Liquefaction in the mainshock (USGS ground failure)',['2%','8%','20%+']],ls:['Landslides in the mainshock (USGS ground failure)',['1%','4%','12%+']],none:null}[layer];
@@ -1345,24 +1449,15 @@ function drawCurve(){const {f,cp,sp,tol,re}=cur,box=$('curve');box.innerHTML='';
   const tip=tipper(box),cross=el('line',{y1:m.t,y2:H-m.b,stroke:'#7a838f',opacity:0},svg),ov=el('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:'transparent'},svg);
   ov.onmousemove=ev=>{const b=svg.getBoundingClientRect(),s=b.width/W,x=(ev.clientX-b.left)/s,t=Math.max(0,Math.min(span,(x-m.l)/(W-m.l-m.r)*span)),p=SHAKE.probQ(f,cp,sp.qv,t,t+1);cross.setAttribute('x1',X(t));cross.setAttribute('x2',X(t));cross.setAttribute('opacity',1);tip.show(X(t)*s,Y(Math.min(p,ymax))*s,`+${dur(t)}: ${pct(p)} in 24 h`)};
   ov.onmouseleave=()=>{cross.setAttribute('opacity',0);tip.hide()}}
-// Monte Carlo: posterior draw -> daily Poisson counts of M5+ -> magnitude (GR) -> source near past quakes -> shaking at the spot with scatter; big ones trigger their own
+// Monte Carlo daily marks use exactly the same posterior and shaking table as the formula.
 function simulate(n=200,days=30){const {f,cp,src,sp,calib}=cur;let seed=7;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
-  const gauss=()=>Math.sqrt(-2*Math.log(rng()||1e-9))*Math.cos(2*Math.PI*rng());const pois=l=>{if(l>30)return Math.max(0,Math.round(l+Math.sqrt(l)*gauss()));let k=0,p=1,L0=Math.exp(-l);do{k++;p*=rng()}while(p>L0);return k-1};
-  const cdf=[];let a0=0;for(const c of cp){a0+=c[0];cdf.push(a0)}const ns=src.length/2,site=SHAKE.site(sp.gv.vs)+(calib?SHAKE.BIAS:0);
-  const rows=[];let hits=0;
-  for(let s=0;s<n;s++){const u=rng()*a0;let j=cdf.findIndex(x=>x>=u);if(j<0)j=cdf.length-1;const [,a,p]=cp[j];const row=new Array(days).fill(0);const queue=[];
-    for(let d=0;d<days;d++){const k=pois(SHAKE.n5(f,a,p,d,d+1));for(let i=0;i<k;i++){const pk=Math.floor(rng()*ns);queue.push({t:d+rng(),m:Math.min(8.5,5-Math.log10(rng()||1e-9)),x:src[2*pk]+gauss()*6,y:src[2*pk+1]+gauss()*6,gen:0})}}
-    for(let qi=0;qi<queue.length;qi++){const e=queue[qi];if(e.t>=days)continue;
-      if(e.gen===0&&e.m>=5.5){const T=days-e.t,N=Math.pow(10,-2.42+(e.m-5))*Math.log((T+0.018)/0.018),kk=pois(N);for(let i=0;i<kk;i++){const tt=0.018*(Math.pow((T+0.018)/0.018,rng())-1);queue.push({t:e.t+tt,m:Math.min(8.5,5-Math.log10(rng()||1e-9)),x:e.x+gauss()*8,y:e.y+gauss()*8,gen:1})}}
-      const d=Math.floor(e.t),dist=Math.hypot(e.x-sp.x,e.y-sp.y),Rh=Math.sqrt(dist*dist+100),mmi=SHAKE.mu(e.m,Rh)+site+SHAKE.sig(Rh)*gauss();
-      if(mmi>=sp.thr)row[d]=2;else if(e.m>=6&&row[d]<1)row[d]=1}
-    if(row.includes(2))hits++;rows.push(row)}
-  return{rows,hits,n}}
+  const mark=SHAKE.marks(src,sp.x,sp.y,sp.gv.vs,sp.thr,calib);
+  return SHAKE.simulateFutures(f,cp,mark,days,n,rng)}
 function drawSims(){const box=$('sims');box.innerHTML='';const sim=simulate(),W=Math.max(box.clientWidth,260),show=50,ch=4,gap=1,m={l:6,r:6,t:4,b:22},H=m.t+show*(ch+gap)+m.b;
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Simulated futures'},box);const cw=(W-m.l-m.r)/30;
   sim.rows.slice(0,show).forEach((row,i)=>row.forEach((v,d)=>{el('rect',{x:m.l+d*cw+.5,y:m.t+i*(ch+gap),width:Math.max(1,cw-1),height:ch,fill:v===2?'#c2391b':v===1?'#9aa3ad':'#eceef1'},svg)}));
   const ax=el('g',{class:'axis'},svg);for(const d of [0,7,14,21,29])el('text',{x:m.l+d*cw+cw/2,y:H-6,'text-anchor':'middle'},ax).textContent=d===0?'day 1':'day '+(d+1);
-  $('simNote').innerHTML=`Damaging shaking here in <b>${sim.hits} of ${sim.n}</b> simulated months (${pct(sim.hits/sim.n)}). The formula says ${pct(cur.p30)}. The simulation adds aftershocks of aftershocks, so it runs a bit higher.`}
+  $('simNote').innerHTML=`Damaging shaking here in <b>${sim.hits} of ${sim.n}</b> simulated months (${pct(sim.hits/sim.n)}). The formula says ${pct(cur.p30)}. Both use the same model; differences here are Monte Carlo sampling noise, not evidence of accuracy.`}
 
 // ---------- side lists ----------
 function renderEvents(){$('evlist').innerHTML=SEQ.map((s,i)=>`<li data-i="${i}" ${s===S?'aria-current="true"':''}><span class="m">${s.M.toFixed(1)}</span><span class="t">${s.label}${s.key.endsWith('26')?' · ongoing':''}</span><span class="s">${fmtDate(new Date(s.t0))} · ${s.events.length} M4+ quakes</span></li>`).join('');
@@ -1386,28 +1481,30 @@ function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
 function renderLedger(){const sm=D.shakemaps[S.key],ex=EX[S.key]||{},gi=ex.gfInfo||{},pg=ex.pager;const res=`${(sm.dlat*111).toFixed(1)} km`;
   const rows=[
    ['catalogue','Quakes: times, places, sizes',`USGS ComCat: <a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">event ${S.id}</a> and ${S.events.length} M4+ quakes within ${S.radiusKm} km`,'Used as recorded. Fetched '+fmtDate(new Date(D.fetchedAt))+'.'],
-   ['rate','How many aftershocks','Reasenberg & Jones (1989), with global starting values from Page et al. (2016), the basis of USGS aftershock forecasts','Updated by Bayes\' rule with this sequence\'s M5+ aftershocks before "now".'],
-   ['shake','How hard a quake shakes a spot','Allen, Wald & Worden (2012) intensity equation, <a href="https://docs.openquake.org/oq-engine/master/manual/_modules/openquake/hazardlib/gsim/allen_2012_ipe.html" target="_blank" rel="noopener">as implemented in OpenQuake</a>',`Used as published, including its scatter. The "ShakeMap-calibrated" option shifts it by ${SHAKE.BIAS}, the average gap measured on 26 aftershock ShakeMaps.`],
-   ['vs30','Ground softness (Vs30)',`USGS ShakeMap grid, version ${sm.version}, cell size about ${res}`,`Soil effect of ${SITEFIT.k} intensity per tenfold change in Vs30 (90% range ${SITEFIT.k90[0]} to ${SITEFIT.k90[1]}), fitted by us to ${SITEFIT.cells.toLocaleString()} cells across 13 ShakeMaps.`],
-   ['shakemap','Mainshock shaking at your spot',`USGS ShakeMap version ${sm.version}: ${sm.stations} seismic stations and ${sm.obs.toLocaleString()} "Did You Feel It?" reports, plus USGS models`,'Read at your location.'],
+   ['rate','How many aftershocks','Reasenberg & Jones (1989), with global starting values from Page et al. (2016), the basis of USGS aftershock forecasts','Prototype Bayesian fit to M5+ events before the replay time. One prior everywhere, not the regional USGS operational forecast; no ETAS secondary triggering.'],
+   ['shake','How hard a quake shakes a spot','Allen, Wald & Worden (2012) active-crust intensity equation, <a href="https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/allen_2012_ipe.py" target="_blank" rel="noopener">GEM OpenQuake reference</a>',`Includes its scatter plus our fitted soil term. The empirical-offset option adds ${SHAKE.BIAS}, chosen from 26 aftershock ShakeMaps; not an independent calibration.`],
+   ['vs30','Ground softness (Vs30)',`USGS ShakeMap grid, version ${sm.version}, cell size about ${res}`,`Soil effect of ${SITEFIT.k} intensity per tenfold change in Vs30 (90% event-bootstrap range ${SITEFIT.k90[0]} to ${SITEFIT.k90[1]}), fitted to ${SITEFIT.cells.toLocaleString()} cells across 13 mainshock ShakeMaps using a rupture-distance equation and rupture proxy. Transfer to the hypocentral aftershock equation is experimental.`],
+   ['shakemap','Mainshock shaking at your spot',`USGS ShakeMap version ${sm.version}: ${sm.stations} seismic stations and ${sm.obs.toLocaleString()} "Did You Feel It?" reports, plus USGS models`,`Read at your location. Processed ${sm.processed || 'date unavailable'}; may postdate the replay time.`],
    ['gf','Liquefaction and landslides',gi.lqModel?`USGS ground failure, version ${gi.version}: ${gi.lqModel} (liquefaction) and ${gi.lsModel} (landslides)`:'USGS ground failure product','Read at your location. If 10% or more of the ground is expected to have liquefied, the building counts as weakened (our rule).'],
-   ['pager','How prepared the country is',`USGS PAGER empirical fatality model (Jaiswal & Wald), country curves from the <a href="https://github.com/usgs/pager" target="_blank" rel="noopener">PAGER code</a>${pg?'; building notes from the PAGER report':''}`,'For "typical local building", damage starts at the intensity where the country\'s fatality rate reaches 1 in 10,000 (our rule).'],
+   ['pager','Country vulnerability proxy',`USGS PAGER empirical fatality model (Jaiswal & Wald), country curves from the <a href="https://github.com/usgs/pager" target="_blank" rel="noopener">PAGER code</a>${pg?'; building notes from the PAGER report':''}`,'Prototype threshold: intensity at a modelled fatality rate of 1 in 10,000, clamped to VI–9.5. This is not a building fragility model. Country is approximated from the nearest town within 40 km, with a sequence-country fallback.'],
    ['mmi','When buildings get damaged','Modified Mercalli Intensity scale descriptions (USGS)','Fixed thresholds for the other building types.'],
    ['people','Population','GeoNames populated places (all-the-cities) and USGS PAGER exposure','Town populations are point counts; PAGER is the official gridded estimate.'],
+   ['validation','Validation scope','Regional M5+/M6+ occurrence checks on revised catalogue data','No independent validation of point shaking, building damage or re-entry. Overlapping forecast windows are correlated; later ShakeMaps and fitted soil terms are retrospective.'],
    ['map','Map','Natural Earth coastlines and borders (world-atlas)','Clipped to the area.']];
   $('ledger').innerHTML='<tr><th>Number</th><th>Source</th><th>What we did</th></tr>'+rows.map(r=>`<tr id="src-${r[0]}"><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
 function bindSrc(){document.querySelectorAll('.src').forEach(b=>b.onclick=()=>{selectTab('sources');const row=$('src-'+b.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})})}
 
 // ---------- accuracy ----------
-function accuracy(){const checks=[0.5,1,2,3,7,14,30,60],rows=[];
-  for(const s of SEQ)for(const t of checks){if(t+7>s.daysAvailable)continue;const f=MODEL.fit(s.events,t);for(const M of [5,6])rows.push({M,p:MODEL.prob(f,M,0,7),hap:s.events.some(e=>e[0]>t&&e[0]<=t+7&&e[1]>=M)})}
-  let h='<tr><th>Model said</th><th class="num">M5+</th><th class="num">happened</th><th class="num">M6+</th><th class="num">happened</th></tr>';
-  for(const [lo,hi,lab] of [[0,.1,'Under 10%'],[.1,.3,'10–30%'],[.3,.6,'30–60%'],[.6,1.01,'Over 60%']]){h+=`<tr><td>${lab}</td>`;for(const M of [5,6]){const b=rows.filter(r=>r.M===M&&r.p>=lo&&r.p<hi);h+=`<td class="num">${b.length}</td><td class="num">${b.length?Math.round(b.filter(r=>r.hap).length/b.length*100)+'%':'–'}</td>`}h+='</tr>'}
-  const sk=M=>{const r=rows.filter(x=>x.M===M),base=r.filter(x=>x.hap).length/r.length,br=r.reduce((a,x)=>a+(x.p-(x.hap?1:0))**2,0)/r.length,bb=r.reduce((a,x)=>a+(base-(x.hap?1:0))**2,0)/r.length;return 1-br/bb};
-  $('bt').innerHTML=h;$('btNote').innerHTML=`Skill compared with always guessing the average (0 = no better, 1 = perfect): <b>M5+ ${sk(5).toFixed(2)}</b>, <b>M6+ ${sk(6).toFixed(2)}</b>.`;
+let validationRows=null;
+function accuracy(){const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));
+  const stats=[5,6].map(m=>VALIDATION.summarize(rows,m));
+  let h='<tr><th>Forecast band</th><th class="num">M5+ n / observed</th><th class="num">M6+ n / observed</th></tr>';
+  for(let i=0;i<4;i++){h+=`<tr><td>${['Under 10%','10–30%','30–60%','60–100%'][i]}</td>`;for(const st of stats){const bin=st.reliability[i];h+=`<td class="num">${bin.count} / ${bin.count?Math.round(bin.observed*100)+'%':'–'}</td>`}h+='</tr>'}
+  $('bt').innerHTML=h;
+  $('btNote').innerHTML=stats.map(st=>`M${st.magnitude}+: <b>Brier ${st.brier.toFixed(3)}</b>; reference ${st.heldOutBrier.toFixed(3)}; skill <b>${st.heldOutSkill.toFixed(2)}</b>.`).join('<br>')+`<br>${stats[0].forecasts} seven-day forecasts per magnitude across ${stats[0].sequences} sequences. Reference: event frequency estimated from the other sequences, excluding the entire target sequence. Lower Brier is better; negative skill is worse than the reference. This is not a chronological holdout test.`;
   const name={};SEQ.forEach(s=>name[s.key]=s.label.split(',')[0]);const mean=AFT.reduce((a,b)=>a+b.bias,0)/AFT.length;
-  $('aft').innerHTML='<tr><th>Aftershock</th><th class="num">Under 15 km</th><th class="num">15–100 km</th><th class="num">Reports</th></tr>'+[...AFT].sort((a,b)=>b.M-a.M).slice(0,10).map(a=>{const far=((a.bins['15-40']??0)+(a.bins['40-100']??0))/2,nr=a.bins['<15'];return `<tr><td>M${a.M} ${name[a.seq]}</td><td class="num">${nr!=null?(nr>0?'+':'')+nr.toFixed(1):'–'}</td><td class="num">${far>0?'+':''}${far.toFixed(1)}</td><td class="num">${a.obs}</td></tr>`}).join('');
-  $('aftNote').innerHTML=`Average gap across all ${AFT.length}: <b>${mean.toFixed(2)}</b> intensity. The best-reported aftershock (Türkiye M6.3, 449 reports) shook harder than the equation within 15 km, so the cautious equation is the default.`}
+  $('aft').innerHTML='<tr><th>Aftershock</th><th class="num">Under 15 km</th><th class="num">15–100 km*</th><th class="num">Reports</th></tr>'+[...AFT].sort((a,b)=>b.M-a.M).slice(0,10).map(a=>{const farBins=[a.bins['15-40'],a.bins['40-100']].filter(Number.isFinite),far=farBins.length?farBins.reduce((a,b)=>a+b,0)/farBins.length:null,nr=a.bins['<15'];return `<tr><td>M${a.M} ${name[a.seq]}</td><td class="num">${nr!=null?(nr>0?'+':'')+nr.toFixed(1):'–'}</td><td class="num">${far!=null?(far>0?'+':'')+far.toFixed(1):'–'}</td><td class="num">${a.obs}</td></tr>`}).join('');
+  $('aftNote').innerHTML=`Mean of event-average gaps across all ${AFT.length} (not a held-out calibration): <b>${mean.toFixed(2)}</b> intensity. The best-reported aftershock (Türkiye M6.3, 449 reports) shook harder than the equation within 15 km, so the unadjusted equation is the default. The soil coefficient and optional offset were fitted or chosen using these events; these comparisons are not independent validation. *Far-distance column is an unweighted mean of available distance-bin means.`}
 
 // ---------- check-ins (opt-in, shared via the artifact database) ----------
 let ciDB=null,ciUser=null,ciUid=null,ciDocs=[],ciNames={};
@@ -1473,28 +1570,27 @@ const STEPS=[
   b:()=>`<p>The purple is how hard the ground shook. About <b>${fmtN(pagerAtLeast(8))} people</b> felt severe shaking or worse.</p><p>Within hours, millions are outside in winter, asking one question: <b>when is it safe to go back in?</b> Nobody can tell them.</p>`},
  {t:'Pick a spot. Get an answer.',
   go(){setLayer('risk');setDays(0.3);goTown('Kahramanmaraş');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8});pulse('mapcard')},
-  b:()=>`<p>Seven hours in, for a typical local building in <b>${esc(loc.name)}</b>: a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>The shading is that 7-day chance everywhere. The card gives a <b>time</b> when going back in fits your risk level.</p>`},
+  b:()=>`<p>Seven hours in, for a typical local building in <b>${esc(loc.name)}</b>: a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>The shading is that 7-day chance everywhere. The card gives a <b>projected time</b> when modelled shaking drops below your limit; an inspection still determines re-entry.</p>`},
  {t:'Then, nine hours after the first quake…',
   async go(){setLayer('risk');goTown('Elbistan');setDays(0.3);update();map.flyTo([38.1,37.15],8,{duration:.6});
     await animateDays(0.3,0.5,2600);
     tourPopup=L.popup({closeButton:false,autoPan:false}).setLatLng([38.011,37.196]).setContent('<div class="pp-h">M7.5, 9 hours later</div>A second huge quake, 90 km north.').openOn(map)},
   b:()=>`<p>An <b>M7.5</b> struck near Elbistan. Two hours before it, the model gave an M7+ anywhere in the region about a <b>${pct(MODEL.prob(MODEL.fit(S.events,0.3),7,0,1))}</b> chance in the next 24 hours: unlikely, but far from zero.</p><p>This is why a single "all clear" is dangerous, and why the forecast updates as every new quake arrives.</p>`},
- {t:'Same town, different streets.',
+ {t:'Same town, different ground.',
   go(){if(tourPopup){map.closePopup(tourPopup);tourPopup=null}setLayer('vs');setDays(1);goTown('Kâhta');update();map.flyTo([loc.lat,loc.lon],11,{duration:.8});selectTab('spot');L.circle([loc.lat,loc.lon],{radius:3000,color:'#c2391b',weight:2,dashArray:'6 5',fill:false,interactive:false}).addTo(tourLayer)},
   b:()=>{return `<p>Darker brown is softer ground, which shakes harder. Around <b>Kâhta</b>, firm and soft ground sit side by side, and parts of town shook harder than others in the mainshock.</p><p>Inside the dashed 3 km circle, the 7-day chance of damaging shaking ranges from <b>${localRangeText()}</b>. A city-wide warning can't capture that.</p>`}},
  {t:'Same shaking, different countries.',
   go(){setLayer('risk');goSeq('noto');setDays(1);goTown('Wajima');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>Japan builds for earthquakes. In the USGS PAGER casualty record, severe shaking (VIII) killed about <b>${rateTxt(fatRate('TR',8))}</b> exposed people in Türkiye, but about <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>So the same forecast becomes a different decision. A typical building in Wajima is treated as damaged from <b>${R(countryThr('JP'))}</b>, compared with <b>${R(countryThr('TR'))}</b> in Türkiye.</p>`},
+  b:()=>`<p>The USGS PAGER model estimates intensity VIII fatality rates of about <b>${rateTxt(fatRate('TR',8))}</b> in Türkiye and <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>This prototype converts those rates to intensity thresholds: <b>${R(countryThr('JP'))}</b> in Japan and <b>${R(countryThr('TR'))}</b> in Türkiye. This is our heuristic, not a measure of an individual building or its inspection status.</p>`},
  {t:'Does it actually work?',
   go(){goSeq('turkey');setLayer('risk');setDays(1);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.6});selectTab('accuracy')},
-  b:()=>`<p>We replayed all 13 earthquakes, forecasting each week using only the data available at the time. For M5+ aftershocks the model scores <b>${skillTxt(5)}</b> (0 = guessing the average, 1 = perfect).</p><p>For the biggest ones it's only roughly right. We show that openly, and default to the more cautious of two shaking models.</p>`},
+  b:()=>{const st=VALIDATION.summarize(validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL)),5);return `<p>We scored ${st.forecasts} complete seven-day forecast windows across ${st.sequences} of the ${SEQ.length} earthquakes, using earlier origin times in a revised catalogue. For M5+ the model scores <b>${skillTxt(5)}</b> (0 = the other-sequence reference, 1 = perfect).</p><p>M6+ occurrence performs worse than the reference. This does not validate local shaking, damage or safe entry.</p>`}},
  {t:'Built for the people waiting outside.',
   go(){setLayer('risk');selectTab('people');update()},
-  b:()=>`<p>Population per town, how many people are at risk this week, and opt-in <b>"I'm safe" / "I need help"</b> check-ins on a shared map.</p><p>Everything runs on free, public USGS data, so it works for the <b>next</b> big earthquake within hours of it happening.</p>`}
+  b:()=>`<p>Population per town, how many people are at risk this week, and opt-in <b>"I'm safe" / "I need help"</b> check-ins on a shared map.</p><p>The bundled USGS data can be refreshed with the download script. Live ingestion and a validated operational forecast are future work.</p>`}
 ];
 let skillCache={};
-function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const checks=[0.5,1,2,3,7,14,30,60],r=[];for(const s of SEQ)for(const t of checks){if(t+7>s.daysAvailable)continue;const f=MODEL.fit(s.events,t);r.push({p:MODEL.prob(f,M,0,7),h:s.events.some(e=>e[0]>t&&e[0]<=t+7&&e[1]>=M)})}
-  const base=r.filter(x=>x.h).length/r.length,br=r.reduce((a,x)=>a+(x.p-(x.h?1:0))**2,0)/r.length,bb=r.reduce((a,x)=>a+(base-(x.h?1:0))**2,0)/r.length;return skillCache[M]=(1-br/bb).toFixed(2)}
+function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));return skillCache[M]=VALIDATION.summarize(rows,M).heldOutSkill.toFixed(2)}
 function pagerAtLeast(m){const p=EX[S.key]&&EX[S.key].pager;if(!p)return 0;return p.exposure.filter(r=>r[0]>=m-0.5).reduce((a,r)=>a+r[2],0)}
 function localRangeText(){const r=localRangeNow();return `${pct(r.min)} on ${r.minTxt} to ${pct(r.max)} on ${r.maxTxt}`}
 function localRangeNow(){let mn=1,mx=0,mnv=0,mxv=0;const c=cur;for(let dy=-3;dy<=3;dy+=0.9)for(let dx=-3;dx<=3;dx+=0.9){if(dx*dx+dy*dy>9)continue;const lat=loc.lat+dy/110.57,lon=loc.lon+dx/(111.32*G.c),gv=gridAt(lat,lon);if(!gv||!gv.vs)continue;
