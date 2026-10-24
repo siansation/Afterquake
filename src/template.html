@@ -39,6 +39,7 @@ a{color:var(--link)}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .pane{overflow:auto;flex:1;padding:14px;padding-left:max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
 .pane[hidden]{display:none!important}
+.pane>*,.wpane>*{flex-shrink:0} /* lists clip their overflow, so without this they squash to fit instead of the panel scrolling */
 h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);margin:0}
 h3{font-size:15px;margin:0}
 .muted{color:var(--mute);font-size:12.5px;margin:0}
