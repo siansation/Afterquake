@@ -107,11 +107,11 @@ const askHtml = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*
 function addAskEntry(q) {
   const el = document.createElement('div'); el.className = 'ask-entry';
   el.innerHTML = `<p class="ask-q">${esc(q)}</p><p class="ask-a muted">Checking the forecast…</p>`;
-  $('askLog').appendChild(el); el.scrollIntoView({ block: 'nearest' });
+  const log = $('askLog'); log.appendChild(el); log.scrollTop = log.scrollHeight;
   const a = el.querySelector('.ask-a');
   return {
     answer(text, checked) { a.className = 'ask-a'; a.innerHTML = askHtml(text);
-      if (checked.length) el.insertAdjacentHTML('beforeend', `<p class="ask-checked">Checked: ${checked.map(esc).join('; ')}</p>`); el.scrollIntoView({ block: 'nearest' }) },
+      if (checked.length) el.insertAdjacentHTML('beforeend', `<p class="ask-checked">Checked: ${checked.map(esc).join('; ')}</p>`); $('askLog').scrollTop = $('askLog').scrollHeight },
     fail(msg) { a.className = 'ask-a ask-err'; a.textContent = msg },
   };
 }
@@ -145,5 +145,10 @@ async function ask(q) {
     entry.fail(e.message === 'Failed to fetch' ? 'Could not reach the assistant. Check the internet connection.' : e.message);
   } finally { ASK.busy = false; $('askBtn').disabled = false }
 }
+// The chat bubble in the bottom-left corner of the map opens and closes the panel.
+function setAskOpen(open) { $('askPanel').hidden = !open; $('askOpen').setAttribute('aria-expanded', String(open)); if (open) $('askInput').focus({ preventScroll: true }); else $('askOpen').focus({ preventScroll: true }) }
+$('askOpen').onclick = () => setAskOpen($('askPanel').hidden);
+$('askClose').onclick = () => setAskOpen(false);
+$('askPanel').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); setAskOpen(false) } });
 $('askForm').onsubmit = e => { e.preventDefault(); ask($('askInput').value) };
 document.querySelectorAll('#askSuggest button').forEach(b => b.onclick = () => ask(b.textContent));

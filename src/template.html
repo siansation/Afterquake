@@ -175,7 +175,7 @@ details summary{cursor:pointer;font-weight:600}
 .wbox .wbtns .btn{padding:7px 14px}
 .wbox .fine{font-size:13px;color:var(--mute);margin:14px 0 0}
 .kbd{font-size:12px;border:1px solid #8d98a3;border-radius:2px;padding:0 4px;background:#f5f6f7}
-@media (max-width:860px){.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
+@media (max-width:860px){.askwrap{bottom:96px}.askpanel{width:100%}.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
 @media (max-width:860px){.legend .keys{display:none}.legend{bottom:auto;top:10px;right:auto;left:56px;max-width:190px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
 .method p{font-size:14px;color:var(--ink2);margin:6px 0}
 .ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line2)}
@@ -190,10 +190,22 @@ details summary{cursor:pointer;font-weight:600}
 .changes-list li+li{margin-top:4px}
 #map.picking-comparison,#map.picking-comparison .leaflet-interactive{cursor:crosshair}
 #pickComparison[aria-pressed="true"]{background:var(--link);border-color:var(--link);color:#fff}
+.askwrap{position:absolute;left:10px;bottom:84px;z-index:650;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:calc(100% - 20px)}
+.tour:not([hidden]) ~ .askwrap{display:none}
+.askopen{width:46px;height:46px;border-radius:50%;border:0;background:var(--bar);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.askopen:hover{background:#33434f}
+.askopen[aria-expanded="true"]{background:var(--link)}
+.askpanel{width:340px;max-width:100%;padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:min(520px,calc(100vh - 260px))}
+.askpanel[hidden]{display:none}
+.askhead{display:flex;justify-content:space-between;align-items:center;font-size:14.5px}
+.askx{border:0;background:none;cursor:pointer;color:var(--mute);font-size:16px;line-height:1;padding:2px 4px}
 .askrow{display:flex;gap:8px}
 .askrow input{flex:1}
+#askSuggest{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 #askSuggest .btn{font-size:13px;padding:3px 8px;text-align:left}
-#askLog{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto}
+#askLog:not(:empty) ~ #askSuggest{display:none}
+#askLog{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;flex:1}
+.askfine{margin:0;font-size:12px;color:var(--mute)}
 #askLog:empty{display:none}
 .ask-entry{border-top:1px solid var(--line2);padding-top:8px}
 .ask-entry:first-child{border-top:0;padding-top:0}
@@ -207,7 +219,7 @@ details summary{cursor:pointer;font-weight:600}
 body.world #globeWrap{display:block}
 #globe{position:absolute;inset:0;width:100%;height:100%;touch-action:none;outline:none}
 #globe:focus-visible{outline:2px solid #2491ff;outline-offset:-3px}
-body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .tour,body.world #hMag,body.world #worldBtn{display:none!important}
+body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .tour,body.world .askwrap,body.world #hMag,body.world #worldBtn{display:none!important}
 .wpane{overflow:auto;flex:1;padding:12px 14px 20px;padding-left:max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:9px}
 body:not(.world) .wpane{display:none}
 .wfilter{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px}
@@ -312,13 +324,6 @@ body:not(.world) .wpane{display:none}
           <select id="tol" hidden><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select>
           <span class="muted" id="tolHint"></span></div>
         <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Standard equation</option><option value="1">Adjusted to past ShakeMaps (in-sample)</option></select></div>
-      </div>
-      <div class="card" id="askCard">
-        <h2>Ask about this forecast</h2>
-        <div id="askLog" aria-live="polite"></div>
-        <form class="askrow" id="askForm"><input type="text" id="askInput" maxlength="300" autocomplete="off" placeholder="Ask a question about this spot" aria-label="Question about this forecast"><button class="btn primary" id="askBtn">Ask</button></form>
-        <div class="row" id="askSuggest"><button type="button" class="btn">What if I'm only inside for 20 minutes?</button><button type="button" class="btn">Why is the risk at this level here?</button><button type="button" class="btn">When does it drop below my limit?</button></div>
-        <p class="muted">Answered by Google Gemini using this page's forecast; what it checked is listed under each answer. It can be wrong, and it cannot clear a building for entry.</p>
       </div>
       <div class="card" id="comparisonCard">
         <h2>Compare two places</h2>
@@ -451,6 +456,16 @@ body:not(.world) .wpane{display:none}
       </div>
     </div>
     <div class="ctl tour" id="tour" hidden aria-live="polite"></div>
+    <div class="askwrap" id="askWrap">
+      <section class="ctl askpanel" id="askPanel" hidden aria-label="Ask about this forecast">
+        <div class="askhead"><b>Ask about this forecast</b><button class="askx" id="askClose" aria-label="Close">✕</button></div>
+        <div id="askLog" aria-live="polite"></div>
+        <div id="askSuggest"><button type="button" class="btn">What if I'm only inside for 20 minutes?</button><button type="button" class="btn">Why is the risk at this level here?</button><button type="button" class="btn">When does it drop below my limit?</button></div>
+        <form class="askrow" id="askForm"><input type="text" id="askInput" maxlength="300" autocomplete="off" placeholder="Ask a question about this spot" aria-label="Question about this forecast"><button class="btn primary" id="askBtn">Ask</button></form>
+        <p class="askfine">Answered by Google Gemini using this page's forecast; what it checked is listed under each answer. It can be wrong, and it cannot clear a building for entry.</p>
+      </section>
+      <button class="askopen" id="askOpen" aria-expanded="false" aria-controls="askPanel" title="Ask about this forecast" aria-label="Ask about this forecast"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 4.5h16v11.5H10l-5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+    </div>
     <div id="globeWrap">
       <canvas id="globe" tabindex="0" role="application" aria-label="Globe of recent earthquakes. Drag or use the arrow keys to spin, scroll or press plus and minus to zoom, click an earthquake to select it. The list beside the globe has the same earthquakes."></canvas>
       <div class="ctl ghelp">Drag to turn the globe, scroll to zoom, click a quake for details.</div>
