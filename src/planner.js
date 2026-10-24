@@ -98,7 +98,7 @@ function renderChanges(){
   const earlier=`${chance(previous.probability)} over ${SCENARIO.durationLabel(previous.minutes)}`;
   const latest=`${chance(current.probability)} over ${SCENARIO.durationLabel(current.minutes)}`;
   const summary=diff.status==='same'?'No inputs changed since your saved check.':`Saved estimate: ${earlier}. Current estimate: ${latest}.`;
-  $('changesResult').innerHTML=`<p class="muted">Compared with ${esc(previous.location.name)} at ${fmtDT(savedDate)} in the replay.</p><p class="p">${summary}</p>${diff.assumptionsChanged?'<p class="muted">The location or settings changed, so these are different scenarios.</p>':''}${diff.reasons.length?`<ul class="changes-list">${diff.reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:''}<p class="muted">Changes refer to this recorded replay and its inputs. This panel does not receive live alerts or local news.</p>`;
+  $('changesResult').innerHTML=`<p class="muted">Compared with ${esc(previous.location.name)} at ${fmtDT(savedDate)} in the replay.</p><p class="p">${summary}</p>${diff.assumptionsChanged?'<p class="muted">The location or settings changed, so these are different scenarios.</p>':''}${diff.reasons.length?`<ul class="changes-list">${diff.reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:''}<p class="muted">Changes refer to this ${S.live?'live sequence':'recorded replay'} and its inputs. This panel does not receive alerts or local news.</p>`;
 }
 $('saveCheck').onclick=()=>{
   if(!cur.f)return;savedChecks[S.key]=currentCheck();

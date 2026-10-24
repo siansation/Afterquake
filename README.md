@@ -6,6 +6,8 @@ Aftershock Re-entry estimates the chance of shaking above a chosen intensity at 
 
 Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
+![Live globe of USGS earthquakes from the last 30 days](docs/globe.jpg)
+
 ![Map view of the 2023 Kahramanmaraş sequence](docs/screenshot.png)
 
 ## Try it
@@ -13,8 +15,9 @@ Built at OxHack 2026 (themes: time; data for prediction and decision making).
 Open `index.html` in a browser. It's one self-contained file (about 10 MB, with the data, map libraries and world outlines inside). The 13 case studies work offline; the live world view needs internet to reach USGS. The fonts also need internet, and fall back to system fonts without it.
 
 - **▶ Story** (top right) runs a 7-step guided demo of the Türkiye 2023 sequence. Use **→ / ←** or a presentation clicker to move between steps, and **Esc** to exit.
+- The page opens on the **live globe**: drag to spin, scroll to zoom, click a quake, then **Open aftershock forecast**. **◀ World map** in the header comes back to it.
 - **?** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
-- [`PITCH.md`](PITCH.md) has a timed 5-minute script that follows the story, plus answers to likely questions.
+- [`PITCH.md`](PITCH.md) has a timed 5-minute script that follows the story and ends on the live globe, plus answers to likely questions.
 
 To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Deploy from a branch**, pick `main` and `/ (root)`, and the app will be served at `https://<your-username>.github.io/aftershock-reentry/`.
 
@@ -103,7 +106,8 @@ scripts/
   build.py                 assemble index.html (inlines the fitted soil term into src/shake.js)
   python.mjs               run Python as python3, python or py, whichever the machine has
   backtest.js              score the aftershock model
-docs/screenshot.png
+docs/screenshot.png        case-study map view
+docs/globe.jpg             live world view
 ```
 
 ## Rebuild from scratch

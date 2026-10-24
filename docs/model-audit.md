@@ -17,9 +17,22 @@ The upstream cross-platform build and fitted soil coefficient (`k=-1.757`) are p
 | Source and decision labels overstated precision | The page described bundled data as live and a model threshold as reasonable re-entry. Some mainshock grids were processed years after the replay time. | Show the snapshot date, retrospective scope, grid spacing and product processing time. Describe the output as a projected model threshold, with inspection and authority guidance required for entry. |
 | Map and point thresholds could disagree near borders | The heat map used the sequence country everywhere while the pin used the nearest town's country. | Apply the same country approximation to map cells and the pin. It remains an approximation, not a boundary or building survey. |
 
-The integral now uses `log1p` and `expm1` for numerical stability. The likelihood uses sufficient statistics without changing the statistical model. Repeated interval rates are cached to keep the full posterior practical for the map.
+The integral now uses `log1p` and `expm1` for numerical stability. The likelihood uses sufficient statistics without changing the statistical model. Repeated interval rates are cached to keep the full posterior practical for the map. Even so, summing the full posterior for every map cell took about 16 s per redraw, so the 7-day shading now interpolates exact values instead (see below).
 
 Version 3.1 adds selected exposure windows from 5 minutes to 24 hours. The projected start and curve integrate that full window after each candidate start; the 24-hour default preserves the earlier behaviour. Location comparisons hold the intensity threshold fixed at both pins. Saved-check explanations distinguish elapsed time, newly visible catalogue entries, revised earlier entries and changed assumptions; they use browser-local storage with a session-only fallback and do not provide live alerts.
+
+## Live world view
+
+Added after `b0c0114`. The page opens on a globe of the USGS 30-day M4.5+ feed, re-read every 2 minutes. Any quake with a ShakeMap can be opened: `src/live.js` downloads its event record, ShakeMap grid, M4+ catalogue and PAGER report in the browser, with the same radius, clipping and scaling as `scripts/fetch_usgs.mjs`. The live Türkiye grid matched the bundled one cell for cell (662×527 from the same origin). Grids that cross 180° are handled in one longitude frame (tested on Fiji and Kermadec events). Coastlines are 1:50m Natural Earth and towns are GeoNames places of 5,000+ people; the country for the PAGER threshold is the nearest town's, or none offshore, which falls back to intensity VIII.
+
+Live forecasts use the same model, prior and soil coefficient as the case studies, with these extra limits:
+
+- No ground-failure maps, so liquefaction cannot lower the threshold.
+- ShakeMaps are often an early automatic version and are revised later.
+- The first hour of aftershocks is excluded from the fit (as for the case studies), so a very young sequence is mostly the prior.
+- None of the live outcomes are in the validation below. This is not an official USGS aftershock forecast.
+
+**Map shading.** The 7-day chance at a cell depends on the cell only through its shaking probability `q`. The shading evaluates the exact full-posterior `probQ` at 200 log-spaced `q` values spanning the map and interpolates linearly in `log q`. Against exact values at 400 random cells (Panama, 15 days in) the largest error was 2×10⁻⁵ in probability (0.025% relative). Every number shown as text, including towns, the pin and comparisons, still uses `probQ` directly.
 
 ## Data verification
 
@@ -72,10 +85,10 @@ The next scientific priorities are an independent local-shaking evaluation by he
 
 ## Verification and primary sources
 
-- `npm test`: 34 numerical, simulation, data-integrity and controller tests. These cover 60,000 monthly Monte Carlo futures, cache invalidation, fitted-coefficient consistency, duration-specific threshold crossings, catalogue change explanations and local saved-check workflows. Controller tests use DOM/map/storage doubles and do not verify visual layout.
+- `npm test`: 39 numerical, simulation, data-integrity, controller and live-loader tests (the live tests use synthetic grids, not the network). These cover 60,000 monthly Monte Carlo futures, cache invalidation, fitted-coefficient consistency, duration-specific threshold crossings, catalogue change explanations and local saved-check workflows. Controller tests use DOM/map/storage doubles and do not verify visual layout.
 - `npm run backtest`: reproducible regional metrics from the same code as the Accuracy tab.
 - `npm run build` and `npm run check`: standalone artifact rebuilt; inline scripts parsed, embedded datasets decoded and bundled numerical modules executed without CommonJS. The bundled catalogue and soil coefficient must match the source files, and browser-module forecasts must match Node forecasts.
-- Browser interaction and visual layout were not verified because this session has no available browser surface.
+- Browser check in Chrome after the live world view: globe rendering, drag and zoom, opening a live quake (Panama M7.7) and the case studies, the story from the globe, and no console errors.
 - [USGS FDSN event service](https://earthquake.usgs.gov/fdsnws/event/1/) documents the source queries.
 - [USGS aftershock scientific background](https://earthquake.usgs.gov/data/oaf/background.php) describes the Reasenberg–Jones family, regionalisation, Bayesian mixture and secondary-triggering limitations.
 - [GEM OpenQuake Allen 2012 implementation](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/allen_2012_ipe.py) supplies the published hypocentral coefficients, checked against the implementation.
