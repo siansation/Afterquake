@@ -7,9 +7,9 @@
 ## Before you go on
 
 - [ ] Open `index.html` in Chrome. It opens on the live globe, which needs Wi-Fi to reach USGS. The Story and the 13 case studies work offline; without Wi-Fi the globe says so and still shows the case-study stars.
-- [ ] Press **Fullscreen**, then **▶ Story**. Use **→** (or a presentation clicker) to advance and **←** to go back.
+- [ ] Press **Fullscreen**, then **Story**. Use **→** (or a presentation clicker) to advance and **←** to go back.
 - [ ] Zoom the browser to 110–125% if the screen is large or far away.
-- [ ] Backup: the hosted link on a phone, and `docs/screenshot.png`.
+- [ ] Backup: the hosted link on a phone, and `docs/map.jpg` / `docs/globe.jpg`.
 - [ ] Have the **Accuracy** and **Sources** tabs ready for questions.
 
 ## Script (5:00)
@@ -24,7 +24,7 @@
 | **2:40–3:10** | Story 5: Japan | "USGS PAGER models population fatality rates by country and shaking intensity. Our prototype converts those modelled rates into different intensity thresholds. This is a heuristic, not an individual building assessment or a measured level of preparedness." |
 | **3:10–3:50** | Story 6: Accuracy tab | "Does it work? We scored 93 complete regional forecast windows across 12 sequences using a revised catalogue. M5+ skill is 0.55 against a reference estimated from the other sequences. M6+ skill is -0.01, slightly worse than that reference. These checks do not validate point shaking, damage or safe entry." |
 | **3:50–4:25** | Story 7: People tab | "It's built for the people waiting outside: who's at risk this week, town by town, and opt-in 'I'm safe' / 'I need help' check-ins on a shared map." |
-| **4:25–5:00** | Back to the globe (**◀ World map**) | "And this isn't just history. This globe is live from USGS, checked every two minutes. Click any recent quake with a ShakeMap and you get the same forecast for it, right now. Under the hood: the USGS earthquake catalogue, ShakeMaps, ground-failure maps and PAGER casualty models, all free and public, plus a simplified model from the Reasenberg-Jones family. USGS operational forecasts use regional parameters and more detailed handling of missing early events. Operational validation remains future work. Every number on screen links to its source. Aftershock Re-entry: from data to a decision you can act on." |
+| **4:25–5:00** | Back to the globe (**World map**) | "And this isn't just history. This globe is live from USGS, checked every two minutes. Click any recent quake with a ShakeMap and you get the same forecast for it, right now. Under the hood: the USGS earthquake catalogue, ShakeMaps, ground-failure maps and PAGER casualty models, all free and public, plus a simplified model from the Reasenberg-Jones family. USGS operational forecasts use regional parameters and more detailed handling of missing early events. Operational validation remains future work. Every number on screen links to its source. Aftershock Re-entry: from data to a decision you can act on." |
 
 If you're running long, cut step 7 and say its line over step 6.
 

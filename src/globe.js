@@ -2,7 +2,7 @@
 // click an earthquake to select it. Coastlines and borders are Natural Earth (world-atlas), like the detail map:
 // 1:110m when zoomed out or moving, 1:50m when zoomed in and still.
 const GLOBE = (() => {
-  const DEG = 180 / Math.PI, SEA = '#d6e2ea', LAND = '#f6f5f2', COAST = '#9aa7b2', ACCENT = '#c2391b';
+  const DEG = 180 / Math.PI, SEA = '#d8e0e1', LAND = '#fbf9f4', COAST = '#948d83', ACCENT = '#b0301c';
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const ageColor = age => age < 3600e3 ? '#d7191c' : age < 864e5 ? '#fd8d3c' : age < 7 * 864e5 ? '#fed24c' : '#ffffff';
   const radius = M => 2.2 + Math.pow(Math.max(M - 4, 0), 1.45) * 2.1;
@@ -30,16 +30,11 @@ const GLOBE = (() => {
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-      const halo = c.createRadialGradient(cx, cy, R * 0.96, cx, cy, R * 1.14);
-      halo.addColorStop(0, 'rgba(110,150,190,.38)'); halo.addColorStop(1, 'rgba(110,150,190,0)');
-      c.fillStyle = halo; c.beginPath(); c.arc(cx, cy, R * 1.14, 0, 2 * Math.PI); c.fill();
       c.beginPath(); path({ type: 'Sphere' }); c.fillStyle = SEA; c.fill();
-      c.beginPath(); path(grat); c.strokeStyle = 'rgba(70,100,130,.13)'; c.lineWidth = .6; c.stroke();
+      c.beginPath(); path(grat); c.strokeStyle = 'rgba(90,80,65,.14)'; c.lineWidth = .6; c.stroke();
       c.beginPath(); path(fine ? geo.land50 : geo.land110); c.fillStyle = LAND; c.fill(); c.strokeStyle = COAST; c.lineWidth = .7; c.stroke();
-      c.beginPath(); path(fine ? geo.borders50 : geo.borders110); c.setLineDash([3, 3]); c.strokeStyle = '#a3adb7'; c.lineWidth = .6; c.stroke(); c.setLineDash([]);
-      const shade = c.createRadialGradient(cx - R * .45, cy - R * .5, R * .1, cx, cy, R * 1.02);
-      shade.addColorStop(0, 'rgba(255,255,255,.16)'); shade.addColorStop(1, 'rgba(30,50,80,.16)');
-      c.beginPath(); path({ type: 'Sphere' }); c.fillStyle = shade; c.fill(); c.strokeStyle = '#8b9cac'; c.lineWidth = 1; c.stroke();
+      c.beginPath(); path(fine ? geo.borders50 : geo.borders110); c.setLineDash([3, 3]); c.strokeStyle = '#aaa298'; c.lineWidth = .6; c.stroke(); c.setLineDash([]);
+      c.beginPath(); path({ type: 'Sphere' }); c.strokeStyle = '#1b1a18'; c.lineWidth = 1.2; c.stroke();
     }
     function star(c, x, y, r) {
       c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; c.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)) } c.closePath();
@@ -58,12 +53,12 @@ const GLOBE = (() => {
           ctx.strokeStyle = age < 3600e3 ? `rgba(215,25,28,${.7 * (1 - ph)})` : `rgba(253,141,60,${.6 * (1 - ph)})`; ctx.lineWidth = 2; ctx.stroke();
         }
         ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = ageColor(age); ctx.globalAlpha = .92; ctx.fill(); ctx.globalAlpha = 1;
-        ctx.strokeStyle = 'rgba(25,30,38,.85)'; ctx.lineWidth = .8; ctx.stroke();
-        if (it.shakemap) { ctx.beginPath(); ctx.arc(x, y, r + 2.6, 0, 2 * Math.PI); ctx.strokeStyle = '#1c2128'; ctx.lineWidth = 1.4; ctx.stroke() }
+        ctx.strokeStyle = 'rgba(27,26,24,.85)'; ctx.lineWidth = .8; ctx.stroke();
+        if (it.shakemap) { ctx.beginPath(); ctx.arc(x, y, r + 2.6, 0, 2 * Math.PI); ctx.strokeStyle = '#1b1a18'; ctx.lineWidth = 1.4; ctx.stroke() }
       }
       for (const it of [hovered, selected]) if (it && visible(it)) {
         const [x, y] = proj([it.lon, it.lat]), r = Math.max(7, sizeOf(it)) + 6;
-        ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.strokeStyle = it === selected ? ACCENT : 'rgba(28,33,40,.6)'; ctx.lineWidth = it === selected ? 2.4 : 1.4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.strokeStyle = it === selected ? ACCENT : 'rgba(27,26,24,.6)'; ctx.lineWidth = it === selected ? 2.4 : 1.4; ctx.stroke();
       }
     }
 
