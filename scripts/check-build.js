@@ -24,6 +24,13 @@ assert.ok(executable.some(code => /geoOrthographic/.test(code)), 'Missing bundle
 assert.deepEqual(Object.keys(datasets.get('d-world')), ['land110', 'countries110', 'land50', 'countries50'], 'World outlines missing');
 assert.ok(datasets.get('d-towns').length > 40000, 'World towns missing');
 assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote script');
+// Design guard (docs/DESIGN.md): the app's own stylesheet and text must not bring back stock AI-template patterns.
+const template = fs.readFileSync(path.join(__dirname, '..', 'src', 'template.html'), 'utf8');
+const appCss = template.split('</style>')[1];
+for (const [re, what] of [[/text-transform\s*:\s*uppercase/i, 'uppercase eyebrow labels'], [/letter-spacing/i, 'tracked-out labels'],
+  [/monospace|--mono/i, 'monospace for non-code text'], [/gradient\(/i, 'decorative gradients'], [/backdrop-filter/i, 'glass panels'],
+  [/@keyframes|animation\s*:/i, 'decorative animation']]) assert.ok(!re.test(appCss), `Design guard: no ${what} (see docs/DESIGN.md)`);
+assert.ok(!/ · |▶|◀/.test(template), 'Design guard: no "A · B" meta strings or glyph buttons (see docs/DESIGN.md)');
 for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonResult', 'saveCheck', 'changesResult']) {
   assert.ok(ids.includes(id), `Missing planning control ${id}`);
 }
