@@ -54,6 +54,11 @@ test('PAGER parsing reads alerts, building notes and exposure',()=>{
   assert.equal(p.struct,'Mostly brick.');assert.deepEqual(p.exposure,[[6.5,7.5,12000]]);assert.equal(p.version,'4');
 });
 
+test('PAGER text is decoded from XML entities to plain text',()=>{
+  const p=LIVE.parsePager('<structcomment>Brick &amp; adobe, &lt;b&gt;weak&lt;/b&gt;</structcomment>');
+  assert.equal(p.struct,'Brick & adobe, <b>weak</b>');   // plain text: the page escapes it before display
+});
+
 test('aftershock radius matches the bundled download',()=>{
   assert.equal(LIVE.radiusKm(7.8),Math.round(Math.pow(10,-2.44+0.59*7.8)*1.2+30));
 });

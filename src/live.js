@@ -62,11 +62,13 @@ const LIVE = (() => {
       mmi, vs30: vs, version: attr('shakemap_version'), processed: attr('process_timestamp'),
       obs: +attr('intensity_observations') || 0, stations: +attr('seismic_stations') || 0, pointSource: attr('point_source'), status: attr('map_status') };
   }
+  // XML text comes back entity-encoded; decode it to plain text (the page escapes it again when showing it)
+  const unxml = t => t && t.replace(/&(lt|gt|quot|apos|amp);/g, (m, e) => ({ lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' })[e]);
   function parsePager(x) {
     return { version: (x.match(/version_number="(\d+)"/) || [])[1],
       alerts: [...x.matchAll(/<alert type="(\w+)" level="(\w+)"/g)].map(m => [m[1], m[2]]),
-      struct: (x.match(/<structcomment>([\s\S]*?)<\/structcomment>/) || [])[1]?.trim(),
-      secondary: (x.match(/<secondary_effects>([\s\S]*?)<\/secondary_effects>/) || [])[1]?.trim(),
+      struct: unxml((x.match(/<structcomment>([\s\S]*?)<\/structcomment>/) || [])[1]?.trim()),
+      secondary: unxml((x.match(/<secondary_effects>([\s\S]*?)<\/secondary_effects>/) || [])[1]?.trim()),
       exposure: [...x.matchAll(/<exposure dmin="([\d.]+)" dmax="([\d.]+)" exposure="(\d+)"/g)].map(m => [+m[1], +m[2], +m[3]]).slice(0, 12) };
   }
 

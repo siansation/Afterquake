@@ -33,4 +33,4 @@ From write-ups on recognisable AI-generated design ([Capital and Compute](https:
 - Pill badges, ▶ and ◀ glyph buttons, an italic or coloured word in a headline
 - Repeating the same disclaimer on every panel
 
-`npm run check` fails if the app's stylesheet brings back uppercase or letter-spaced labels, monospace, gradients, glass, animations, "·" separators or glyph buttons.
+`npm run check` fails if any of `src/template.html`, `src/globe.js` or `src/planner.js` brings back uppercase or letter-spaced labels, monospace, gradients (CSS or canvas), glass, animations, "·" separators or glyph buttons. It checks whole files, so inline styles and JS-built markup count too. Colours used from JavaScript are read from the CSS tokens in `:root`, so the palette is defined in one place.
