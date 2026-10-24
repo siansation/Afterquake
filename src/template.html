@@ -127,6 +127,46 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .townlbl{background:transparent;border:0;box-shadow:none;font-weight:700;font-size:12px;color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;padding:0}
 .townlbl::before{display:none}
 details summary{cursor:pointer;font-weight:600}
+.hbtn{background:transparent;border:1px solid #4a525d;color:var(--barInk);border-radius:4px;padding:5px 10px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
+.hbtn:hover{border-color:#aeb6c0}
+.hbtn.story{background:#c2391b;border-color:#c2391b}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.seg button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:6px 2px;cursor:pointer;font-size:12.5px;line-height:1.2;color:var(--ink2)}
+.seg button small{display:block;font:500 10.5px var(--mono);color:var(--mute);margin-top:2px}
+.seg button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:#fff}
+.seg button[aria-pressed="true"] small{color:#c9cfd6}
+.mapcard{position:absolute;top:10px;left:56px;z-index:600;width:310px;padding:12px 14px;cursor:pointer;border-left:5px solid var(--warn)}
+.mapcard.ok{border-left-color:var(--good)}
+.mapcard .mc-place{font-size:13px;color:var(--ink2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mapcard .mc-big{font-size:22px;font-weight:800;line-height:1.15;margin:2px 0 4px}
+.mapcard .mc-odds{display:flex;gap:14px;font-size:13px;color:var(--ink2)}
+.mapcard .mc-odds b{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.mapcard .mc-hint{font-size:11.5px;color:var(--mute);margin-top:4px}
+.tour{position:absolute;left:56px;bottom:96px;z-index:700;width:min(420px,calc(100% - 80px));padding:16px 18px;border-top:4px solid var(--accent);box-shadow:0 6px 24px rgba(20,30,40,.28)}
+.tour .tstep{font:500 11.5px var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.tour h3{font-size:20px;line-height:1.2;margin:4px 0 6px;font-weight:800}
+.tour p{margin:0 0 6px;font-size:14.5px;color:var(--ink2)}
+.tour p b{color:var(--ink)}
+.tour .tnav{display:flex;align-items:center;gap:8px;margin-top:10px}
+.tour .dots{display:flex;gap:5px;flex:1}
+.tour .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.tour .dots i.on{background:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.welcome{position:fixed;inset:0;z-index:2000;background:rgba(20,26,34,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.welcome[hidden]{display:none}
+.wbox{background:#fff;border-radius:8px;max-width:560px;width:100%;padding:26px 26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.wbox h1{font-size:30px;line-height:1.1;margin:0 0 6px;font-weight:800}
+.wbox h1 b{color:var(--accent)}
+.wbox .lead{font-size:17px;color:var(--ink2);margin:0 0 14px}
+.wbox ol{margin:0 0 18px;padding-left:20px;color:var(--ink2);font-size:14.5px;display:flex;flex-direction:column;gap:4px}
+.wbox .wbtns{display:flex;gap:10px;flex-wrap:wrap}
+.wbox .wbtns .btn{padding:10px 16px;font-size:15px}
+.wbox .fine{font-size:12px;color:var(--mute);margin:14px 0 0}
+.kbd{font:500 11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;color:var(--ink2);background:#fff}
+.pulse{animation:pulse 1.4s ease-out 2}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(194,57,27,.55)}100%{box-shadow:0 0 0 14px rgba(194,57,27,0)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+@media (max-width:860px){.mapcard{display:none}.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
 @media (max-width:860px){.legend .keys{display:none}.legend{bottom:auto;top:10px;right:auto;left:56px;max-width:190px;padding:6px 8px}.legend .t{font-size:11px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
 .method p{font-size:13.5px;color:var(--ink2);margin:6px 0}
 .method code{font-family:var(--mono);font-size:12px}
@@ -139,7 +179,23 @@ details summary{cursor:pointer;font-weight:600}
   <div class="brand">Aftershock <b>Re-entry</b></div>
   <div class="evsum"><span class="mag" id="hMag">7.8</span><span class="evtxt" id="hTxt"></span></div>
   <span class="note" id="hNote"></span>
+  <button class="hbtn story" id="storyBtn">▶ Story</button>
+  <button class="hbtn" id="helpBtn" aria-label="How to use">?</button>
+  <button class="hbtn fs" id="fsBtn">Fullscreen</button>
 </header>
+<div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
+  <div class="wbox">
+    <h1 id="wTitle">After the quake, <b>when is it safe to go back in?</b></h1>
+    <p class="lead">Millions of people sleep outside after a big earthquake because nobody can tell them how long the danger lasts. This tool turns live USGS data into an answer for their exact spot.</p>
+    <ol>
+      <li><b>Pick a spot</b> on the map, or search a town.</li>
+      <li><b>Say how careful you are</b> and what kind of building it is.</li>
+      <li><b>Get a time</b> when going back in fits that risk, with every number traced to its source.</li>
+    </ol>
+    <div class="wbtns"><button class="btn primary" id="wStory">▶ Watch the 2-minute story</button><button class="btn" id="wExplore">Explore the map</button></div>
+    <p class="fine">Real data from 13 earthquakes, 2010–2026. A prototype, not safety advice. Keys: <span class="kbd">←</span> <span class="kbd">→</span> story steps · <span class="kbd">Space</span> play the timeline · <span class="kbd">Esc</span> close</p>
+  </div>
+</div>
 
 <div class="app">
   <aside class="side">
@@ -160,8 +216,16 @@ details summary{cursor:pointer;font-weight:600}
       <div class="verdict" id="verdict" aria-live="polite"></div>
       <div class="fields">
         <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
-        <div class="f"><label for="tol">Risk you'll accept (24 h)</label><select id="tol"><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select></div>
-        <div class="f"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Felt-report (cautious)</option><option value="1">ShakeMap-calibrated</option></select></div>
+        <div class="f wide"><label id="tolLbl">How careful are you?</label>
+          <div class="seg" role="group" aria-labelledby="tolLbl" id="tolSeg">
+            <button data-v="0.001" aria-pressed="false">Very careful<small>1 in 1,000</small></button>
+            <button data-v="0.01" aria-pressed="true">Careful<small>1 in 100</small></button>
+            <button data-v="0.02" aria-pressed="false">Some risk OK<small>1 in 50</small></button>
+            <button data-v="0.1" aria-pressed="false">Relaxed<small>1 in 10</small></button>
+          </div>
+          <select id="tol" hidden><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select>
+          <span class="muted">The chance of damaging shaking you'd accept while inside for 24 hours.</span></div>
+        <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Felt-report (cautious)</option><option value="1">ShakeMap-calibrated</option></select></div>
       </div>
       <div class="card">
         <h2 id="oddsTitle">Chance of damaging shaking here</h2>
@@ -273,6 +337,8 @@ details summary{cursor:pointer;font-weight:600}
         <label><input type="checkbox" id="showC" checked> Check-ins</label>
       </div>
     </div>
+    <div class="ctl mapcard" id="mapcard" role="button" tabindex="0" aria-label="Open the forecast for your spot"></div>
+    <div class="ctl tour" id="tour" hidden aria-live="polite"></div>
     <div class="ctl legend" id="legend"></div>
     <div class="ctl timebar">
       <button class="play" id="play" aria-label="Play the sequence"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg></button>
@@ -393,7 +459,7 @@ function update(){
   $('odds').innerHTML=[['next 24 h',p24],['next 7 days',p7],['next 30 days',p30]].map(([k,p])=>`<div class="odd"><span class="v">${pct(p)}</span><span class="k">${k}</span><span class="bar"><i style="width:${Math.max(1,p*100)}%"></i></span></div>`).join('');
   const qAlt=SHAKE.q(src,sp.x,sp.y,sp.gv.vs,sp.thr,!calib),p7alt=SHAKE.probQ(f,cp,qAlt,0,7);
   $('alt').innerHTML=`With the ${calib?'felt-report':'ShakeMap-calibrated'} model instead: ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
-  renderFactors();renderAround();
+  renderMapCard();renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
   drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);bindSrc();
@@ -594,5 +660,79 @@ $('play').onclick=()=>{playing=!playing;$('playIcon').setAttribute('d',playing?'
   if(playing){if(+$('now').value>=1000)$('now').value=0;const step=()=>{if(!playing)return;const v=Math.min(1000,+$('now').value+8);$('now').value=v;update();if(v>=1000){$('play').click();return}playT=setTimeout(step,90)};step()}
   else{clearTimeout(playT);heatKey='';update()}};
 let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.invalidateSize();update()},150)});
-requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins()});
+
+// ---------- big verdict card on the map ----------
+function renderMapCard(){const c=cur,mc=$('mapcard');const ok=c.re===0;mc.className='ctl mapcard'+(ok?' ok':'');
+  mc.innerHTML=`<div class="mc-place">${esc(loc.name)} · ${$('bld').selectedOptions[0]?esc($('bld').selectedOptions[0].text.split(' (')[0]):''}</div><div class="mc-big">${ok?'OK to go back in now':c.re===Infinity?'Stay out for now':'Wait until '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5)).replace(' UTC','')}</div><div class="mc-odds"><span>Next 24 h <b>${pct(c.p24)}</b></span><span>7 days <b>${pct(c.p7)}</b></span><span>30 days <b>${pct(c.p30)}</b></span></div><div class="mc-hint">Chance of damaging shaking here · click for why</div>`}
+$('mapcard').onclick=()=>selectTab('spot');$('mapcard').onkeydown=e=>{if(e.key==='Enter')selectTab('spot')};
+
+// ---------- plain-English risk buttons ----------
+function setTol(v){$('tol').value=v;document.querySelectorAll('#tolSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===String(v))))}
+document.querySelectorAll('#tolSeg button').forEach(b=>b.onclick=()=>{setTol(b.dataset.v);update()});
+
+// ---------- helpers the story uses ----------
+function seqIndex(key){return SEQ.findIndex(s=>s.key===key)}
+function goSeq(key){const i=seqIndex(key);if(S&&S.key===key)return;pickSeq(i)}
+function setDays(d){$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
+function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
+function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v)}
+function resetChoices(){$('bld').value='local';setTol('0.01');$('shk').value='0';$('reveal').checked=true}
+function animateDays(from,to,ms){return new Promise(res=>{const t0=performance.now(),a=Math.log(from),b=Math.log(to);playing=true;
+  const step=now=>{const k=Math.min(1,(now-t0)/ms);setDays(Math.exp(a+(b-a)*k));update();if(k<1&&tourOn)requestAnimationFrame(step);else{playing=false;heatKey='';update();res()}};requestAnimationFrame(step)})}
+
+// ---------- story mode ----------
+let tourOn=false,tourI=0,tourPopup=null;const tourLayer=L.layerGroup().addTo(map);
+const rateTxt=p=>'1 in '+Number((1/p).toPrecision(2)).toLocaleString();
+const STEPS=[
+ {t:'6 Feb 2023, 04:17. An M7.8 hits southern Türkiye.',
+  go(){resetChoices();goSeq('turkey');setLayer('mmi');setDays(1/24);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.8});selectTab('spot')},
+  b:()=>`<p>The purple is how hard the ground shook. About <b>${fmtN(pagerAtLeast(8))} people</b> felt severe shaking or worse.</p><p>Within hours, millions are outside in winter, asking one question: <b>when is it safe to go back in?</b> Nobody can tell them.</p>`},
+ {t:'Pick a spot. Get an answer.',
+  go(){setLayer('risk');setDays(0.3);goTown('Kahramanmaraş');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8});pulse('mapcard')},
+  b:()=>`<p>Seven hours in, for a typical local building in <b>${esc(loc.name)}</b>: a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>The shading is that 7-day chance everywhere. The card gives a <b>time</b> when going back in fits your risk level.</p>`},
+ {t:'Then, nine hours after the first quake…',
+  async go(){setLayer('risk');goTown('Elbistan');setDays(0.3);update();map.flyTo([38.1,37.15],8,{duration:.6});
+    await animateDays(0.3,0.5,2600);
+    tourPopup=L.popup({closeButton:false,autoPan:false}).setLatLng([38.011,37.196]).setContent('<div class="pp-h">M7.5, 9 hours later</div>A second huge quake, 90 km north.').openOn(map)},
+  b:()=>`<p>An <b>M7.5</b> struck near Elbistan. Two hours before it, the model gave an M7+ anywhere in the region about a <b>${pct(MODEL.prob(MODEL.fit(S.events,0.3),7,0,1))}</b> chance in the next 24 hours: unlikely, but far from zero.</p><p>This is why a single "all clear" is dangerous, and why the forecast updates as every new quake arrives.</p>`},
+ {t:'Same town, different streets.',
+  go(){if(tourPopup){map.closePopup(tourPopup);tourPopup=null}setLayer('vs');setDays(1);goTown('Kâhta');update();map.flyTo([loc.lat,loc.lon],11,{duration:.8});selectTab('spot');L.circle([loc.lat,loc.lon],{radius:3000,color:'#c2391b',weight:2,dashArray:'6 5',fill:false,interactive:false}).addTo(tourLayer)},
+  b:()=>{return `<p>Darker brown is softer ground, which shakes harder. Around <b>Kâhta</b>, firm and soft ground sit side by side, and parts of town shook harder than others in the mainshock.</p><p>Inside the dashed 3 km circle, the 7-day chance of damaging shaking ranges from <b>${localRangeText()}</b>. A city-wide warning can't capture that.</p>`}},
+ {t:'Same shaking, different countries.',
+  go(){setLayer('risk');goSeq('noto');setDays(1);goTown('Wajima');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
+  b:()=>`<p>Japan builds for earthquakes. In the USGS PAGER casualty record, severe shaking (VIII) killed about <b>${rateTxt(fatRate('TR',8))}</b> exposed people in Türkiye, but about <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>So the same forecast becomes a different decision. A typical building in Wajima is treated as damaged from <b>${R(countryThr('JP'))}</b>, compared with <b>${R(countryThr('TR'))}</b> in Türkiye.</p>`},
+ {t:'Does it actually work?',
+  go(){goSeq('turkey');setLayer('risk');setDays(1);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.6});selectTab('accuracy')},
+  b:()=>`<p>We replayed all 13 earthquakes, forecasting each week using only the data available at the time. For M5+ aftershocks the model scores <b>${skillTxt(5)}</b> (0 = guessing the average, 1 = perfect).</p><p>For the biggest ones it's only roughly right. We show that openly, and default to the more cautious of two shaking models.</p>`},
+ {t:'Built for the people waiting outside.',
+  go(){setLayer('risk');selectTab('people');update()},
+  b:()=>`<p>Population per town, how many people are at risk this week, and opt-in <b>"I'm safe" / "I need help"</b> check-ins on a shared map.</p><p>Everything runs on free, public USGS data, so it works for the <b>next</b> big earthquake within hours of it happening.</p>`}
+];
+let skillCache={};
+function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const checks=[0.5,1,2,3,7,14,30,60],r=[];for(const s of SEQ)for(const t of checks){if(t+7>s.daysAvailable)continue;const f=MODEL.fit(s.events,t);r.push({p:MODEL.prob(f,M,0,7),h:s.events.some(e=>e[0]>t&&e[0]<=t+7&&e[1]>=M)})}
+  const base=r.filter(x=>x.h).length/r.length,br=r.reduce((a,x)=>a+(x.p-(x.h?1:0))**2,0)/r.length,bb=r.reduce((a,x)=>a+(base-(x.h?1:0))**2,0)/r.length;return skillCache[M]=(1-br/bb).toFixed(2)}
+function pagerAtLeast(m){const p=EX[S.key]&&EX[S.key].pager;if(!p)return 0;return p.exposure.filter(r=>r[0]>=m-0.5).reduce((a,r)=>a+r[2],0)}
+function localRangeText(){const r=localRangeNow();return `${pct(r.min)} on ${r.minTxt} to ${pct(r.max)} on ${r.maxTxt}`}
+function localRangeNow(){let mn=1,mx=0,mnv=0,mxv=0;const c=cur;for(let dy=-3;dy<=3;dy+=0.9)for(let dx=-3;dx<=3;dx+=0.9){if(dx*dx+dy*dy>9)continue;const lat=loc.lat+dy/110.57,lon=loc.lon+dx/(111.32*G.c),gv=gridAt(lat,lon);if(!gv||!gv.vs)continue;
+  const sp=spot(lat,lon,c.thrB,c.calib,c.src),p=SHAKE.probQ(c.f,c.cp,sp.qv,0,7);if(p<mn){mn=p;mnv=gv.vs}if(p>mx){mx=p;mxv=gv.vs}}
+  const t=v=>`${vsClass(v)[1]}`;return{min:mn,max:mx,minTxt:t(mnv),maxTxt:t(mxv)}}
+function pulse(id){const e=$(id);e.classList.remove('pulse');void e.offsetWidth;e.classList.add('pulse')}
+async function showStep(i){tourI=Math.max(0,Math.min(STEPS.length-1,i));const st=STEPS[tourI],T=$('tour');
+  tourLayer.clearLayers();T.hidden=false;T.innerHTML=`<div class="tstep">Story · ${tourI+1} of ${STEPS.length}</div><h3>${st.t}</h3><p class="muted">…</p>`;
+  await st.go();if(!tourOn||STEPS[tourI]!==st)return;
+  T.innerHTML=`<div class="tstep">Story · ${tourI+1} of ${STEPS.length}</div><h3>${st.t}</h3>${st.b()}<div class="tnav"><div class="dots">${STEPS.map((_,k)=>`<i class="${k===tourI?'on':''}"></i>`).join('')}</div><button class="btn" id="tBack" ${tourI===0?'disabled':''}>Back</button><button class="btn primary" id="tNext">${tourI===STEPS.length-1?'Finish':'Next'}</button><button class="btn" id="tExit" aria-label="Exit the story">✕</button></div>`;
+  $('tBack').onclick=()=>showStep(tourI-1);$('tNext').onclick=()=>tourI===STEPS.length-1?endTour():showStep(tourI+1);$('tExit').onclick=endTour;$('tNext').focus({preventScroll:true})}
+function startTour(){$('welcome').hidden=true;tourOn=true;showStep(0)}
+function endTour(){tourOn=false;$('tour').hidden=true;tourLayer.clearLayers();if(tourPopup){map.closePopup(tourPopup);tourPopup=null}selectTab('spot')}
+$('storyBtn').onclick=startTour;$('wStory').onclick=startTour;
+$('wExplore').onclick=()=>{$('welcome').hidden=true;try{localStorage.setItem('ar_seen','1')}catch(e){}};
+$('helpBtn').onclick=()=>{$('welcome').hidden=false;$('wStory').focus()};
+$('fsBtn').onclick=()=>{const d=document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{})};
+addEventListener('keydown',e=>{const typing=/INPUT|SELECT|TEXTAREA/.test(e.target.tagName);
+  if(e.key==='Escape'){if(!$('welcome').hidden)$('welcome').hidden=true;else if(tourOn)endTour();return}
+  if(typing)return;
+  if(tourOn&&(e.key==='ArrowRight'||e.key==='PageDown')){e.preventDefault();tourI===STEPS.length-1?endTour():showStep(tourI+1)}
+  else if(tourOn&&(e.key==='ArrowLeft'||e.key==='PageUp')){e.preventDefault();showStep(tourI-1)}
+  else if(e.key===' '&&!tourOn&&e.target===document.body){e.preventDefault();$('play').click()}});
+requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen){$('welcome').hidden=false;$('wStory').focus()}});
 </script>

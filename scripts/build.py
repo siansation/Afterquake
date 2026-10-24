@@ -16,6 +16,12 @@ for v in extra.values():
     if v.get('pager'):
         v['pager'].pop('cities', None)
 
+# Bundle Leaflet's script inline so the page works with no internet (e.g. on stage)
+leaflet_js = read('node_modules', 'leaflet', 'dist', 'leaflet.js')
+cdn_tag = '<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>'
+assert cdn_tag in template
+template = template.replace(cdn_tag, '<script>' + leaflet_js.replace('</script', '<\\/script') + '</script>')
+
 out = (template
        .replace('__LEAFLET_CSS__', css)
        .replace('__DATA__', esc(read('data', 'sequences.json')))
