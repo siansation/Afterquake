@@ -2,7 +2,7 @@
 
 **After a big earthquake, how does the estimated risk of further shaking change?**
 
-Aftershock Re-entry estimates the chance of shaking above a chosen intensity at a location over the next 24 hours, 7 days and 30 days, then projects when its next-24-hour probability falls below a chosen limit. It uses bundled USGS data for 13 earthquakes and a simplified Reasenberg-Jones model. It is a retrospective prototype; building inspection and local authorities determine whether entry is safe.
+Aftershock Re-entry estimates the chance of shaking above a chosen intensity at a location over an exposure you choose, plus the next 24 hours, 7 days and 30 days. It projects when the chance during your chosen exposure falls below a limit. It uses bundled USGS data for 13 earthquakes and a simplified Reasenberg-Jones model. It is a retrospective prototype; building inspection and local authorities determine whether entry is safe.
 
 Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
@@ -22,6 +22,9 @@ To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Dep
 
 - **Story mode.** A guided 2-minute demo of the Türkiye 2023 sequence, built for pitching.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
+- **Exposure duration.** Choose 5, 10 or 30 minutes, 1 hour, 8 hours or 24 hours. The probability, parameter range, projected start and curve use that entire interval. The 24-hour, 7-day and 30-day context figures remain available.
+- **Compare two places.** Keep your spot A and choose B on the map or by town search. Compare shaking over the selected duration, ground softness, mainshock intensity, modelled ground-failure extent and coast proximity. Both places use the same intensity threshold; neither is a verified shelter.
+- **Since your saved check.** Save a check, then move the replay timeline, change assumptions or return after a data update. The explanation distinguishes elapsed time, newly visible events, revised past entries, location/settings changes and data/model updates. Checks remain in this browser, with a session-only fallback if storage is blocked. This is not a live news or alert feed.
 - **Forecast at your spot.** Modelled intensity exceedance from M5+ aftershocks, a projected threshold-crossing time, and a curve of how the estimate changes. A 90% parameter range describes fitted rate uncertainty, excluding other model errors.
 - **200 simulated futures.** Monte Carlo runs from the same posterior and marked Poisson process as the displayed formula. This model does not simulate secondary triggering (ETAS).
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
@@ -75,7 +78,11 @@ src/template.html          app UI and logic (placeholders filled by the build)
 src/model.js               aftershock rate model (Reasenberg–Jones + Bayesian update)
 src/shake.js               shaking, uncertainty ranges and consistent Monte Carlo futures
 src/validation.js          regional occurrence checks shared by the UI and CLI
+src/scenario.js            duration estimates and saved-check change explanations
+src/planner.js             browser controls for comparison pins and local saved checks
 tests/forecast.test.js      numerical, simulation and data-integrity regression tests
+tests/scenario.test.js      exposure windows, threshold crossings and change attribution
+tests/planner.test.js       controller workflows with DOM/map/storage test doubles
 data/                      everything the app embeds
   sequences.json           catalogue + ShakeMap grids (MMI, Vs30) for 13 quakes
   ground-failure-and-pager.json  liquefaction/landslide grids, PAGER exposure and building notes

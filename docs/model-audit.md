@@ -19,6 +19,8 @@ The upstream cross-platform build and fitted soil coefficient (`k=-1.757`) are p
 
 The integral now uses `log1p` and `expm1` for numerical stability. The likelihood uses sufficient statistics without changing the statistical model. Repeated interval rates are cached to keep the full posterior practical for the map.
 
+Version 3.1 adds selected exposure windows from 5 minutes to 24 hours. The projected start and curve integrate that full window after each candidate start; the 24-hour default preserves the earlier behaviour. Location comparisons hold the intensity threshold fixed at both pins. Saved-check explanations distinguish elapsed time, newly visible catalogue entries, revised earlier entries and changed assumptions; they use browser-local storage with a session-only fallback and do not provide live alerts.
+
 ## Data verification
 
 Read-only requests to the official USGS event and count services matched all 13 bundled mainshock magnitudes, origin times and coordinates. Regional M5+ counts also matched for the recorded radius and coverage window:
@@ -70,7 +72,7 @@ The next scientific priorities are an independent local-shaking evaluation by he
 
 ## Verification and primary sources
 
-- `npm test`: 13 numerical, simulation and data-integrity tests, including 60,000 monthly Monte Carlo futures for formula agreement, cache invalidation and fitted-coefficient consistency.
+- `npm test`: 34 numerical, simulation, data-integrity and controller tests. These cover 60,000 monthly Monte Carlo futures, cache invalidation, fitted-coefficient consistency, duration-specific threshold crossings, catalogue change explanations and local saved-check workflows. Controller tests use DOM/map/storage doubles and do not verify visual layout.
 - `npm run backtest`: reproducible regional metrics from the same code as the Accuracy tab.
 - `npm run build` and `npm run check`: standalone artifact rebuilt; inline scripts parsed, embedded datasets decoded and bundled numerical modules executed without CommonJS. The bundled catalogue and soil coefficient must match the source files, and browser-module forecasts must match Node forecasts.
 - Browser interaction and visual layout were not verified because this session has no available browser surface.

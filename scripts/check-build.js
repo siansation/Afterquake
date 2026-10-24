@@ -18,13 +18,16 @@ for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
   }
 }
 assert.equal(data, 5);
-assert.ok(scripts >= 5, 'Expected bundled map, model, shaking, validation and UI scripts');
+assert.ok(scripts >= 6, 'Expected bundled map, model, shaking, validation, scenario and UI scripts');
 assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote script');
+for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonResult', 'saveCheck', 'changesResult']) {
+  assert.ok(ids.includes(id), `Missing planning control ${id}`);
+}
 // Execute the bundled numerical modules in a browser-like global scope with no
 // CommonJS require/module. Syntax checks alone cannot catch a missed build-time
 // replacement of the fitted soil coefficient or a stale generated model module.
 const browser = vm.createContext({});
-for (const name of ['MODEL', 'SHAKE', 'VALIDATION']) {
+for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO']) {
   const source = executable.find(code => new RegExp(`\\bconst ${name}\\s*=`).test(code));
   assert.ok(source, `Missing bundled ${name}`);
   assert.ok(!/\brequire\s*\(/.test(source), `${name} still needs CommonJS in the browser`);
@@ -38,4 +41,8 @@ browser.sampleEvents = sample.events;
 const bundled = vm.runInContext('MODEL.prob(MODEL.fit(sampleEvents,1),5,0,7)', browser);
 const MODEL = require('../src/model.js');
 assert.equal(bundled, MODEL.prob(MODEL.fit(sample.events, 1), 5, 0, 7), 'Browser and Node forecasts differ');
+const SHAKE = require('../src/shake.js'), SCENARIO = require('../src/scenario.js');
+const f = MODEL.fit(sample.events, 1), cp = SHAKE.compact(f);
+const shortExposure = vm.runInContext('(()=>{const f=MODEL.fit(sampleEvents,1);return SCENARIO.exposure(SHAKE,f,SHAKE.compact(f),.1,10).probability})()', browser);
+assert.equal(shortExposure, SCENARIO.exposure(SHAKE, f, cp, .1, 10).probability, 'Bundled short-exposure estimate differs');
 console.log(`Standalone build verified: ${scripts} scripts parsed, ${data} datasets decoded; bundled models executed and matched source data.`);

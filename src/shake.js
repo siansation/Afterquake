@@ -39,7 +39,13 @@ const SHAKE=(()=>{
   // Quantiles are weighted by posterior mass, not by the number of grid cells.
   // They describe parameter uncertainty only, rather than all uncertainty in local shaking.
   function parameterRange(f,cp,qv,t1,t2){const pairs=cp.map(([w,a,p])=>[-Math.expm1(-n5(f,a,p,t1,t2)*qv),w]).sort((a,b)=>a[0]-b[0]);const quantile=target=>{let w=0;for(const [v,weight] of pairs){w+=weight;if(w>=target)return v}return pairs[pairs.length-1][0]};return{low:quantile(.05),high:quantile(.95)}}
-  function reentryQ(f,cp,qv,tol){if(probQ(f,cp,qv,0,1)<tol)return 0;let lo=0,hi=400;if(probQ(f,cp,qv,hi,hi+1)>=tol)return Infinity;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(probQ(f,cp,qv,m,m+1)<tol)hi=m;else lo=m}return hi}
+  // Search over candidate START times, integrating over the full planned exposure
+  // after each start. A short visit is a different window, not 24-hour odds scaled down.
+  function reentryQ(f,cp,qv,tol,duration=1){
+    if(!Number.isFinite(duration)||duration<=0||!Number.isFinite(tol)||tol<=0||tol>=1)throw new RangeError('Invalid exposure duration or risk limit.');
+    if(probQ(f,cp,qv,0,duration)<tol)return 0;let lo=0,hi=400;
+    if(probQ(f,cp,qv,hi,hi+duration)>=tol)return Infinity;
+    for(let i=0;i<40;i++){const m=(lo+hi)/2;if(probQ(f,cp,qv,m,m+duration)<tol)hi=m;else lo=m}return hi}
   // Marked Poisson process from the SAME RJ model as probQ. Counts for disjoint
   // marks are independent conditional on a,p; sampling whether each is nonzero
   // is exact for the daily colour chart and needs no count approximation.

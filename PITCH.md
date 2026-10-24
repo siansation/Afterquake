@@ -57,3 +57,9 @@ Live ingestion of new earthquakes, finer city soil maps, building data from Open
 ## Accuracy note
 
 Numbers changed after fixing discarded posterior probability and aligning the simulations with the formula. Use the current screen values. The recorded data is a retrospective snapshot, not live ingestion or an as-issued hindcast. See [the model audit](docs/model-audit.md).
+
+## Optional 3.1 feature demonstration
+
+1. Change the exposure from 10 minutes to 8 hours. The estimate, parameter range, projected start and curve update for that whole interval.
+2. Select **Choose B on map**, then click another place. A stays fixed; the blue B pin is compared at the same intensity threshold and replay time. These are model comparisons, not verified shelters.
+3. Select **Save this check**, then advance the replay past more earthquakes. **Since your saved check** explains newly visible catalogue entries, elapsed time and any settings changes. The baseline stays fixed until explicitly saved again.

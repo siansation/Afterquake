@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aftershock Re-entry</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +18,7 @@
   --sans:"Source Sans 3","Segoe UI",Helvetica,Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   color-scheme:light;
 }
-html,body{height:100%;background:var(--bg);color:var(--ink)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink)}
 body{font-family:var(--sans);font-size:15px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
 button,select,input{font:inherit}
 a{color:var(--link)}
@@ -139,7 +144,7 @@ details summary{cursor:pointer;font-weight:600}
 .mapcard.ok{border-left-color:var(--good)}
 .mapcard .mc-place{font-size:13px;color:var(--ink2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mapcard .mc-big{font-size:22px;font-weight:800;line-height:1.15;margin:2px 0 4px}
-.mapcard .mc-odds{display:flex;gap:14px;font-size:13px;color:var(--ink2)}
+.mapcard .mc-odds{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--ink2)}
 .mapcard .mc-odds b{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
 .mapcard .mc-hint{font-size:11.5px;color:var(--mute);margin-top:4px}
 .tour{position:absolute;left:56px;bottom:96px;z-index:700;width:min(420px,calc(100% - 80px));padding:16px 18px;border-top:4px solid var(--accent);box-shadow:0 6px 24px rgba(20,30,40,.28)}
@@ -173,7 +178,18 @@ details summary{cursor:pointer;font-weight:600}
 .ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13px;padding:6px 0;border-top:1px solid var(--line2)}
 .ci:first-child{border-top:0}
 .ci .dot{width:10px;height:10px;border-radius:50%}
+.compare-table{table-layout:fixed;font-size:12px}
+.compare-table th,.compare-table td{overflow-wrap:anywhere;padding:6px 4px}
+.compare-table th:first-child{width:36%}
+.compare-table tbody th{font-weight:600;color:var(--ink2);border-top:1px solid var(--line2)}
+.comparison-b{color:var(--link)}
+.changes-list{margin:0;padding-left:18px;font-size:13px;color:var(--ink2)}
+.changes-list li+li{margin-top:5px}
+#map.picking-comparison,#map.picking-comparison .leaflet-interactive{cursor:crosshair}
+#pickComparison[aria-pressed="true"]{background:var(--link);border-color:var(--link);color:#fff}
 </style>
+</head>
+<body>
 
 <header class="top">
   <div class="brand">Aftershock <b>Re-entry</b></div>
@@ -189,8 +205,8 @@ details summary{cursor:pointer;font-weight:600}
     <p class="lead">Explore recorded USGS earthquake sequences and estimates of further shaking near a chosen location. A forecast can inform decisions; building entry still needs an inspection and local authority guidance.</p>
     <ol>
       <li><b>Pick a spot</b> on the map, or search a town.</li>
-      <li><b>Say how careful you are</b> and what kind of building it is.</li>
-      <li><b>Get a time</b> when going back in fits that risk, with every number traced to its source.</li>
+      <li><b>Choose your exposure time</b>, building assumption and risk limit.</li>
+      <li><b>Compare places</b> and save a check to explain later changes. Projected model thresholds do not clear buildings for entry.</li>
     </ol>
     <div class="wbtns"><button class="btn primary" id="wStory">▶ Watch the 2-minute story</button><button class="btn" id="wExplore">Explore the map</button></div>
     <p class="fine">Real data from 13 earthquakes, 2010–2026. A prototype, not safety advice. Keys: <span class="kbd">←</span> <span class="kbd">→</span> story steps · <span class="kbd">Space</span> play the timeline · <span class="kbd">Esc</span> close</p>
@@ -217,7 +233,11 @@ details summary{cursor:pointer;font-weight:600}
       <div class="verdict" id="verdict" aria-live="polite"></div>
       <div class="fields">
         <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
-        <div class="f wide"><label id="tolLbl">How careful are you?</label>
+        <div class="f wide"><label for="exposure">How long will you be at this spot?</label>
+          <select id="exposure"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="480">8 hours / overnight</option><option value="1440" selected>24 hours</option></select>
+          <p class="muted" id="exposureNote"></p>
+        </div>
+        <div class="f wide"><label id="tolLbl">Risk limit for this exposure</label>
           <div class="seg" role="group" aria-labelledby="tolLbl" id="tolSeg">
             <button data-v="0.001" aria-pressed="false">Very careful<small>1 in 1,000</small></button>
             <button data-v="0.01" aria-pressed="true">Careful<small>1 in 100</small></button>
@@ -225,8 +245,21 @@ details summary{cursor:pointer;font-weight:600}
             <button data-v="0.1" aria-pressed="false">Relaxed<small>1 in 10</small></button>
           </div>
           <select id="tol" hidden><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select>
-          <span class="muted">The chance of damaging shaking you'd accept while inside for 24 hours.</span></div>
+          <span class="muted" id="tolHint">The modelled shaking probability you'd accept during the selected exposure.</span></div>
         <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Unadjusted intensity equation</option><option value="1">Empirical offset (in sample)</option></select></div>
+      </div>
+      <div class="card" id="comparisonCard">
+        <h2>Compare places to wait</h2>
+        <div class="row"><button class="btn" id="pickComparison" aria-pressed="false">Choose B on map</button><button class="btn" id="clearComparison" disabled>Clear B</button></div>
+        <p class="muted" id="comparisonStatus" role="status"></p>
+        <input type="search" id="comparisonTown" list="towns" placeholder="Search a town for comparison B" autocomplete="off" aria-label="Search a town for comparison B">
+        <div id="comparisonResult"></div>
+      </div>
+      <div class="card">
+        <h2>Since your saved check</h2>
+        <div id="changesResult"></div>
+        <div class="row"><button class="btn" id="saveCheck">Save this check</button><button class="btn" id="forgetCheck" disabled>Forget check</button></div>
+        <p class="muted" id="changesFeedback" role="status"></p>
       </div>
       <div class="card">
         <h2 id="oddsTitle">Chance of damaging shaking here</h2>
@@ -235,7 +268,7 @@ details summary{cursor:pointer;font-weight:600}
         <p class="muted" id="alt"></p>
       </div>
       <div class="card">
-        <h2>Risk here over the coming days</h2>
+        <h2 id="curveTitle">Risk here over the coming days</h2>
         <div class="chart" id="curve"></div>
       </div>
       <div class="card">
@@ -306,6 +339,9 @@ details summary{cursor:pointer;font-weight:600}
         <p>4. <b>Your ground.</b> A soil term fitted to ShakeMaps: <code>ΔMMI = <span class="kv"></span> × log10(Vs30/760)</code>.</p>
         <p>5. <b>Your building.</b> Damage threshold from the Modified Mercalli scale, or for "typical local building", from the USGS PAGER casualty model for that country. It drops one level if this spot already shook at that level, or if the ground-failure model gives at least 10% liquefaction.</p>
         <p>6. <b>Simulated futures.</b> 200 Monte Carlo runs from the same posterior and shaking model as the formula. Their frequencies vary because the sample is small. This Reasenberg–Jones implementation does not model secondary triggering (ETAS).</p>
+        <p>7. <b>Planned exposure.</b> Integrate the aftershock rate over your selected 5-minute to 24-hour interval. The projected start is when that whole interval falls below your chosen limit, assuming the model continues unchanged.</p>
+        <p>8. <b>Compare places.</b> Both pins use A's effective intensity threshold, the same replay time, duration and shaking equation. Only location-dependent shaking inputs differ. The pins are not verified shelters or building assessments.</p>
+        <p>9. <b>Saved checks.</b> One check per earthquake sequence stays in this browser. The explanation compares replay times, known catalogue entries, locations, assumptions and data/model versions. It does not fetch live warnings or news.</p>
         <p><b>Replay limits.</b> The catalogue contains later revisions, the mainshock ShakeMap may have been processed years later, and the soil coefficient was fitted using these sequences. This is a retrospective illustration, not a real-time hindcast or independent validation of local shaking.</p>
         <p><b>Prototype only, not safety advice.</b> Whether a building is safe to enter is decided by a structural inspection and local authorities.</p>
       </details>
@@ -361,6 +397,7 @@ details summary{cursor:pointer;font-weight:600}
 <script>__MODEL__</script>
 <script>__SHAKE__</script>
 <script>__VALIDATION__</script>
+<script>__SCENARIO__</script>
 <script>
 const J=id=>JSON.parse(document.getElementById(id).textContent);
 const D=J('d-data'),EX=J('d-extra'),BASE=J('d-base'),POP=J('d-pop'),AFT=J('d-aft');const SITEFIT=__SITEFIT__;
@@ -404,6 +441,7 @@ const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupA
 const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><path d="M13 1.5l3.3 7.6 8.2.7-6.2 5.4 1.9 8L13 19l-7.2 4.2 1.9-8L1.5 9.8l8.2-.7z" fill="#c2391b" stroke="#fff" stroke-width="1.6"/></svg>'});
 
 function pickSeq(i){
+  resetComparison();checkFeedback='';
   S=SEQ[i];B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
   G={...sm,mmi:b64(sm.mmi),vs:b64(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
   G.lon1=G.lon0+(G.nc-1)*G.dlon;G.lat1=G.lat0-(G.nr-1)*G.dlat;
@@ -430,7 +468,7 @@ function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('
 function countryAt(lat,lon){let best=null,bd=40;for(const t of TOWNS.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lon)*111.32*G.c);if(d<bd){bd=d;best=t}}return best&&POP.fatality[best[4]]?best[4]:POP.seqCountry[S.key]}
 function pinCountry(){return loc?countryAt(loc.lat,loc.lon):POP.seqCountry[S.key]}
 function setLoc(lat,lon,name,doUpdate=true){loc={lat,lon,name};$('town').value=name&&!/^(Dropped|Near)/.test(name)?name:'';if(doUpdate){buildBuildingOptions();update()}}
-map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng))return;let best=null,bd=4;for(const t of B.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lng)*111.32*G.c);if(d<bd){bd=d;best=t}}setLoc(lat,lng,best?`Near ${best[0]}`:'Dropped pin');openPinPopup()});
+map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng)){if(comparisonPicking)$('comparisonStatus').textContent='Choose B inside the modelled map area.';return}let best=null,bd=4;for(const t of B.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lng)*111.32*G.c);if(d<bd){bd=d;best=t}}const name=best?`Near ${best[0]}`:'Dropped pin';if(comparisonPicking){chooseComparison(lat,lng,name);return}setLoc(lat,lng,name);openPinPopup()});
 
 // ---------- forecast ----------
 function sources(now){const out=[];const ev=S.events.filter(e=>e[0]>=-0.001&&e[0]<=now);const step=Math.max(1,Math.ceil(ev.length/700));for(let i=0;i<ev.length;i+=step){const [x,y]=km(ev[i][2],ev[i][3]);out.push(x,y)}return out}
@@ -451,14 +489,18 @@ function update(){
   // point probability and can move the projected threshold-crossing time too early.
   const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f),src=sources(now);
   const sp=spot(loc.lat,loc.lon,thrB,calib,src);
-  const p24=SHAKE.probQ(f,cp,sp.qv,0,1),p7=SHAKE.probQ(f,cp,sp.qv,0,7),p30=SHAKE.probQ(f,cp,sp.qv,0,30),re=SHAKE.reentryQ(f,cp,sp.qv,tol);
-  cur={key:S.key,now,f,cp,src,sp,p24,p7,p30,re,thrB,tol,calib,nowDate};
+  const exposure=SCENARIO.exposure(SHAKE,f,cp,sp.qv,+$('exposure').value);
+  const p24=SHAKE.probQ(f,cp,sp.qv,0,1),p7=SHAKE.probQ(f,cp,sp.qv,0,7),p30=SHAKE.probQ(f,cp,sp.qv,0,30),re=SHAKE.reentryQ(f,cp,sp.qv,tol,exposure.days);
+  cur={key:S.key,now,f,cp,src,sp,p24,p7,p30,re,thrB,tol,calib,nowDate,exposure};
   $('place').textContent=loc.name;$('coords').textContent=`${loc.lat.toFixed(3)}°, ${loc.lon.toFixed(3)}° · ${Math.round(Math.hypot(sp.x,sp.y))} km from the epicentre`;
   // verdict
   const v=$('verdict'),tolTxt=$('tol').selectedOptions[0].text,lvl=R(sp.thr);
-  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Model below your limit</span><p class="big">Shaking threshold met at this replay time</p><p>Chance of intensity ${lvl}+ shaking from M5+ aftershocks here in the next 24 h: ${oneIn(p24)}. Your limit is ${tolTxt}.</p>`}
-  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Model above your limit</span><p class="big">Beyond the 400-day search</p><p>The model stays above ${tolTxt} in each 24-hour window.</p>`}
-  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Model above your limit</span><p class="big">Projected threshold: ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>${dur(re)} after the replay time. Chance of intensity ${lvl}+ shaking from M5+ aftershocks here in the next 24 h: ${oneIn(p24)} (your limit: ${tolTxt}).</p>`}
+  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Model below your limit</span><p class="big">Below your limit for ${exposureLabel()}</p><p>Starting at this replay time, chance of intensity ${lvl}+ shaking from M5+ aftershocks during ${exposureLabel()}: ${chance(exposure.probability)}. Your limit is ${tolTxt}.</p>`}
+  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Model above your limit</span><p class="big">Beyond the 400-day search</p><p>The model stays above ${tolTxt} during the ${exposureLabel()} after each candidate start.</p>`}
+  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Model above your limit</span><p class="big">Projected start: ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>${dur(re)} after the replay time. Chance of intensity ${lvl}+ shaking from M5+ aftershocks during ${exposureLabel()} starting now: ${chance(exposure.probability)} (your limit: ${tolTxt}).</p>`}
+  $('exposureNote').textContent=`Starting at the selected replay time: ${chance(exposure.probability)}. 90% parameter range ${chance(exposure.range.low)}–${chance(exposure.range.high)}; excludes ground, building and model errors.`;
+  $('tolHint').textContent=`Your chosen probability limit applies to ${exposureLabel()}, starting at each candidate time.`;
+  $('curveTitle').textContent=`Chance during ${exposureLabel()}, by start time`;
   if(reveal){const near=S.events.filter(e=>e[0]>now&&e[1]>=5).map(e=>{const [x,y]=km(e[2],e[3]);const d=Math.hypot(x-sp.x,y-sp.y);return{e,d,mmi:SHAKE.mu(e[1],Math.sqrt(d*d+100))+SHAKE.site(sp.gv.vs)+(calib?SHAKE.BIAS:0)}}).filter(o=>o.mmi>=sp.thr-0.5).sort((a,b)=>a.e[0]-b.e[0]);
     const remaining=Math.max(0,S.daysAvailable-now);
     v.insertAdjacentHTML('beforeend',`<p><b>Later catalogue (shaking estimated):</b> ${near.length?`an M${near[0].e[1]} hit ${Math.round(near[0].d)} km away ${dur(near[0].e[0]-now)} later, with modelled intensity ${near[0].mmi.toFixed(1)} here.`:remaining<.001?'No follow-up after this replay time in the snapshot.':`no later M5+ event has estimated shaking near intensity ${lvl} here in the remaining ${dur(remaining)} of data. This does not establish that no damage occurred.`}</p>`)}
@@ -473,7 +515,7 @@ function update(){
   renderMapCard();renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
-  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);bindSrc();
+  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();bindSrc();
 }
 function computeHeat(f,cp,src,calib){
   const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
@@ -540,8 +582,8 @@ function drawTowns(){townLayer.clearLayers();if(!$('showT').checked||!cur.f||cur
     L.tooltip({permanent:true,direction:'right',className:'townlbl',offset:[6,0],pane:'labels'}).setLatLng([t[1],t[2]]).setContent(t[0]).addTo(townLayer)}}
 map.on('zoomend',()=>{if(S)drawTowns()});
 let pinMarker=null;
-function drawPin(){pinLayer.clearLayers();pinMarker=L.marker([loc.lat,loc.lon],{icon:pinIcon,keyboard:false}).addTo(pinLayer);pinMarker.bindPopup(pinPopupHtml)}
-function pinPopupHtml(){const c=cur;return `<div class="pp-h">${loc.name}</div>Damaging shaking (intensity ${R(c.sp.thr)}+):<br><b>${pct(c.p24)}</b> next 24 h · <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Model below your limit; not building clearance':c.re===Infinity?'Beyond the 400-day search':'Projected model threshold: '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
+function drawPin(){pinLayer.clearLayers();pinMarker=L.marker([loc.lat,loc.lon],{icon:pinIcon,title:'Your spot A: '+loc.name,keyboard:true}).addTo(pinLayer);pinMarker.bindPopup(pinPopupHtml)}
+function pinPopupHtml(){const c=cur;return `<div class="pp-h">A: ${esc(loc.name)}</div>Intensity ${R(c.sp.thr)}+ shaking from M5+ aftershocks:<br><b>${chance(c.exposure.probability)}</b> over ${exposureLabel()}<br><b>${pct(c.p24)}</b> next 24 h · <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Model below your limit; not building clearance':c.re===Infinity?'Beyond the 400-day search':'Projected start for this exposure: '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
 function openPinPopup(){if(pinMarker)pinMarker.openPopup()}
 function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]?$('bld').selectedOptions[0].text.split(/ \(|,/)[0].toLowerCase():'';
   const spec={risk:[`Chance of damaging shaking, next 7 days (${bld})`,['0.3%','2%','10%','40%']],mmi:['Mainshock intensity (USGS ShakeMap)',['IV','VI','VIII','IX']],vs:['Vs30: lower = softer ground, more shaking',['150','400','900 m/s']],liq:['Liquefaction in the mainshock (USGS ground failure)',['2%','8%','20%+']],ls:['Landslides in the mainshock (USGS ground failure)',['1%','4%','12%+']],none:null}[layer];
@@ -557,12 +599,12 @@ const NS='http://www.w3.org/2000/svg';
 function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
 function niceStep(max,n=4){const raw=max/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),r=raw/mag;return (r<1.5?1:r<3?2:r<7?5:10)*mag}
 function tipper(box){let t=box.querySelector('.ctip');if(!t){t=document.createElement('div');t.className='ctip';box.appendChild(t)}return{show(x,y,h){t.innerHTML=h;t.style.left=x+'px';t.style.top=y+'px';t.style.opacity=1},hide(){t.style.opacity=0}}}
-function drawCurve(){const {f,cp,sp,tol,re}=cur,box=$('curve');box.innerHTML='';const W=Math.max(box.clientWidth,260),H=170,m={l:42,r:10,t:12,b:26};
-  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'24-hour risk here over the coming days'},box);
-  const span=Math.min(60,Math.max(7,isFinite(re)?re*2.2:30)),pts=[];for(let i=0;i<=100;i++){const t=span*i/100;pts.push([t,SHAKE.probQ(f,cp,sp.qv,t,t+1)])}
+function drawCurve(){const {f,cp,sp,tol,re,exposure}=cur,box=$('curve');box.innerHTML='';const W=Math.max(box.clientWidth,260),H=170,m={l:42,r:10,t:12,b:26};
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':`Chance of shaking during ${exposureLabel()} by start time`},box);
+  const span=Math.min(60,Math.max(7,isFinite(re)?re*2.2:30)),pts=[];for(let i=0;i<=100;i++){const t=span*i/100;pts.push([t,SHAKE.probQ(f,cp,sp.qv,t,t+exposure.days)])}
   const ymax=Math.max(tol*2.2,pts[0][1]*1.08,0.002),X=t=>m.l+t/span*(W-m.l-m.r),Y=p=>H-m.b-p/ymax*(H-m.t-m.b);
   const ax=el('g',{class:'axis'},svg),g=el('g',{class:'grid'},svg),st=niceStep(ymax);
-  for(let p=0;p<=ymax*1.0001;p+=st){el('line',{x1:m.l,x2:W-m.r,y1:Y(p),y2:Y(p)},g);el('text',{x:m.l-6,y:Y(p)+4,'text-anchor':'end'},ax).textContent=p===0?'0%':pct(p)}
+  for(let p=0;p<=ymax*1.0001;p+=st){el('line',{x1:m.l,x2:W-m.r,y1:Y(p),y2:Y(p)},g);el('text',{x:m.l-6,y:Y(p)+4,'text-anchor':'end'},ax).textContent=chance(p)}
   const xs=niceStep(span,5);for(let t=0;t<=span+1e-9;t+=xs)el('text',{x:X(t),y:H-m.b+16,'text-anchor':'middle'},ax).textContent=t===0?'now':'+'+Math.round(t)+'d';
   el('line',{x1:m.l,x2:W-m.r,y1:Y(tol),y2:Y(tol),stroke:'#1e7a46','stroke-width':1.5,'stroke-dasharray':'5 4'},svg);
   el('text',{x:W-m.r,y:Y(tol)-5,'text-anchor':'end',class:'lbl'},svg).textContent='your limit';
@@ -570,7 +612,7 @@ function drawCurve(){const {f,cp,sp,tol,re}=cur,box=$('curve');box.innerHTML='';
   el('path',{d:d+`L${X(span)},${Y(0)}L${X(0)},${Y(0)}Z`,fill:'#c2391b',opacity:.12},svg);el('path',{d,fill:'none',stroke:'#c2391b','stroke-width':2},svg);
   if(isFinite(re)&&re>0&&re<=span){el('line',{x1:X(re),x2:X(re),y1:m.t,y2:H-m.b,stroke:'#4a5360','stroke-dasharray':'2 3'},svg);el('circle',{cx:X(re),cy:Y(tol),r:4.5,fill:'#1e7a46',stroke:'#fff','stroke-width':2},svg)}
   const tip=tipper(box),cross=el('line',{y1:m.t,y2:H-m.b,stroke:'#7a838f',opacity:0},svg),ov=el('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:'transparent'},svg);
-  ov.onmousemove=ev=>{const b=svg.getBoundingClientRect(),s=b.width/W,x=(ev.clientX-b.left)/s,t=Math.max(0,Math.min(span,(x-m.l)/(W-m.l-m.r)*span)),p=SHAKE.probQ(f,cp,sp.qv,t,t+1);cross.setAttribute('x1',X(t));cross.setAttribute('x2',X(t));cross.setAttribute('opacity',1);tip.show(X(t)*s,Y(Math.min(p,ymax))*s,`+${dur(t)}: ${pct(p)} in 24 h`)};
+  ov.onmousemove=ev=>{const b=svg.getBoundingClientRect(),s=b.width/W,x=(ev.clientX-b.left)/s,t=Math.max(0,Math.min(span,(x-m.l)/(W-m.l-m.r)*span)),p=SHAKE.probQ(f,cp,sp.qv,t,t+exposure.days);cross.setAttribute('x1',X(t));cross.setAttribute('x2',X(t));cross.setAttribute('opacity',1);tip.show(X(t)*s,Y(Math.min(p,ymax))*s,`Start +${dur(t)}: ${chance(p)} during ${exposureLabel()}`)};
   ov.onmouseleave=()=>{cross.setAttribute('opacity',0);tip.hide()}}
 // Monte Carlo daily marks use exactly the same posterior and shaking table as the formula.
 function simulate(n=200,days=30){const {f,cp,src,sp,calib}=cur;let seed=7;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
@@ -656,7 +698,7 @@ $('ciDel').onclick=async()=>{if(!ciDB||!ciUid)return;try{await ciDB.doc('checkin
 // ---------- tabs, controls, time ----------
 function selectTab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);if(t==='spot'){drawCurve();drawSims()}}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>selectTab(b.dataset.tab));
-['bld','tol','shk','reveal'].forEach(id=>$(id).onchange=()=>update());
+['bld','tol','shk','reveal','exposure'].forEach(id=>$(id).onchange=()=>update());
 let sT;$('now').oninput=()=>{clearTimeout(sT);sT=setTimeout(update,60)};
 $('town').addEventListener('change',()=>{const n=$('town').value.trim().toLowerCase();const t=TOWNS.towns.find(t=>t[0].toLowerCase()===n)||B.towns.find(t=>t[0].toLowerCase()===n);if(t){setLoc(t[1],t[2],t[0]);map.setView([t[1],t[2]],Math.max(map.getZoom(),9))}});
 let playT=null;
@@ -667,7 +709,7 @@ let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.in
 
 // ---------- big verdict card on the map ----------
 function renderMapCard(){const c=cur,mc=$('mapcard');const ok=c.re===0;mc.className='ctl mapcard'+(ok?' ok':'');
-  mc.innerHTML=`<div class="mc-place">${esc(loc.name)} · ${$('bld').selectedOptions[0]?esc($('bld').selectedOptions[0].text.split(' (')[0]):''}</div><div class="mc-big">${ok?'OK to go back in now':c.re===Infinity?'Stay out for now':'Wait until '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5)).replace(' UTC','')}</div><div class="mc-odds"><span>Next 24 h <b>${pct(c.p24)}</b></span><span>7 days <b>${pct(c.p7)}</b></span><span>30 days <b>${pct(c.p30)}</b></span></div><div class="mc-hint">Chance of damaging shaking here · click for why</div>`}
+  mc.innerHTML=`<div class="mc-place">A: ${esc(loc.name)} · ${exposureLabel()} exposure</div><div class="mc-big">${ok?'Model below your limit':c.re===Infinity?'Beyond the 400-day search':'Projected start: '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</div><div class="mc-odds"><span>${exposureLabel()} <b>${chance(c.exposure.probability)}</b></span><span>24 h <b>${pct(c.p24)}</b></span><span>7 days <b>${pct(c.p7)}</b></span></div><div class="mc-hint">Modelled shaking only. Building entry needs inspection. Click for details.</div>`}
 $('mapcard').onclick=()=>selectTab('spot');$('mapcard').onkeydown=e=>{if(e.key==='Enter')selectTab('spot')};
 
 // ---------- plain-English risk buttons ----------
@@ -680,7 +722,7 @@ function goSeq(key){const i=seqIndex(key);if(S&&S.key===key)return;pickSeq(i)}
 function setDays(d){$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
 function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
 function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v)}
-function resetChoices(){$('bld').value='local';setTol('0.01');$('shk').value='0';$('reveal').checked=true}
+function resetChoices(){$('bld').value='local';setTol('0.01');$('shk').value='0';$('exposure').value='1440';$('reveal').checked=true;resetComparison()}
 function animateDays(from,to,ms){return new Promise(res=>{const t0=performance.now(),a=Math.log(from),b=Math.log(to);playing=true;
   const step=now=>{const k=Math.min(1,(now-t0)/ms);setDays(Math.exp(a+(b-a)*k));update();if(k<1&&tourOn)requestAnimationFrame(step);else{playing=false;heatKey='';update();res()}};requestAnimationFrame(step)})}
 
@@ -732,10 +774,13 @@ $('wExplore').onclick=()=>{$('welcome').hidden=true;try{localStorage.setItem('ar
 $('helpBtn').onclick=()=>{$('welcome').hidden=false;$('wStory').focus()};
 $('fsBtn').onclick=()=>{const d=document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{})};
 addEventListener('keydown',e=>{const typing=/INPUT|SELECT|TEXTAREA/.test(e.target.tagName);
-  if(e.key==='Escape'){if(!$('welcome').hidden)$('welcome').hidden=true;else if(tourOn)endTour();return}
+  if(e.key==='Escape'){if(comparisonPicking)setComparisonPicking(false);else if(!$('welcome').hidden)$('welcome').hidden=true;else if(tourOn)endTour();return}
   if(typing)return;
   if(tourOn&&(e.key==='ArrowRight'||e.key==='PageDown')){e.preventDefault();tourI===STEPS.length-1?endTour():showStep(tourI+1)}
   else if(tourOn&&(e.key==='ArrowLeft'||e.key==='PageUp')){e.preventDefault();showStep(tourI-1)}
   else if(e.key===' '&&!tourOn&&e.target===document.body){e.preventDefault();$('play').click()}});
+__PLANNER__
 requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen){$('welcome').hidden=false;$('wStory').focus()}});
 </script>
+</body>
+</html>
