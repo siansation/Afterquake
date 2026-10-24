@@ -7,18 +7,20 @@ const GLOBE = (() => {
   const ageColor = age => age < 3600e3 ? '#d7191c' : age < 864e5 ? '#fd8d3c' : age < 7 * 864e5 ? '#fed24c' : '#ffffff';
   const radius = M => 2.2 + Math.pow(Math.max(M - 4, 0), 1.45) * 2.1;
 
-  // geo: {land110, land50, borders110, borders50} as GeoJSON. opts: {onPick(item|null), onHover(item|null, x, y)}
+  // geo: {land110, land50, borders110, borders50} as GeoJSON. opts: {onPick(item|null), onHover(item|null, x, y), accent}
+  // Draws only when something changes (drag, zoom, fly-to, hover, selection, new items), not every animation frame.
   function create(canvas, geo, opts) {
     const ctx = canvas.getContext('2d'), base = document.createElement('canvas'), bctx = base.getContext('2d');
     const proj = d3.geoOrthographic().clipAngle(90).precision(0.4), path = d3.geoPath(proj), grat = d3.geoGraticule10();
     let w = 0, h = 0, dpr = 1, R0 = 1, k = 1, rot = [-30, -18, 0], items = [], selected = null, hovered = null, baseKey = '';
-    let running = false, raf = 0, last = 0, idleSince = 0, fly = null, vel = null, moving = false;
+    let running = false, raf = 0, last = 0, fly = null, vel = null, moving = false;
+    const accent = opts.accent || ACCENT;
     const pointers = new Map(); let drag = null, pinch = null;
 
     function resize() {
       w = canvas.clientWidth; h = canvas.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
       canvas.width = base.width = Math.max(1, Math.round(w * dpr)); canvas.height = base.height = Math.max(1, Math.round(h * dpr));
-      R0 = Math.max(60, Math.min(w, h) * 0.43); baseKey = '';
+      R0 = Math.max(60, Math.min(w, h) * 0.43); baseKey = ''; kick();
     }
     const center = () => [-rot[0], -rot[1]];
     const visible = it => d3.geoDistance([it.lon, it.lat], center()) < Math.PI / 2 - 0.01;
@@ -39,14 +41,14 @@ const GLOBE = (() => {
     function star(c, x, y, r) {
       c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; c.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)) } c.closePath();
     }
-    function draw(now) {
+    function draw() {
       drawBase(); proj.scale(R0 * k).translate([w / 2, h / 2]).rotate(rot);
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(base, 0, 0);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const t = Date.now(), vis = items.filter(visible);
       for (const it of vis) {
         const [x, y] = proj([it.lon, it.lat]), r = sizeOf(it);
-        if (it.kind === 'case') { star(ctx, x, y, Math.max(7, r * .9)); ctx.fillStyle = ACCENT; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); continue }
+        if (it.kind === 'case') { star(ctx, x, y, Math.max(7, r * .9)); ctx.fillStyle = accent; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); continue }
         const age = t - it.t;
         ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = ageColor(age); ctx.globalAlpha = .92; ctx.fill(); ctx.globalAlpha = 1;
         ctx.strokeStyle = 'rgba(25,30,38,.85)'; ctx.lineWidth = .8; ctx.stroke();
@@ -54,20 +56,22 @@ const GLOBE = (() => {
       }
       for (const it of [hovered, selected]) if (it && visible(it)) {
         const [x, y] = proj([it.lon, it.lat]), r = Math.max(7, sizeOf(it)) + 6;
-        ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.strokeStyle = it === selected ? ACCENT : 'rgba(28,33,40,.6)'; ctx.lineWidth = it === selected ? 2.4 : 1.4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.strokeStyle = it === selected ? accent : 'rgba(28,33,40,.6)'; ctx.lineWidth = it === selected ? 2.4 : 1.4; ctx.stroke();
       }
     }
 
+    function kick() { if (running && !raf) raf = requestAnimationFrame(frame) }
     function frame(now) {
-      if (!running) return; const dt = Math.min(64, now - (last || now)); last = now;
-      if (fly) { const p = Math.min(1, (now - fly.t0) / fly.ms), e = ease(p); rot = [fly.r0[0] + (fly.r1[0] - fly.r0[0]) * e, fly.r0[1] + (fly.r1[1] - fly.r0[1]) * e, 0];
-        k = Math.exp(Math.log(fly.k0) + (Math.log(fly.k1) - Math.log(fly.k0)) * e); if (p >= 1) { const done = fly.done; fly = null; idleSince = now; if (done) done() } }
-      else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); vel = [vel[0] * .93, vel[1] * .93]; if (Math.hypot(vel[0], vel[1]) < 0.002) { vel = null; idleSince = now } }
+      raf = 0; if (!running) return; const dt = Math.min(64, now - (last || now)); last = now;
+      if (fly) { const p = Math.max(0, Math.min(1, (now - fly.t0) / fly.ms)), e = ease(p); rot = [fly.r0[0] + (fly.r1[0] - fly.r0[0]) * e, fly.r0[1] + (fly.r1[1] - fly.r0[1]) * e, 0];
+        k = Math.exp(Math.log(fly.k0) + (Math.log(fly.k1) - Math.log(fly.k0)) * e); if (p >= 1) { const done = fly.done; fly = null; if (done) done() } }
+      else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); vel = [vel[0] * .93, vel[1] * .93]; if (Math.hypot(vel[0], vel[1]) < 0.002) vel = null }
       moving = !!(drag || pinch || fly || vel);
-      draw(now); raf = requestAnimationFrame(frame);
+      draw();
+      if (fly || (vel && !drag)) kick(); else last = 0;   // keep going only while something is animating
     }
     const clampLat = v => Math.max(-85, Math.min(85, v));
-    function touch() { idleSince = performance.now(); fly = null }
+    function touch() { fly = null; kick() }
 
     function hit(px, py) {
       proj.scale(R0 * k).translate([w / 2, h / 2]).rotate(rot);
@@ -94,7 +98,7 @@ const GLOBE = (() => {
         drag.lastPt = p; drag.lastT = nowT; touch(); return;
       }
       const it = hit(p[0], p[1]);
-      if (it !== hovered) { hovered = it; canvas.style.cursor = it ? 'pointer' : 'grab' }
+      if (it !== hovered) { hovered = it; canvas.style.cursor = it ? 'pointer' : 'grab'; kick() }
       opts.onHover(it, p[0], p[1]);
     });
     const up = ev => {
@@ -103,10 +107,10 @@ const GLOBE = (() => {
       if (drag) { const click = drag.moved <= 4, p = local(ev), recent = performance.now() - drag.lastT < 60; drag = null; canvas.style.cursor = 'grab';
         if (!recent) vel = null;
         if (click) { vel = null; const it = hit(p[0], p[1]); selected = it; opts.onPick(it) } }
-      idleSince = performance.now();
+      kick();
     };
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-    canvas.addEventListener('pointerleave', () => { if (hovered && !drag) { hovered = null; opts.onHover(null) } });
+    canvas.addEventListener('pointerleave', () => { if (hovered && !drag) { hovered = null; opts.onHover(null); kick() } });
     const clampK = v => Math.max(0.75, Math.min(16, v));
     canvas.addEventListener('wheel', ev => {
       ev.preventDefault(); touch(); const p = local(ev);
@@ -124,18 +128,18 @@ const GLOBE = (() => {
 
     function flyTo(lon, lat, kTo = k, ms = 1100, done) {
       let l = -lon; while (l - rot[0] > 180) l -= 360; while (l - rot[0] < -180) l += 360;
-      vel = null; fly = { t0: performance.now(), ms, r0: rot.slice(), r1: [l, clampLat(-lat), 0], k0: k, k1: clampK(kTo), done };
+      vel = null; fly = { t0: performance.now(), ms, r0: rot.slice(), r1: [l, clampLat(-lat), 0], k0: k, k1: clampK(kTo), done }; kick();
     }
     resize(); canvas.style.cursor = 'grab';
     return {
       resize, flyTo,
       setItems(list) { items = list.slice().sort((a, b) => (a.kind === 'case') - (b.kind === 'case') || a.M - b.M);
-        if (selected) selected = items.find(i => i.id === selected.id) || null; if (hovered) hovered = items.find(i => i.id === hovered.id) || null },
-      select(id) { selected = items.find(i => i.id === id) || null; return selected },
+        if (selected) selected = items.find(i => i.id === selected.id) || null; if (hovered) hovered = items.find(i => i.id === hovered.id) || null; kick() },
+      select(id) { selected = items.find(i => i.id === id) || null; kick(); return selected },
       zoomBy(f) { touch(); fly = { t0: performance.now(), ms: 300, r0: rot.slice(), r1: rot.slice(), k0: k, k1: clampK(k * f) } },
       get zoom() { return k },
-      start() { if (running) return; running = true; last = 0; idleSince = performance.now(); raf = requestAnimationFrame(frame) },
-      stop() { running = false; cancelAnimationFrame(raf) },
+      start() { if (running) return; running = true; last = 0; baseKey = ''; kick() },
+      stop() { running = false; cancelAnimationFrame(raf); raf = 0 },
     };
   }
   return { create, ageColor, radius };
