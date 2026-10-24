@@ -3,5 +3,8 @@
   "framework": null,
   "installCommand": "echo 'nothing to install: index.html is prebuilt (npm run build)'",
   "buildCommand": "echo 'nothing to build: index.html is prebuilt (npm run build)'",
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "headers": [
+    { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }
+  ]
 }
