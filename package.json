@@ -1,0 +1,21 @@
+{
+  "name": "aftershock-reentry",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Forecasts damaging aftershock shaking at a chosen spot and turns it into a time when going back inside is reasonable.",
+  "scripts": {
+    "fetch": "node scripts/fetch_usgs.mjs",
+    "prep": "node scripts/prep_basemap.js && node scripts/prep_population.js",
+    "fit": "python scripts/fit_site_term.py",
+    "build": "python scripts/build.py",
+    "backtest": "node scripts/backtest.js"
+  },
+  "devDependencies": {
+    "all-the-cities": "3.1.0",
+    "cities.json": "1.1.50",
+    "geotiff": "2.1.3",
+    "leaflet": "1.9.4",
+    "topojson-client": "3.1.0",
+    "world-atlas": "2.0.2"
+  }
+}

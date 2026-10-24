@@ -1,0 +1,7 @@
+[
+  { "label": "Build index.html", "command": "python scripts/build.py", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Backtest the aftershock model", "command": "node scripts/backtest.js", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Refit soil term", "command": "python scripts/fit_site_term.py", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Fetch fresh data from USGS", "command": "node scripts/fetch_usgs.mjs", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Serve locally on port 8000", "command": "python -m http.server 8000", "cwd": "$ZED_WORKTREE_ROOT" }
+]

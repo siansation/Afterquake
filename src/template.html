@@ -1,0 +1,598 @@
+<title>Aftershock Re-entry</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>__LEAFLET_CSS__</style>
+<style>
+/* Layout: a hazard-agency map console. Slim dark header, a 400px side panel with tabs, the map filling the rest with layer control, legend and a timeline bar over it. Single light look by design, like official hazard maps. */
+:root{
+  --bar:#1f2329; --barInk:#f1f2f4; --bg:#eef0f2; --panel:#ffffff; --line:#d9dde2; --line2:#eceef1;
+  --ink:#1c2128; --ink2:#4a5360; --mute:#7a838f; --link:#0b5cad;
+  --accent:#c2391b; --sea:#d6e2ea; --land:#f6f5f2; --coast:#9aa7b2;
+  --good:#1e7a46; --goodbg:#e4f3ea; --warn:#a85008; --warnbg:#fdf0df; --help:#b3261e;
+  --sans:"Source Sans 3","Segoe UI",Helvetica,Arial,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+html,body{height:100%;background:var(--bg);color:var(--ink)}
+body{font-family:var(--sans);font-size:15px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+button,select,input{font:inherit}
+a{color:var(--link)}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.top{background:var(--bar);color:var(--barInk);display:flex;align-items:center;gap:14px;padding-block:8px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));flex-wrap:wrap}
+.brand{font-weight:800;font-size:17px;letter-spacing:.01em;white-space:nowrap}
+.brand b{color:#ff8a66}
+.evsum{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.mag{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:30px;border-radius:4px;font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;color:#fff;background:var(--accent);padding:0 6px}
+.evtxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.evtxt small{color:#aeb6c0;margin-left:6px}
+.top .note{color:#aeb6c0;font-size:12.5px}
+.app{flex:1;display:grid;grid-template-columns:400px 1fr;min-height:0}
+@media (max-width:860px){body{overflow:auto;height:auto}.app{grid-template-columns:minmax(0,1fr);grid-template-rows:62vh auto}.evtxt small{display:none}.top .note{display:none}.side{order:2;border-right:0;border-top:1px solid var(--line)}.mapwrap{order:1}}
+.side{min-width:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding-left:max(0px,env(safe-area-inset-left,0px));overflow-x:auto}
+.tabs button{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:10px 8px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;font-size:14px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow:auto;flex:1;padding:14px;padding-left:max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+.pane[hidden]{display:none!important}
+h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);margin:0}
+h3{font-size:15px;margin:0}
+.muted{color:var(--mute);font-size:12.5px;margin:0}
+.p{margin:0;font-size:14px;color:var(--ink2)}
+.card{border:1px solid var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f.wide{grid-column:1/-1}
+.f label{font-size:12px;font-weight:600;color:var(--ink2)}
+select,input[type=search],input[type=text]{color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
+.place{font-size:19px;font-weight:800;margin:0;line-height:1.2}
+.coords{font-family:var(--mono);font-size:11.5px;color:var(--mute)}
+.verdict{border-radius:6px;padding:12px;border:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.verdict.wait{background:var(--warnbg);border-color:#efc999}
+.verdict.ok{background:var(--goodbg);border-color:#a9d8bb}
+.status{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+.wait .status{color:var(--warn)} .ok .status{color:var(--good)}
+.status svg{width:14px;height:14px}
+.big{font-size:21px;font-weight:800;line-height:1.2;margin:0}
+.verdict p{margin:0;font-size:13.5px;color:var(--ink2)}
+.odds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.odd{border:1px solid var(--line);border-radius:6px;padding:8px;display:flex;flex-direction:column;min-width:0}
+.odd .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.odd .k{font-size:12px;color:var(--ink2)}
+.odd .bar{height:4px;background:var(--line2);border-radius:2px;margin-top:6px;overflow:hidden}
+.odd .bar i{display:block;height:100%;background:var(--accent)}
+.factors{list-style:none;margin:0;padding:0}
+.factors li{display:grid;grid-template-columns:1fr auto;gap:1px 10px;padding:8px 0;border-top:1px solid var(--line2);font-size:13.5px}
+.factors li:first-child{border-top:0;padding-top:0}
+.fk{color:var(--ink2)} .fv{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.fd{grid-column:1/-1;font-size:12.5px;color:var(--mute)}
+.flag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--warn)}
+.src{font:500 11px var(--mono);color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{display:flex;gap:5px;align-items:center;font-size:13px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;cursor:pointer}
+.btn{border:1px solid var(--line);background:#fff;border-radius:4px;padding:6px 12px;cursor:pointer;font-weight:600;color:var(--ink)}
+.btn.safe{background:var(--good);border-color:var(--good);color:#fff}
+.btn.help{background:var(--help);border-color:var(--help);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.axis text{font:10.5px var(--mono);fill:var(--mute)}
+.grid line{stroke:var(--line);stroke-dasharray:2 3}
+.lbl{font:600 11px var(--sans);fill:var(--ink2)}
+.ctip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font:12px var(--mono);padding:5px 7px;border-radius:4px;white-space:nowrap;transform:translate(-50%,-115%);opacity:0;z-index:5}
+.evlist{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.evlist li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:9px 10px;border-top:1px solid var(--line2);cursor:pointer;align-items:center}
+.evlist li:first-child{border-top:0}
+.evlist li:hover{background:#f6f8fa}
+.evlist li[aria-current="true"]{background:#fdf3ef;box-shadow:inset 3px 0 0 var(--accent)}
+.evlist .m{grid-row:span 2;font-weight:800;font-size:18px;min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
+.evlist .t{font-weight:600;font-size:14px}
+.evlist .s{font-size:12px;color:var(--mute);font-family:var(--mono)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 6px;border-top:1px solid var(--line2);vertical-align:top}
+th{font-size:12px;color:var(--ink2);font-weight:600;border-top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.ledger td:first-child{font-weight:600}
+.ledger tr.hl td{background:#fff3c4}
+.mapwrap{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:var(--sea)}
+.leaflet-container{font-family:var(--sans);background:var(--sea)}
+.ctl{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 1px 4px rgba(20,30,40,.18);font-size:13px}
+.layers{position:absolute;top:10px;right:max(10px,env(safe-area-inset-right,0px));z-index:500;padding:10px 12px;display:flex;flex-direction:column;gap:4px;max-width:230px}
+.layers h4{margin:0 0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2)}
+.layers label{display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap}
+.layers hr{border:0;border-top:1px solid var(--line2);margin:4px 0}
+.layers .tgl{display:none}
+.layers .body{display:flex;flex-direction:column;gap:4px}
+@media (max-width:860px){.layers .body{display:none}.layers.open .body{display:flex}.layers .tgl{display:block}}
+.legend{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:74px;z-index:500;padding:8px 10px;max-width:260px}
+.legend .ramp{display:flex;gap:4px;align-items:center;font:11px var(--mono);color:var(--mute)}
+.legend canvas{width:150px;height:10px;border-radius:2px;border:1px solid var(--line)}
+.legend .t{font-size:12px;color:var(--ink2);margin-top:4px}
+.legend .keys{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:11.5px;color:var(--ink2)}
+.legend .keys i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.35)}
+.timebar{position:absolute;left:10px;right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:500;padding:8px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center}
+.timebar input[type=range]{width:100%;accent-color:var(--accent);min-width:0}
+.timebar .clock{font:12.5px var(--mono);color:var(--ink2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.timebar .clock b{color:var(--ink);font-weight:500}
+.timebar .sub{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+.play{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+@media (max-width:600px){.timebar{grid-template-columns:auto 1fr}.timebar .clock{grid-column:1/-1}}
+.pin{width:26px;height:36px}
+.leaflet-popup-content{margin:10px 12px;font-size:13px;line-height:1.4;min-width:180px}
+.leaflet-popup-content b{font-weight:700}
+.pp-h{font-weight:800;font-size:14px;margin-bottom:2px}
+.pp-k{color:var(--mute);font-size:12px}
+.leaflet-tooltip{font-family:var(--sans);font-size:12px}
+.townlbl{background:transparent;border:0;box-shadow:none;font-weight:700;font-size:12px;color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;padding:0}
+.townlbl::before{display:none}
+details summary{cursor:pointer;font-weight:600}
+@media (max-width:860px){.legend .keys{display:none}.legend{bottom:auto;top:10px;right:auto;left:56px;max-width:190px;padding:6px 8px}.legend .t{font-size:11px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
+.method p{font-size:13.5px;color:var(--ink2);margin:6px 0}
+.method code{font-family:var(--mono);font-size:12px}
+.ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13px;padding:6px 0;border-top:1px solid var(--line2)}
+.ci:first-child{border-top:0}
+.ci .dot{width:10px;height:10px;border-radius:50%}
+</style>
+
+<header class="top">
+  <div class="brand">Aftershock <b>Re-entry</b></div>
+  <div class="evsum"><span class="mag" id="hMag">7.8</span><span class="evtxt" id="hTxt"></span></div>
+  <span class="note" id="hNote"></span>
+</header>
+
+<div class="app">
+  <aside class="side">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="spot" aria-selected="true">Your spot</button>
+      <button role="tab" data-tab="events" aria-selected="false">Earthquakes</button>
+      <button role="tab" data-tab="people" aria-selected="false">People</button>
+      <button role="tab" data-tab="sources" aria-selected="false">Sources</button>
+      <button role="tab" data-tab="accuracy" aria-selected="false">Accuracy</button>
+    </div>
+
+    <section class="pane" id="pane-spot">
+      <div>
+        <input type="search" id="town" list="towns" placeholder="Search a town, or click the map" autocomplete="off" aria-label="Search a town">
+        <datalist id="towns"></datalist>
+      </div>
+      <div><p class="place" id="place"></p><span class="coords" id="coords"></span></div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+      <div class="fields">
+        <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
+        <div class="f"><label for="tol">Risk you'll accept (24 h)</label><select id="tol"><option value="0.1">1 in 10</option><option value="0.02">1 in 50</option><option value="0.01" selected>1 in 100</option><option value="0.001">1 in 1,000</option></select></div>
+        <div class="f"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Felt-report (cautious)</option><option value="1">ShakeMap-calibrated</option></select></div>
+      </div>
+      <div class="card">
+        <h2 id="oddsTitle">Chance of damaging shaking here</h2>
+        <div class="odds" id="odds"></div>
+        <p class="muted" id="alt"></p>
+      </div>
+      <div class="card">
+        <h2>Risk here over the coming days</h2>
+        <div class="chart" id="curve"></div>
+      </div>
+      <div class="card">
+        <h2>200 simulated futures at this spot</h2>
+        <p class="muted">Each row is one possible next 30 days. Every simulated aftershock can set off its own. Red = damaging shaking here that day; grey = an M6+ somewhere in the area.</p>
+        <div class="chart" id="sims"></div>
+        <p class="muted" id="simNote"></p>
+      </div>
+      <div class="card">
+        <h2>Danger factors at this spot</h2>
+        <ul class="factors" id="factors"></ul>
+      </div>
+      <div class="card">
+        <h2>Around you</h2>
+        <p class="muted">No global data covers these yet, so tick what applies. It changes where to wait, not the forecast.</p>
+        <div class="chips" id="around">
+          <label><input type="checkbox" value="tall"> Tall buildings</label>
+          <label><input type="checkbox" value="walls"> Brick walls, facades</label>
+          <label><input type="checkbox" value="trees"> Large trees</label>
+          <label><input type="checkbox" value="power"> Power lines</label>
+          <label><input type="checkbox" value="slope"> Steep slope above</label>
+          <label><input type="checkbox" value="water"> River, dam or sea nearby</label>
+        </div>
+        <p class="p" id="waitAdvice"></p>
+      </div>
+    </section>
+
+    <section class="pane" id="pane-events" hidden>
+      <h2>Earthquakes</h2>
+      <p class="muted">13 real earthquakes from the USGS catalogue. The three from 2026 were still in progress when the data was pulled.</p>
+      <ul class="evlist" id="evlist"></ul>
+      <h2 style="margin-top:6px">Largest aftershocks so far</h2>
+      <ul class="evlist" id="aftlist"></ul>
+    </section>
+
+    <section class="pane" id="pane-people" hidden>
+      <div class="card">
+        <h2>People near your spot</h2>
+        <div id="nearPeople"></div>
+      </div>
+      <div class="card">
+        <h2>People at risk in the next 7 days</h2>
+        <div id="atRisk"></div>
+      </div>
+      <div class="card">
+        <h2>Who felt the mainshock</h2>
+        <p class="muted" id="pagerNote"></p>
+        <div id="pagerExp"></div>
+      </div>
+      <div class="card">
+        <h2>Safety check-in</h2>
+        <p class="muted">Opt-in only. Mark yourself safe or in need of help at your pin, so the people you've shared this page with can find you. Only people with contributor access can see check-ins, and you can remove yours at any time.</p>
+        <div class="row"><input type="text" id="ciNote" maxlength="80" placeholder="Short note (optional)" aria-label="Check-in note"></div>
+        <div class="row"><button class="btn safe" id="ciSafe">I'm safe here</button><button class="btn help" id="ciHelp">I need help here</button><button class="btn" id="ciDel">Remove mine</button></div>
+        <p class="muted" id="ciStatus">Connecting…</p>
+        <div id="ciList"></div>
+      </div>
+    </section>
+
+    <section class="pane" id="pane-sources" hidden>
+      <h2>Where every number comes from</h2>
+      <p class="muted">What each source is, and what this tool does with it.</p>
+      <table class="ledger" id="ledger"></table>
+      <details class="method"><summary>How the forecast at your spot works</summary>
+        <p>1. <b>How many.</b> Reasenberg–Jones aftershock model, fitted to the sequence so far, starting from global average settings.</p>
+        <p>2. <b>Where.</b> Every quake so far counts as a possible source of the next one, smoothed by 6 km and placed 10 km deep.</p>
+        <p>3. <b>How hard.</b> The Allen–Wald–Worden (2012) intensity equation for each source and magnitude (M5 to 8.5), including its scatter.</p>
+        <p>4. <b>Your ground.</b> A soil term fitted to ShakeMaps: <code>ΔMMI = <span class="kv"></span> × log10(Vs30/760)</code>.</p>
+        <p>5. <b>Your building.</b> Damage threshold from the Modified Mercalli scale, or for "typical local building", from the USGS PAGER casualty model for that country. It drops one level if this spot already shook at that level, or if the ground-failure model gives at least 10% liquefaction.</p>
+        <p>6. <b>Simulated futures.</b> 200 Monte Carlo runs of the next 30 days. Each simulated M5.5+ triggers its own aftershocks using global average settings. That's why the simulation can run a little above the formula.</p>
+        <p><b>Prototype only, not safety advice.</b> Whether a building is safe to enter is decided by a structural inspection and local authorities.</p>
+      </details>
+    </section>
+
+    <section class="pane" id="pane-accuracy" hidden>
+      <div class="card"><h2>Does it forecast how many aftershocks?</h2>
+        <p class="muted">At 0.5–60 days after each mainshock, the model forecast the next 7 days using only data available then. Each forecast was checked against what happened.</p>
+        <table id="bt"></table><p class="muted" id="btNote"></p></div>
+      <div class="card"><h2>Does it predict how hard they shake?</h2>
+        <p class="muted">The felt-report equation compared with USGS ShakeMaps of 26 real aftershocks. A negative gap means the equation predicted stronger shaking.</p>
+        <table id="aft"></table><p class="muted" id="aftNote"></p></div>
+    </section>
+  </aside>
+
+  <div class="mapwrap">
+    <div id="map" role="application" aria-label="Map. Click to choose your location."></div>
+    <div class="ctl layers" id="layers">
+      <button class="btn tgl" id="layTgl" aria-expanded="false">Layers</button>
+      <div class="body">
+        <h4>Shade the map by</h4>
+        <label><input type="radio" name="lay" value="risk" checked> Damaging shaking, 7 days</label>
+        <label><input type="radio" name="lay" value="mmi"> Mainshock shaking</label>
+        <label><input type="radio" name="lay" value="vs"> Ground softness (Vs30)</label>
+        <label><input type="radio" name="lay" value="liq"> Liquefaction</label>
+        <label><input type="radio" name="lay" value="ls"> Landslides</label>
+        <label><input type="radio" name="lay" value="none"> Nothing</label>
+        <hr>
+        <h4>Show</h4>
+        <label><input type="checkbox" id="showQ" checked> Aftershocks</label>
+        <label><input type="checkbox" id="showT" checked> Towns and population</label>
+        <label><input type="checkbox" id="showC" checked> Check-ins</label>
+      </div>
+    </div>
+    <div class="ctl legend" id="legend"></div>
+    <div class="ctl timebar">
+      <button class="play" id="play" aria-label="Play the sequence"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg></button>
+      <input type="range" id="now" min="0" max="1000" value="300" aria-label="Time since the mainshock">
+      <span class="clock" id="clock"></span>
+      <div class="sub"><label><input type="checkbox" id="reveal" checked> Show quakes after this moment (hidden from the model)</label></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script id="d-data" type="application/json">__DATA__</script>
+<script id="d-extra" type="application/json">__EXTRA__</script>
+<script id="d-base" type="application/json">__BASE__</script>
+<script id="d-pop" type="application/json">__POP__</script>
+<script id="d-aft" type="application/json">__AFT__</script>
+<script>__MODEL__</script>
+<script>__SHAKE__</script>
+<script>
+const J=id=>JSON.parse(document.getElementById(id).textContent);
+const D=J('d-data'),EX=J('d-extra'),BASE=J('d-base'),POP=J('d-pop'),AFT=J('d-aft');const SITEFIT=__SITEFIT__;
+const $=id=>document.getElementById(id);
+const ORDER=['turkey','nepal','darfield','noto','kaikoura','ridgecrest','myanmar','kumamoto','ecuador','morocco','indonesia26','panama26','nagqu26'];
+const SEQ=D.sequences.sort((a,b)=>ORDER.indexOf(a.key)-ORDER.indexOf(b.key));
+const CNAME={TR:'Türkiye',NP:'Nepal',NZ:'New Zealand',JP:'Japan',US:'United States',MM:'Myanmar',EC:'Ecuador',MA:'Morocco',ID:'Indonesia',PA:'Panama',CN:'China',IN:'India',SY:'Syria',CO:'Colombia',CR:'Costa Rica',IR:'Iran'};
+const MMI_NAME=['','not felt','weak','weak','light','moderate','strong','very strong','severe','violent','extreme'];
+const ROMAN=['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+const R=v=>ROMAN[Math.max(1,Math.min(10,Math.round(v)))];
+const ICON={wait:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1z" fill="currentColor"/><path d="M8 6v4" stroke="#fdf0df" stroke-width="1.6"/><circle cx="8" cy="12" r=".9" fill="#fdf0df"/></svg>',ok:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="m4.8 8.2 2.2 2.2 4.2-4.6" stroke="#e4f3ea" stroke-width="1.8" fill="none"/></svg>'};
+document.querySelectorAll('.kv').forEach(e=>e.textContent=SITEFIT.k);
+const fmtDate=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+const fmtDT=d=>d.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
+const dur=d=>d<1/24?Math.round(d*1440)+' min':d<2?(d*24).toFixed(d<0.5?1:0)+' hours':d.toFixed(d<10?1:0)+' days';
+const pct=p=>p>=.995?'>99%':p<0.0005?'<0.1%':p<0.1?(p*100).toFixed(1)+'%':Math.round(p*100)+'%';
+const oneIn=p=>p>=.5?'more likely than not':p<0.0002?'under 1 in 5,000':'about 1 in '+Number((1/p).toPrecision(2)).toLocaleString();
+const fmtN=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+' million':n>=1e4?Math.round(n/1000)+',000':Math.round(n).toLocaleString();
+const vsClass=v=>v>=1500?['A','hard rock']:v>=760?['B','rock']:v>=360?['C','dense soil or soft rock']:v>=180?['D','stiff soil']:['E','soft soil'];
+function b64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+function erf(x){const t=1/(1+0.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
+const PhiN=z=>0.5*(1+erf(z/Math.SQRT2));
+function countryThr(cc){const f=POP.fatality[cc];if(!f)return null;return Math.max(6,Math.min(9.5,f[0]*Math.exp(-3.719*f[1])))}
+function fatRate(cc,mmi){const f=POP.fatality[cc];return f?PhiN(Math.log(mmi/f[0])/f[1]):null}
+
+// ---------- state ----------
+let S,G,B,TOWNS,tMin=1/24,tMax=1,layer='risk',loc=null,heat=null,heatKey='',playing=false,cur={};
+const sliderToT=v=>tMin*Math.pow(tMax/tMin,v/1000),tToSlider=t=>Math.round(1000*Math.log(t/tMin)/Math.log(tMax/tMin));
+const km=(lat,lon)=>[(lon-S.lon)*111.32*G.c,(lat-S.lat)*110.57];
+function gridAt(lat,lon){const c=Math.round((lon-G.lon0)/G.dlon),r=Math.round((G.lat0-lat)/G.dlat);if(c<0||r<0||c>=G.nc||r>=G.nr)return null;const i=r*G.nc+c;return{mmi:G.mmi[i]/20,vs:G.vs[i]*8,liq:G.liq?G.liq[i]/500:null,ls:G.ls?G.ls[i]/1000:null}}
+
+// ---------- map ----------
+const map=L.map('map',{zoomControl:true,preferCanvas:true,attributionControl:true,worldCopyJump:false,minZoom:4,maxZoom:13});
+map.attributionControl.setPrefix('');map.attributionControl.addAttribution('Data: USGS, Natural Earth, GeoNames');
+// Drawing order: land (300) < shading (380) < towns (420) < quakes (440) < check-ins (460) < pin (600) < labels (640)
+[['land',300],['shade',380],['towns',420],['quakes',440],['checks',460],['labels',640]].forEach(([n,z])=>{map.createPane(n);map.getPane(n).style.zIndex=z});
+map.getPane('land').style.pointerEvents='none';map.getPane('shade').style.pointerEvents='none';map.getPane('labels').style.pointerEvents='none';
+const RND={land:L.canvas({pane:'land'}),quakes:L.canvas({pane:'quakes'}),checks:L.canvas({pane:'checks'})};
+const landLayer=L.layerGroup().addTo(map),overlayLayer=L.layerGroup().addTo(map),townLayer=L.layerGroup().addTo(map),quakeLayer=L.layerGroup().addTo(map),ciLayer=L.layerGroup().addTo(map),pinLayer=L.layerGroup().addTo(map);
+const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupAnchor:[0,-30],html:'<svg class="pin" viewBox="0 0 26 36" aria-hidden="true"><path d="M13 35C13 35 2 21 2 13a11 11 0 1 1 22 0c0 8-11 22-11 22z" fill="#c2391b" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.2" fill="#fff"/></svg>'});
+const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><path d="M13 1.5l3.3 7.6 8.2.7-6.2 5.4 1.9 8L13 19l-7.2 4.2 1.9-8L1.5 9.8l8.2-.7z" fill="#c2391b" stroke="#fff" stroke-width="1.6"/></svg>'});
+
+function pickSeq(i){
+  S=SEQ[i];B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
+  G={...sm,mmi:b64(sm.mmi),vs:b64(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
+  G.lon1=G.lon0+(G.nc-1)*G.dlon;G.lat1=G.lat0-(G.nr-1)*G.dlat;
+  G.bounds=L.latLngBounds([G.lat1-G.dlat/2,G.lon0-G.dlon/2],[G.lat0+G.dlat/2,G.lon1+G.dlon/2]);
+  // coastline segments (drop edges created by clipping to the map box)
+  const bx={w:G.lon0-0.3,e:G.lon1+0.3,s:G.lat1-0.3,n:G.lat0+0.3},on=(p,q)=>[['0','w'],['0','e'],['1','s'],['1','n']].some(([ax,k])=>Math.abs(p[ax]-bx[k])<2e-3&&Math.abs(q[ax]-bx[k])<2e-3);
+  G.coast=[];for(const r of B.land)for(let k=0;k<r.length;k++){const a=r[k],b=r[(k+1)%r.length];if(!on(a,b))G.coast.push([...km(a[1],a[0]),...km(b[1],b[0])])}
+  $('hMag').textContent=S.M.toFixed(1);$('hTxt').innerHTML=`${S.label} <small>${fmtDate(new Date(S.t0))} · ${S.place}</small>`;
+  tMax=Math.max(1,S.daysAvailable);$('now').value=tToSlider(Math.min(tMax,S.key.endsWith('26')?tMax:1));
+  // land
+  landLayer.clearLayers();
+  for(const r of B.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:true,color:'#9aa7b2',weight:1,fillColor:'#f6f5f2',fillOpacity:1,interactive:false}).addTo(landLayer);
+  for(const l of B.borders)L.polyline(l.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',color:'#7d8893',weight:1.2,dashArray:'4 4',interactive:false}).addTo(landLayer);
+  G.mask=null;
+  map.invalidateSize();map.fitBounds(G.bounds.pad(-0.08));map.setMaxBounds(G.bounds.pad(0.4));
+  $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${n}"></option>`).join('');
+  const t=TOWNS.towns.find(t=>B.labels.includes(t[0]))||TOWNS.towns[0];
+  const lab=B.labels.map(n=>B.towns.find(x=>x[0]===n)).filter(Boolean)[0];
+  const start=lab||(t&&[t[0],t[1],t[2]]);setLoc(start?start[1]:S.lat,start?start[2]:S.lon,start?start[0]:'Epicentre area',false);
+  buildBuildingOptions();renderEvents();renderLedger();renderPager();heatKey='';update();refreshCheckins();
+}
+function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('bld').value||'local';
+  $('bld').innerHTML=`<option value="local">Typical local building, ${CNAME[cc]||cc} (${ct?R(ct):'VIII'})</option><option value="9">Modern, built to seismic code (IX)</option><option value="8">Reinforced concrete (VIII)</option><option value="7">Older brick, stone or adobe (VII)</option><option value="6">Already cracked or damaged (VI)</option>`;$('bld').value=keep}
+function pinCountry(){if(!loc)return POP.seqCountry[S.key];let best=null,bd=40;for(const t of TOWNS.towns){const d=Math.hypot((t[1]-loc.lat)*110.57,(t[2]-loc.lon)*111.32*G.c);if(d<bd){bd=d;best=t}}return best&&POP.fatality[best[4]]?best[4]:POP.seqCountry[S.key]}
+function setLoc(lat,lon,name,doUpdate=true){loc={lat,lon,name};$('town').value=name&&!/^(Dropped|Near)/.test(name)?name:'';if(doUpdate){buildBuildingOptions();update()}}
+map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng))return;let best=null,bd=4;for(const t of B.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lng)*111.32*G.c);if(d<bd){bd=d;best=t}}setLoc(lat,lng,best?`Near ${best[0]}`:'Dropped pin');openPinPopup()});
+
+// ---------- forecast ----------
+function sources(now){const out=[];const ev=S.events.filter(e=>e[0]>=-0.001&&e[0]<=now);const step=Math.max(1,Math.ceil(ev.length/700));for(let i=0;i<ev.length;i+=step){const [x,y]=km(ev[i][2],ev[i][3]);out.push(x,y)}return out}
+function baseThr(){const v=$('bld').value;return v==='local'?(countryThr(pinCountry())||8):+v}
+function spot(lat,lon,thrBase,calib,src){
+  const gv=gridAt(lat,lon)||{mmi:0,vs:600,liq:null,ls:null};let thr=thrBase,why=[];
+  if(gv.mmi>=thrBase-0.5&&thrBase>6){why.push('mainshock')}
+  if(gv.liq!=null&&gv.liq>=0.1){why.push('liquefaction')}
+  if(why.length)thr=Math.max(6,thrBase-1);
+  const [x,y]=km(lat,lon);return{gv,thr,why,x,y,qv:SHAKE.q(src,x,y,gv.vs,thr,calib)}}
+function update(){
+  const now=sliderToT(+$('now').value),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
+  const t0=Date.parse(S.t0),nowDate=new Date(t0+now*864e5);
+  $('clock').innerHTML=`<b>${dur(now)}</b> after · ${fmtDT(nowDate)}`;
+  $('hNote').textContent=`Forecast as of ${fmtDT(nowDate)}`;
+  const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f).slice(0,160),src=sources(now);
+  const sp=spot(loc.lat,loc.lon,thrB,calib,src);
+  const p24=SHAKE.probQ(f,cp,sp.qv,0,1),p7=SHAKE.probQ(f,cp,sp.qv,0,7),p30=SHAKE.probQ(f,cp,sp.qv,0,30),re=SHAKE.reentryQ(f,cp,sp.qv,tol);
+  cur={key:S.key,now,f,cp,src,sp,p24,p7,p30,re,thrB,tol,calib,nowDate};
+  $('place').textContent=loc.name;$('coords').textContent=`${loc.lat.toFixed(3)}°, ${loc.lon.toFixed(3)}° · ${Math.round(Math.hypot(sp.x,sp.y))} km from the epicentre`;
+  // verdict
+  const v=$('verdict'),tolTxt=$('tol').selectedOptions[0].text,lvl=R(sp.thr);
+  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Within your limit</span><p class="big">Reasonable to go back in now</p><p>Chance of intensity ${lvl}+ shaking here in the next 24 h: ${oneIn(p24)}. Your limit is ${tolTxt}.</p>`}
+  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Not within the next year</p><p>The chance stays above ${tolTxt} per day.</p>`}
+  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Wait until ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>${dur(re)} from now. Chance of intensity ${lvl}+ shaking here in the next 24 h: ${oneIn(p24)} (your limit: ${tolTxt}).</p>`}
+  if(reveal){const near=S.events.filter(e=>e[0]>now&&e[1]>=5).map(e=>{const [x,y]=km(e[2],e[3]);const d=Math.hypot(x-sp.x,y-sp.y);return{e,d,mmi:SHAKE.mu(e[1],Math.sqrt(d*d+100))+SHAKE.site(sp.gv.vs)+(calib?SHAKE.BIAS:0)}}).filter(o=>o.mmi>=sp.thr-0.5).sort((a,b)=>a.e[0]-b.e[0]);
+    v.insertAdjacentHTML('beforeend',`<p><b>What actually happened:</b> ${near.length?`an M${near[0].e[1]} hit ${Math.round(near[0].d)} km away ${dur(near[0].e[0]-now)} later, estimated at intensity ${near[0].mmi.toFixed(1)} here.`:`nothing came close to intensity ${lvl} here in the next ${dur(S.daysAvailable-now)} of data.`}</p>`)}
+  v.insertAdjacentHTML('beforeend',`<p style="font-size:12px;border-top:1px dashed #d8c8b0;padding-top:5px">Covers the chance of more shaking only. A structural check still decides whether the building is safe.</p>`);
+  // odds
+  $('oddsTitle').textContent=`Chance of intensity ${lvl}+ shaking here`;
+  $('odds').innerHTML=[['next 24 h',p24],['next 7 days',p7],['next 30 days',p30]].map(([k,p])=>`<div class="odd"><span class="v">${pct(p)}</span><span class="k">${k}</span><span class="bar"><i style="width:${Math.max(1,p*100)}%"></i></span></div>`).join('');
+  const qAlt=SHAKE.q(src,sp.x,sp.y,sp.gv.vs,sp.thr,!calib),p7alt=SHAKE.probQ(f,cp,qAlt,0,7);
+  $('alt').innerHTML=`With the ${calib?'felt-report':'ShakeMap-calibrated'} model instead: ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
+  renderFactors();renderAround();
+  const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
+  if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
+  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);bindSrc();
+}
+function computeHeat(f,cp,src,calib){
+  const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=G.lat0-(r+0.5)/rows*(G.lat0-G.lat1),lon=G.lon0+(c+0.5)/cols*(G.lon1-G.lon0);
+    const tb=local?(countryThr(POP.seqCountry[S.key])||8):+$('bld').value;const s=spot(lat,lon,tb,calib,src);P[r*cols+c]=SHAKE.probQ(f,cp,s.qv,0,7)}
+  return{cols,rows,P}}
+function factorsList(){const sp=cur.sp,gv=sp.gv,cc=pinCountry(),ct=countryThr(cc),amp=SHAKE.site(gv.vs),[cls,clsN]=vsClass(gv.vs);
+  let nearest=Infinity;for(let k=0;k<cur.src.length;k+=2)nearest=Math.min(nearest,Math.hypot(cur.src[k]-sp.x,cur.src[k+1]-sp.y));
+  let coast=Infinity;for(const s of G.coast){const [ax,ay,bx,by]=s,dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((sp.x-ax)*dx+(sp.y-ay)*dy)/l));coast=Math.min(coast,Math.hypot(ax+t*dx-sp.x,ay+t*dy-sp.y))}
+  const p7M7=MODEL.prob(cur.f,7,0,7),fr=fatRate(cc,8);
+  const L=[];
+  L.push(['Nearest aftershock activity',`${Math.round(nearest)} km`,'Shaking fades fast with distance, so nearby activity drives most of the risk.','catalogue']);
+  L.push(['Ground under you',`Vs30 ${Math.round(gv.vs)} m/s`,`Site class ${cls} (${clsN}): ${amp>=0?'+':''}${amp.toFixed(2)} intensity ${amp>0.05?'(amplifies)':amp<-0.05?'(damps)':'(average)'}.`,'vs30']);
+  L.push(['Mainshock shaking here',`${R(gv.mmi)} · ${MMI_NAME[Math.round(gv.mmi)]||''}`,sp.why.includes('mainshock')?'<span class="flag">Likely damaged</span> At or near your building\'s damage level, so the threshold drops one level.':'Below your building\'s damage level.','shakemap']);
+  if(gv.liq!=null)L.push(['Liquefaction (mainshock)',pct(gv.liq),gv.liq>=0.1?'<span class="flag">High</span> Ground that liquefies can tilt or sink foundations, so the building is treated as weakened. Common near rivers, coasts and on soft soil.':'Share of nearby ground the USGS model expects to have liquefied. Low here.','gf']);
+  if(gv.ls!=null)L.push(['Landslides (mainshock)',pct(gv.ls),gv.ls>=0.05?'<span class="flag">High</span> Slopes here are prone to sliding. Aftershocks can trigger more.':'Share of nearby ground the USGS model expects to have slid. Low here.','gf']);
+  L.push(['How prepared the country is',`${CNAME[cc]||cc}`,fr!=null?`In past earthquakes here, about ${oneIn(fr).replace('about ','')} people exposed to intensity VIII died (USGS PAGER). Typical buildings start failing around ${R(ct)}.`:'No PAGER model for this country.','pager']);
+  if(EX[S.key]&&EX[S.key].pager&&EX[S.key].pager.struct)L.push(['Common building types','PAGER',EX[S.key].pager.struct.replace(/^Overall, /,'').replace(/\s+/g,' '),'pager']);
+  L.push(['Distance to coast',coast<400?`${coast<1?coast.toFixed(1):Math.round(coast)} km`:'inland',coast<5?`<span class="flag">Tsunami</span> An M7+ aftershock offshore could cause a tsunami. Chance of an M7+ anywhere in the area this week: ${pct(p7M7)}. If you feel strong shaking, move inland or uphill.`:'Far enough from the sea that tsunami isn\'t a concern.','catalogue']);
+  return L}
+function renderFactors(){$('factors').innerHTML=factorsList().map(([k,v,d,s])=>`<li><span class="fk">${k}</span><span class="fv">${v}</span><span class="fd">${d} <button class="src" data-src="${s}">source</button></span></li>`).join('')}
+function renderAround(){const sel=[...document.querySelectorAll('#around input:checked')].map(i=>i.value);
+  const tips=[];if(sel.includes('tall')||sel.includes('walls'))tips.push('stay clear of building faces: falling glass and masonry are the main outdoor danger, so keep at least the building\'s height away');
+  if(sel.includes('trees')||sel.includes('power'))tips.push('keep away from trees and power lines, which can fall or snap');
+  if(sel.includes('slope'))tips.push('don\'t wait below a steep slope, since aftershocks can trigger landslides');
+  if(sel.includes('water'))tips.push('avoid riverbanks and dams, and if you\'re near the sea, move to high ground after strong shaking');
+  $('waitAdvice').textContent=tips.length?'While you wait: '+tips.join('; ')+'.':'Open ground away from buildings, trees and wires is the safest place to wait.'}
+document.querySelectorAll('#around input').forEach(i=>i.onchange=renderAround);
+
+// ---------- overlays ----------
+const RAMPS={risk:[[0,[255,214,120,0]],[0.003,[255,214,120,.3]],[0.02,[245,150,60,.7]],[0.1,[214,72,40,.82]],[0.4,[140,20,30,.9]]],
+  mmi:[[3,[237,233,247,0]],[4,[205,189,230,.75]],[6,[165,140,207,.8]],[7,[125,92,181,.85]],[8,[87,52,143,.88]],[9,[51,26,99,.9]]],
+  vs:[[150,[90,59,30,.8]],[250,[138,98,51,.75]],[400,[191,154,98,.6]],[600,[227,207,166,.45]],[900,[243,236,223,.3]]],
+  liq:[[0.005,[60,120,200,0]],[0.02,[90,150,220,.45]],[0.08,[40,100,200,.75]],[0.2,[20,50,140,.9]]],
+  ls:[[0.002,[160,110,40,0]],[0.01,[200,150,60,.45]],[0.04,[170,100,30,.75]],[0.12,[110,50,10,.9]]]};
+const LOGR={risk:1,liq:1,ls:1};
+function rampAt(n,v){const Rr=RAMPS[n],X=x=>LOGR[n]?Math.log10(Math.max(x,1e-5)):x;if(v<=Rr[0][0])return Rr[0][1];for(let i=1;i<Rr.length;i++)if(v<=Rr[i][0]){const t=(X(v)-X(Rr[i-1][0]))/(X(Rr[i][0])-X(Rr[i-1][0]));return Rr[i-1][1].map((a,k)=>a+(Rr[i][1][k]-a)*t)}return Rr[Rr.length-1][1]}
+function drawOverlay(){overlayLayer.clearLayers();if(layer==='none')return;
+  let w,h,get;
+  if(layer==='risk'){w=heat.cols;h=heat.rows;get=i=>heat.P[i]}
+  else{w=G.nc;h=G.nr;const a=layer==='mmi'?G.mmi:layer==='vs'?G.vs:layer==='liq'?G.liq:G.ls;if(!a)return;const sc=layer==='mmi'?1/20:layer==='vs'?8:layer==='liq'?1/500:1/1000;get=i=>a[i]*sc}
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h);
+  for(let i=0;i<w*h;i++){const v=get(i);if(layer==='vs'&&!v)continue;const col=rampAt(layer,v);im.data[i*4]=col[0];im.data[i*4+1]=col[1];im.data[i*4+2]=col[2];im.data[i*4+3]=Math.round(col[3]*255)}
+  x.putImageData(im,0,0);
+  // keep shading on land only: paint the land shape at the same scale and keep pixels inside it
+  const mk=document.createElement('canvas');mk.width=w;mk.height=h;const mx=mk.getContext('2d'),b=G.bounds,W0=b.getWest(),N0=b.getNorth(),sx=w/(b.getEast()-W0),sy=h/(N0-b.getSouth());
+  mx.beginPath();for(const r of B.land){r.forEach(([lo,la],i)=>i?mx.lineTo((lo-W0)*sx,(N0-la)*sy):mx.moveTo((lo-W0)*sx,(N0-la)*sy));mx.closePath()}mx.fillStyle='#000';mx.fill('evenodd');
+  x.globalCompositeOperation='destination-in';x.drawImage(mk,0,0);
+  L.imageOverlay(c.toDataURL(),G.bounds,{opacity:1,interactive:false,pane:'shade'}).addTo(overlayLayer)}
+function ageColor(age){return age<1/24?'#d7191c':age<1?'#fd8d3c':age<7?'#fed24c':'#ffffff'}
+function drawQuakes(now,reveal){quakeLayer.clearLayers();if(!$('showQ').checked)return;const t0=Date.parse(S.t0);
+  const ev=S.events.filter(e=>e[0]>=-0.001&&(e[0]<=now||reveal)).sort((a,b)=>a[1]-b[1]);
+  for(const e of ev){const past=e[0]<=now,r=2+Math.pow(Math.max(e[1]-3.7,0),1.6)*2.2;
+    const m=L.circleMarker([e[2],e[3]],past?{renderer:RND.quakes,pane:'quakes',radius:r,color:'#222',weight:.8,fillColor:ageColor(now-e[0]),fillOpacity:.9}:{renderer:RND.quakes,pane:'quakes',radius:r,color:'#6b7480',weight:1.2,dashArray:'2 2',fill:false});
+    m.bindPopup(`<div class="pp-h">M${e[1]}${Math.abs(e[0])<1e-4?' mainshock':''}</div>${fmtDT(new Date(t0+e[0]*864e5))}<br><span class="pp-k">${Math.abs(e[0])<1e-4?'':dur(Math.max(0,e[0]))+' after the mainshock · '}${past?'known at "now"':'after "now" (hidden from the model)'}</span>`);m.addTo(quakeLayer)}
+  L.marker([S.lat,S.lon],{icon:starIcon,keyboard:false,pane:'checks'}).bindPopup(`<div class="pp-h">M${S.M} mainshock</div>${S.place}<br>${fmtDT(new Date(t0))}<br><a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">USGS event page</a>`).addTo(quakeLayer)}
+function drawTowns(){townLayer.clearLayers();if(!$('showT').checked||!cur.f||cur.key!==S.key)return;
+  const top=TOWNS.towns.filter(t=>gridAt(t[1],t[2])).slice(0,60),local=$('bld').value==='local';
+  for(const t of top){const tb=local?(countryThr(t[4])||countryThr(POP.seqCountry[S.key])||8):+$('bld').value,s=spot(t[1],t[2],tb,cur.calib,cur.src),p=SHAKE.probQ(cur.f,cur.cp,s.qv,0,7);t.p7=p;
+    const sz=Math.round(Math.min(26,6+Math.sqrt(t[3])/70));
+    L.marker([t[1],t[2]],{pane:'towns',keyboard:false,icon:L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],html:`<span style="display:block;width:${sz}px;height:${sz}px;background:rgba(40,52,70,.55);border:1.5px solid #fff;outline:1px solid rgba(40,52,70,.8)"></span>`})})
+      .bindTooltip(`<b>${t[0]}</b> · ${fmtN(t[3])} people<br>7-day chance of damaging shaking: ${pct(p)}`,{direction:'top'}).addTo(townLayer)}
+  const placed=[];for(const t of top.slice(0,14)){const pt=map.latLngToContainerPoint([t[1],t[2]]);if(placed.some(q=>Math.abs(q.x-pt.x)<70&&Math.abs(q.y-pt.y)<16))continue;placed.push(pt);
+    L.tooltip({permanent:true,direction:'right',className:'townlbl',offset:[6,0],pane:'labels'}).setLatLng([t[1],t[2]]).setContent(t[0]).addTo(townLayer)}}
+map.on('zoomend',()=>{if(S)drawTowns()});
+let pinMarker=null;
+function drawPin(){pinLayer.clearLayers();pinMarker=L.marker([loc.lat,loc.lon],{icon:pinIcon,keyboard:false}).addTo(pinLayer);pinMarker.bindPopup(pinPopupHtml)}
+function pinPopupHtml(){const c=cur;return `<div class="pp-h">${loc.name}</div>Damaging shaking (intensity ${R(c.sp.thr)}+):<br><b>${pct(c.p24)}</b> next 24 h · <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Re-entry within your limit now':c.re===Infinity?'Not within a year at your limit':'Re-entry: '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
+function openPinPopup(){if(pinMarker)pinMarker.openPopup()}
+function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]?$('bld').selectedOptions[0].text.split(/ \(|,/)[0].toLowerCase():'';
+  const spec={risk:[`Chance of damaging shaking, next 7 days (${bld})`,['0.3%','2%','10%','40%']],mmi:['Mainshock intensity (USGS ShakeMap)',['IV','VI','VIII','IX']],vs:['Vs30: lower = softer ground, more shaking',['150','400','900 m/s']],liq:['Liquefaction in the mainshock (USGS ground failure)',['2%','8%','20%+']],ls:['Landslides in the mainshock (USGS ground failure)',['1%','4%','12%+']],none:null}[layer];
+  L0.innerHTML=(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div>`:'')+
+   `<div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span><span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>town (size = people)</span>${$('reveal').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div>`;
+  if(!spec)return;const rc=$('rampc').getContext('2d');for(let i=0;i<150;i++){const t=i/149,v=layer==='risk'?Math.pow(10,-2.5+t*2.1):layer==='mmi'?4+t*5:layer==='vs'?150+t*750:layer==='liq'?Math.pow(10,-2+t*1.4):Math.pow(10,-2.3+t*1.4);const c=rampAt(layer,v);rc.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(c[3],.35)})`;rc.fillRect(i,0,1,10)}}
+document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;drawOverlay();drawLegend()});
+['showQ','showT'].forEach(id=>$(id).onchange=()=>update());$('showC').onchange=renderCheckins;
+$('layTgl').onclick=()=>{const o=$('layers').classList.toggle('open');$('layTgl').setAttribute('aria-expanded',String(o))};
+
+// ---------- charts ----------
+const NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function niceStep(max,n=4){const raw=max/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),r=raw/mag;return (r<1.5?1:r<3?2:r<7?5:10)*mag}
+function tipper(box){let t=box.querySelector('.ctip');if(!t){t=document.createElement('div');t.className='ctip';box.appendChild(t)}return{show(x,y,h){t.innerHTML=h;t.style.left=x+'px';t.style.top=y+'px';t.style.opacity=1},hide(){t.style.opacity=0}}}
+function drawCurve(){const {f,cp,sp,tol,re}=cur,box=$('curve');box.innerHTML='';const W=Math.max(box.clientWidth,260),H=170,m={l:42,r:10,t:12,b:26};
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'24-hour risk here over the coming days'},box);
+  const span=Math.min(60,Math.max(7,isFinite(re)?re*2.2:30)),pts=[];for(let i=0;i<=100;i++){const t=span*i/100;pts.push([t,SHAKE.probQ(f,cp,sp.qv,t,t+1)])}
+  const ymax=Math.max(tol*2.2,pts[0][1]*1.08,0.002),X=t=>m.l+t/span*(W-m.l-m.r),Y=p=>H-m.b-p/ymax*(H-m.t-m.b);
+  const ax=el('g',{class:'axis'},svg),g=el('g',{class:'grid'},svg),st=niceStep(ymax);
+  for(let p=0;p<=ymax*1.0001;p+=st){el('line',{x1:m.l,x2:W-m.r,y1:Y(p),y2:Y(p)},g);el('text',{x:m.l-6,y:Y(p)+4,'text-anchor':'end'},ax).textContent=p===0?'0%':pct(p)}
+  const xs=niceStep(span,5);for(let t=0;t<=span+1e-9;t+=xs)el('text',{x:X(t),y:H-m.b+16,'text-anchor':'middle'},ax).textContent=t===0?'now':'+'+Math.round(t)+'d';
+  el('line',{x1:m.l,x2:W-m.r,y1:Y(tol),y2:Y(tol),stroke:'#1e7a46','stroke-width':1.5,'stroke-dasharray':'5 4'},svg);
+  el('text',{x:W-m.r,y:Y(tol)-5,'text-anchor':'end',class:'lbl'},svg).textContent='your limit';
+  const d=pts.map((p,i)=>`${i?'L':'M'}${X(p[0]).toFixed(1)},${Y(Math.min(p[1],ymax)).toFixed(1)}`).join('');
+  el('path',{d:d+`L${X(span)},${Y(0)}L${X(0)},${Y(0)}Z`,fill:'#c2391b',opacity:.12},svg);el('path',{d,fill:'none',stroke:'#c2391b','stroke-width':2},svg);
+  if(isFinite(re)&&re>0&&re<=span){el('line',{x1:X(re),x2:X(re),y1:m.t,y2:H-m.b,stroke:'#4a5360','stroke-dasharray':'2 3'},svg);el('circle',{cx:X(re),cy:Y(tol),r:4.5,fill:'#1e7a46',stroke:'#fff','stroke-width':2},svg)}
+  const tip=tipper(box),cross=el('line',{y1:m.t,y2:H-m.b,stroke:'#7a838f',opacity:0},svg),ov=el('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,fill:'transparent'},svg);
+  ov.onmousemove=ev=>{const b=svg.getBoundingClientRect(),s=b.width/W,x=(ev.clientX-b.left)/s,t=Math.max(0,Math.min(span,(x-m.l)/(W-m.l-m.r)*span)),p=SHAKE.probQ(f,cp,sp.qv,t,t+1);cross.setAttribute('x1',X(t));cross.setAttribute('x2',X(t));cross.setAttribute('opacity',1);tip.show(X(t)*s,Y(Math.min(p,ymax))*s,`+${dur(t)}: ${pct(p)} in 24 h`)};
+  ov.onmouseleave=()=>{cross.setAttribute('opacity',0);tip.hide()}}
+// Monte Carlo: posterior draw -> daily Poisson counts of M5+ -> magnitude (GR) -> source near past quakes -> shaking at the spot with scatter; big ones trigger their own
+function simulate(n=200,days=30){const {f,cp,src,sp,calib}=cur;let seed=7;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+  const gauss=()=>Math.sqrt(-2*Math.log(rng()||1e-9))*Math.cos(2*Math.PI*rng());const pois=l=>{if(l>30)return Math.max(0,Math.round(l+Math.sqrt(l)*gauss()));let k=0,p=1,L0=Math.exp(-l);do{k++;p*=rng()}while(p>L0);return k-1};
+  const cdf=[];let a0=0;for(const c of cp){a0+=c[0];cdf.push(a0)}const ns=src.length/2,site=SHAKE.site(sp.gv.vs)+(calib?SHAKE.BIAS:0);
+  const rows=[];let hits=0;
+  for(let s=0;s<n;s++){const u=rng()*a0;let j=cdf.findIndex(x=>x>=u);if(j<0)j=cdf.length-1;const [,a,p]=cp[j];const row=new Array(days).fill(0);const queue=[];
+    for(let d=0;d<days;d++){const k=pois(SHAKE.n5(f,a,p,d,d+1));for(let i=0;i<k;i++){const pk=Math.floor(rng()*ns);queue.push({t:d+rng(),m:Math.min(8.5,5-Math.log10(rng()||1e-9)),x:src[2*pk]+gauss()*6,y:src[2*pk+1]+gauss()*6,gen:0})}}
+    for(let qi=0;qi<queue.length;qi++){const e=queue[qi];if(e.t>=days)continue;
+      if(e.gen===0&&e.m>=5.5){const T=days-e.t,N=Math.pow(10,-2.42+(e.m-5))*Math.log((T+0.018)/0.018),kk=pois(N);for(let i=0;i<kk;i++){const tt=0.018*(Math.pow((T+0.018)/0.018,rng())-1);queue.push({t:e.t+tt,m:Math.min(8.5,5-Math.log10(rng()||1e-9)),x:e.x+gauss()*8,y:e.y+gauss()*8,gen:1})}}
+      const d=Math.floor(e.t),dist=Math.hypot(e.x-sp.x,e.y-sp.y),Rh=Math.sqrt(dist*dist+100),mmi=SHAKE.mu(e.m,Rh)+site+SHAKE.sig(Rh)*gauss();
+      if(mmi>=sp.thr)row[d]=2;else if(e.m>=6&&row[d]<1)row[d]=1}
+    if(row.includes(2))hits++;rows.push(row)}
+  return{rows,hits,n}}
+function drawSims(){const box=$('sims');box.innerHTML='';const sim=simulate(),W=Math.max(box.clientWidth,260),show=50,ch=4,gap=1,m={l:6,r:6,t:4,b:22},H=m.t+show*(ch+gap)+m.b;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Simulated futures'},box);const cw=(W-m.l-m.r)/30;
+  sim.rows.slice(0,show).forEach((row,i)=>row.forEach((v,d)=>{el('rect',{x:m.l+d*cw+.5,y:m.t+i*(ch+gap),width:Math.max(1,cw-1),height:ch,fill:v===2?'#c2391b':v===1?'#9aa3ad':'#eceef1'},svg)}));
+  const ax=el('g',{class:'axis'},svg);for(const d of [0,7,14,21,29])el('text',{x:m.l+d*cw+cw/2,y:H-6,'text-anchor':'middle'},ax).textContent=d===0?'day 1':'day '+(d+1);
+  $('simNote').innerHTML=`Damaging shaking here in <b>${sim.hits} of ${sim.n}</b> simulated months (${pct(sim.hits/sim.n)}). The formula says ${pct(cur.p30)}. The simulation adds aftershocks of aftershocks, so it runs a bit higher.`}
+
+// ---------- side lists ----------
+function renderEvents(){$('evlist').innerHTML=SEQ.map((s,i)=>`<li data-i="${i}" ${s===S?'aria-current="true"':''}><span class="m">${s.M.toFixed(1)}</span><span class="t">${s.label}${s.key.endsWith('26')?' · ongoing':''}</span><span class="s">${fmtDate(new Date(s.t0))} · ${s.events.length} M4+ quakes</span></li>`).join('');
+  document.querySelectorAll('#evlist li').forEach(li=>li.onclick=()=>{pickSeq(+li.dataset.i);selectTab('spot')})}
+function renderAftList(now){const t0=Date.parse(S.t0);const big=S.events.filter(e=>e[0]>0.001&&e[0]<=now).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  $('aftlist').innerHTML=big.length?big.map(e=>`<li data-la="${e[2]}" data-lo="${e[3]}"><span class="m">${e[1].toFixed(1)}</span><span class="t">${dur(e[0])} after</span><span class="s">${fmtDT(new Date(t0+e[0]*864e5))}</span></li>`).join(''):'<li><span class="m">–</span><span class="t">None yet at this time</span><span class="s">Move the time slider forward</span></li>';
+  document.querySelectorAll('#aftlist li[data-la]').forEach(li=>li.onclick=()=>map.setView([+li.dataset.la,+li.dataset.lo],Math.max(map.getZoom(),9)))}
+function renderPeople(){const sp=cur.sp;const near=TOWNS.towns.map(t=>({t,d:Math.hypot((t[1]-loc.lat)*110.57,(t[2]-loc.lon)*111.32*G.c)})).filter(o=>o.d<=15).sort((a,b)=>a.d-b.d);
+  const pop=near.reduce((a,o)=>a+o.t[3],0);
+  $('nearPeople').innerHTML=near.length?`<p class="p">About <b>${fmtN(pop)}</b> people live in the ${near.length} town${near.length>1?'s':''} within 15 km of your pin.</p><table><tr><th>Town</th><th class="num">People</th><th class="num">Distance</th></tr>${near.slice(0,6).map(o=>`<tr><td>${o.t[0]}</td><td class="num">${fmtN(o.t[3])}</td><td class="num">${o.d.toFixed(1)} km</td></tr>`).join('')}</table><p class="muted">Town populations from GeoNames. Rural homes outside towns aren't counted.</p>`:'<p class="p">No listed towns within 15 km of your pin.</p>';
+  const ts=TOWNS.towns.filter(t=>t.p7!=null);const exp=ts.reduce((a,t)=>a+t[3]*t.p7,0),hi=ts.filter(t=>t.p7>=0.1);
+  $('atRisk').innerHTML=`<p class="p">Across the ${ts.length} largest towns in the area, the forecast expects about <b>${fmtN(exp)}</b> people to feel damaging shaking for their local buildings in the next 7 days.${hi.length?` ${hi.length} town${hi.length>1?'s have':' has'} a 1-in-10 chance or higher: ${hi.slice(0,5).map(t=>t[0]).join(', ')}.`:''}</p><p class="muted">Each town's population times its 7-day chance, as on the map.</p>`}
+function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
+  if(!p||!p.exposure||!p.exposure.length){$('pagerNote').textContent='No USGS PAGER exposure estimate was published for this earthquake.';$('pagerExp').innerHTML='';return}
+  const rows=p.exposure.filter(r=>r[2]>0&&r[0]>=3.5).reverse();const al=Object.fromEntries(p.alerts||[]);
+  $('pagerNote').innerHTML=`USGS PAGER estimate${p.version?` (version ${p.version})`:''}: people exposed to each shaking level in the mainshock.${al.fatality?` PAGER alert: <b>${al.fatality}</b> for deaths, <b>${al.economic}</b> for losses.`:''}`;
+  const mx=Math.max(...rows.map(r=>r[2]));
+  $('pagerExp').innerHTML=`<table><tr><th>Intensity</th><th class="num">People</th><th style="width:40%"></th></tr>${rows.map(r=>`<tr><td>${R((r[0]+r[1])/2)} ${MMI_NAME[Math.round((r[0]+r[1])/2)]}</td><td class="num">${fmtN(r[2])}</td><td><div style="height:8px;background:#7d5cb5;opacity:.75;border-radius:2px;width:${Math.max(1,r[2]/mx*100)}%"></div></td></tr>`).join('')}</table>`}
+
+// ---------- sources ----------
+function renderLedger(){const sm=D.shakemaps[S.key],ex=EX[S.key]||{},gi=ex.gfInfo||{},pg=ex.pager;const res=`${(sm.dlat*111).toFixed(1)} km`;
+  const rows=[
+   ['catalogue','Quakes: times, places, sizes',`USGS ComCat: <a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">event ${S.id}</a> and ${S.events.length} M4+ quakes within ${S.radiusKm} km`,'Used as recorded. Fetched '+fmtDate(new Date(D.fetchedAt))+'.'],
+   ['rate','How many aftershocks','Reasenberg & Jones (1989), with global starting values from Page et al. (2016), the basis of USGS aftershock forecasts','Updated by Bayes\' rule with this sequence\'s M5+ aftershocks before "now".'],
+   ['shake','How hard a quake shakes a spot','Allen, Wald & Worden (2012) intensity equation, <a href="https://docs.openquake.org/oq-engine/master/manual/_modules/openquake/hazardlib/gsim/allen_2012_ipe.html" target="_blank" rel="noopener">as implemented in OpenQuake</a>',`Used as published, including its scatter. The "ShakeMap-calibrated" option shifts it by ${SHAKE.BIAS}, the average gap measured on 26 aftershock ShakeMaps.`],
+   ['vs30','Ground softness (Vs30)',`USGS ShakeMap grid, version ${sm.version}, cell size about ${res}`,`Soil effect of ${SITEFIT.k} intensity per tenfold change in Vs30 (90% range ${SITEFIT.k90[0]} to ${SITEFIT.k90[1]}), fitted by us to ${SITEFIT.cells.toLocaleString()} cells across 13 ShakeMaps.`],
+   ['shakemap','Mainshock shaking at your spot',`USGS ShakeMap version ${sm.version}: ${sm.stations} seismic stations and ${sm.obs.toLocaleString()} "Did You Feel It?" reports, plus USGS models`,'Read at your location.'],
+   ['gf','Liquefaction and landslides',gi.lqModel?`USGS ground failure, version ${gi.version}: ${gi.lqModel} (liquefaction) and ${gi.lsModel} (landslides)`:'USGS ground failure product','Read at your location. If 10% or more of the ground is expected to have liquefied, the building counts as weakened (our rule).'],
+   ['pager','How prepared the country is',`USGS PAGER empirical fatality model (Jaiswal & Wald), country curves from the <a href="https://github.com/usgs/pager" target="_blank" rel="noopener">PAGER code</a>${pg?'; building notes from the PAGER report':''}`,'For "typical local building", damage starts at the intensity where the country\'s fatality rate reaches 1 in 10,000 (our rule).'],
+   ['mmi','When buildings get damaged','Modified Mercalli Intensity scale descriptions (USGS)','Fixed thresholds for the other building types.'],
+   ['people','Population','GeoNames populated places (all-the-cities) and USGS PAGER exposure','Town populations are point counts; PAGER is the official gridded estimate.'],
+   ['map','Map','Natural Earth coastlines and borders (world-atlas)','Clipped to the area.']];
+  $('ledger').innerHTML='<tr><th>Number</th><th>Source</th><th>What we did</th></tr>'+rows.map(r=>`<tr id="src-${r[0]}"><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
+function bindSrc(){document.querySelectorAll('.src').forEach(b=>b.onclick=()=>{selectTab('sources');const row=$('src-'+b.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})})}
+
+// ---------- accuracy ----------
+function accuracy(){const checks=[0.5,1,2,3,7,14,30,60],rows=[];
+  for(const s of SEQ)for(const t of checks){if(t+7>s.daysAvailable)continue;const f=MODEL.fit(s.events,t);for(const M of [5,6])rows.push({M,p:MODEL.prob(f,M,0,7),hap:s.events.some(e=>e[0]>t&&e[0]<=t+7&&e[1]>=M)})}
+  let h='<tr><th>Model said</th><th class="num">M5+</th><th class="num">happened</th><th class="num">M6+</th><th class="num">happened</th></tr>';
+  for(const [lo,hi,lab] of [[0,.1,'Under 10%'],[.1,.3,'10–30%'],[.3,.6,'30–60%'],[.6,1.01,'Over 60%']]){h+=`<tr><td>${lab}</td>`;for(const M of [5,6]){const b=rows.filter(r=>r.M===M&&r.p>=lo&&r.p<hi);h+=`<td class="num">${b.length}</td><td class="num">${b.length?Math.round(b.filter(r=>r.hap).length/b.length*100)+'%':'–'}</td>`}h+='</tr>'}
+  const sk=M=>{const r=rows.filter(x=>x.M===M),base=r.filter(x=>x.hap).length/r.length,br=r.reduce((a,x)=>a+(x.p-(x.hap?1:0))**2,0)/r.length,bb=r.reduce((a,x)=>a+(base-(x.hap?1:0))**2,0)/r.length;return 1-br/bb};
+  $('bt').innerHTML=h;$('btNote').innerHTML=`Skill compared with always guessing the average (0 = no better, 1 = perfect): <b>M5+ ${sk(5).toFixed(2)}</b>, <b>M6+ ${sk(6).toFixed(2)}</b>.`;
+  const name={};SEQ.forEach(s=>name[s.key]=s.label.split(',')[0]);const mean=AFT.reduce((a,b)=>a+b.bias,0)/AFT.length;
+  $('aft').innerHTML='<tr><th>Aftershock</th><th class="num">Under 15 km</th><th class="num">15–100 km</th><th class="num">Reports</th></tr>'+[...AFT].sort((a,b)=>b.M-a.M).slice(0,10).map(a=>{const far=((a.bins['15-40']??0)+(a.bins['40-100']??0))/2,nr=a.bins['<15'];return `<tr><td>M${a.M} ${name[a.seq]}</td><td class="num">${nr!=null?(nr>0?'+':'')+nr.toFixed(1):'–'}</td><td class="num">${far>0?'+':''}${far.toFixed(1)}</td><td class="num">${a.obs}</td></tr>`}).join('');
+  $('aftNote').innerHTML=`Average gap across all ${AFT.length}: <b>${mean.toFixed(2)}</b> intensity. The best-reported aftershock (Türkiye M6.3, 449 reports) shook harder than the equation within 15 km, so the cautious equation is the default.`}
+
+// ---------- check-ins (opt-in, shared via the artifact database) ----------
+let ciDB=null,ciUser=null,ciUid=null,ciDocs=[],ciNames={};
+async function initCheckins(){
+  try{ciDB=await claude.use('db');ciUser=await claude.use('user')}catch(e){}
+  if(!ciDB||!ciUser){$('ciStatus').textContent='Check-ins need a shared database. They work in the Claude-hosted version of this page; a standalone copy would need its own backend.';['ciSafe','ciHelp','ciDel'].forEach(id=>$(id).disabled=true);return}
+  try{ciUid=await ciUser.id()}catch(e){}
+  const can=await ciUser.can('data.write').catch(()=>null);
+  if(!ciUid||can===false){['ciSafe','ciHelp','ciDel'].forEach(id=>$(id).disabled=true);$('ciStatus').textContent=can===false?'You can see check-ins, but checking in needs contributor access to this page.':'Sign in to check in.'}
+  else $('ciStatus').textContent='Your check-in uses your pin\'s location.';
+  ciDB.collection('checkins').onSnapshot(async snap=>{ciDocs=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));
+    const ids=ciDocs.map(d=>d.id);if(ids.length&&ciUser.profiles){try{const ps=await ciUser.profiles(ids);ids.forEach(id=>ciNames[id]=(ps[id]&&ps[id].name)||'Someone')}catch(e){}}renderCheckins()},
+    ()=>{$('ciStatus').textContent='Check-ins are unavailable right now.'})}
+function refreshCheckins(){renderCheckins()}
+function renderCheckins(){ciLayer.clearLayers();if(!S)return;const mine=ciDocs.filter(d=>d.seq===S.key).sort((a,b)=>b.ts-a.ts);
+  if($('showC').checked)for(const d of mine){L.circleMarker([d.lat,d.lon],{renderer:RND.checks,pane:'checks',radius:8,color:'#fff',weight:2,fillColor:d.status==='help'?'#b3261e':'#1e7a46',fillOpacity:1}).bindPopup(`<div class="pp-h">${esc(d.id===ciUid?'You':(ciNames[d.id]||'Someone'))}: ${d.status==='help'?'needs help':'safe'}</div>${d.note?esc(d.note)+'<br>':''}<span class="pp-k">${new Date(d.ts).toLocaleString('en-GB')}</span>`).addTo(ciLayer)}
+  $('ciList').innerHTML=mine.length?mine.map(d=>`<div class="ci"><span class="dot" style="background:${d.status==='help'?'#b3261e':'#1e7a46'}"></span><span><b>${esc(d.id===ciUid?'You':(ciNames[d.id]||'Someone'))}</b> · ${d.status==='help'?'needs help':'safe'}${d.note?' · '+esc(d.note):''}</span><button class="src" data-la="${d.lat}" data-lo="${d.lon}">show</button></div>`).join(''):'<p class="muted">No check-ins for this earthquake yet.</p>';
+  document.querySelectorAll('#ciList button[data-la]').forEach(b=>b.onclick=()=>map.setView([+b.dataset.la,+b.dataset.lo],11))}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function checkIn(status){if(!ciDB||!ciUid)return;$('ciStatus').textContent='Saving…';
+  try{await ciDB.doc('checkins/'+ciUid).set({seq:S.key,lat:+loc.lat.toFixed(4),lon:+loc.lon.toFixed(4),status,note:$('ciNote').value.slice(0,80),ts:Date.now()});$('ciStatus').textContent=status==='help'?'Marked as needing help at your pin.':'Marked safe at your pin.'}
+  catch(e){$('ciStatus').textContent=e&&e.code==='invalid_argument'?'Checking in needs contributor access to this page.':'Couldn\'t save. Try again.'}}
+$('ciSafe').onclick=()=>checkIn('safe');$('ciHelp').onclick=()=>checkIn('help');
+$('ciDel').onclick=async()=>{if(!ciDB||!ciUid)return;try{await ciDB.doc('checkins/'+ciUid).delete();$('ciStatus').textContent='Your check-in was removed.'}catch(e){$('ciStatus').textContent='Couldn\'t remove it. Try again.'}};
+
+// ---------- tabs, controls, time ----------
+function selectTab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);if(t==='spot'){drawCurve();drawSims()}}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>selectTab(b.dataset.tab));
+['bld','tol','shk','reveal'].forEach(id=>$(id).onchange=()=>update());
+let sT;$('now').oninput=()=>{clearTimeout(sT);sT=setTimeout(update,60)};
+$('town').addEventListener('change',()=>{const n=$('town').value.trim().toLowerCase();const t=TOWNS.towns.find(t=>t[0].toLowerCase()===n)||B.towns.find(t=>t[0].toLowerCase()===n);if(t){setLoc(t[1],t[2],t[0]);map.setView([t[1],t[2]],Math.max(map.getZoom(),9))}});
+let playT=null;
+$('play').onclick=()=>{playing=!playing;$('playIcon').setAttribute('d',playing?'M3 1.5h3v11H3zM8 1.5h3v11H8z':'M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label',playing?'Pause':'Play the sequence');
+  if(playing){if(+$('now').value>=1000)$('now').value=0;const step=()=>{if(!playing)return;const v=Math.min(1000,+$('now').value+8);$('now').value=v;update();if(v>=1000){$('play').click();return}playT=setTimeout(step,90)};step()}
+  else{clearTimeout(playT);heatKey='';update()}};
+let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.invalidateSize();update()},150)});
+requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins()});
+</script>
