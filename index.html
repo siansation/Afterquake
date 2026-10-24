@@ -860,6 +860,7 @@ body:not(.world) .wpane{display:none}
 .wfilter{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}
 .wfilter label{display:flex;gap:6px;align-items:center}
 .wfilter select{width:auto}
+#wList{max-height:min(44vh,400px);overflow-y:auto;overscroll-behavior:contain} /* scrolls on its own so the case studies stay in view */
 .evlist li .fc{font:600 10.5px var(--mono);color:var(--good);text-transform:uppercase;letter-spacing:.04em}
 .ghelp{position:absolute;top:10px;left:10px;padding:8px 12px;max-width:280px;display:flex;flex-direction:column}
 .ghelp b{font-size:14px}
@@ -2273,7 +2274,7 @@ const WGEO={land110:topojson.feature(WORLD.land110,WORLD.land110.objects.land),l
   borders110:topojson.mesh(WORLD.countries110,WORLD.countries110.objects.countries,(a,b)=>a!==b),borders50:topojson.mesh(WORLD.countries50,WORLD.countries50.objects.countries,(a,b)=>a!==b)};
 const CASES=SEQ.map(s=>({id:'case:'+s.key,kind:'case',seq:s,lon:s.lon,lat:s.lat,M:s.M,t:Date.parse(s.t0),place:s.label}));
 let mode='detail',feed=null,feedAt=0,feedErr=null,gSel=null,gItems=[],loadingLive=false;const liveSeqs={};
-const globe=GLOBE.create($('globe'),WGEO,{onPick:it=>{gSel=it;renderGCard();markWorldList();if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
+const globe=GLOBE.create($('globe'),WGEO,{onPick:it=>{gSel=it;renderGCard();markWorldList();const row=document.querySelector('#wList li[aria-current]');if(row)row.scrollIntoView({block:'nearest'});if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
 function enterWorld(){if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
   $('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS · last 30 days</small>';globe.resize();globe.start();renderWorld();$('globe').focus({preventScroll:true})}
 function enterDetail(refresh=true){if(mode==='detail')return;mode='detail';document.body.classList.remove('world');globe.stop();$('gTip').hidden=true;
