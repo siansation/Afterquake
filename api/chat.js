@@ -2,13 +2,15 @@
 // The API key stays here (environment variable GEMINI_API_KEY); the page never sees it.
 // Gemini answers by calling tools, and the TOOLS run in the visitor's browser against the page's own model and data
 // (src/assistant.js), so every number it quotes comes from the forecast, not from the language model.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+// Flash-Lite with minimal thinking: these are lookups plus a short explanation, and 3.8 Flash took 30-50 s per step.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+const THINKING = process.env.GEMINI_THINKING || (/flash-lite/.test(MODEL) ? 'minimal' : 'low');
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
 
 const RULES = `You are the assistant inside Aftershock Re-entry, a prototype that estimates the chance of damaging shaking from M5+ aftershocks at a chosen spot after an earthquake.
 Rules:
 - Answer only questions about the open earthquake, its aftershocks, this forecast, the data behind it and how to read it. Politely decline anything else in one sentence.
-- Get every number from a tool. Never estimate, round up or invent probabilities, times, counts or distances yourself. If no tool can answer, say so.
+- Get every number from a tool called for this question. Never estimate, round, reuse figures from earlier answers, or invent probabilities, ranges, times, counts or distances yourself. If no tool can answer, say so.
 - Never say or imply that a building is safe to enter. The forecast only covers the chance of more shaking. Whether a building can be re-entered is decided by a structural inspection and local authorities. Say this briefly whenever someone asks about going back inside.
 - If someone describes an emergency, injury or being trapped, tell them to contact local emergency services first.
 - Make clear these are model estimates with uncertainty, without repeating long caveats.
@@ -18,7 +20,7 @@ Rules:
 // Shared with src/assistant.js, which implements each one in the browser.
 const TOOLS = [
   { name: 'current_forecast', description: 'The forecast at the pin the user has placed, with their current settings (building, length of stay, risk limit, replay time).', parameters: { type: 'object', properties: {} } },
-  { name: 'forecast_at', description: 'Forecast at another place or with different settings, without changing the page. Give a town name or coordinates inside the mapped area.',
+  { name: 'forecast_at', description: 'Forecast at another place or with different settings, without changing the page. Give a town name or coordinates inside the mapped area; leave both out to use the user\'s pin with the other settings changed.',
     parameters: { type: 'object', properties: {
       place: { type: 'string', description: 'Town name in the mapped area, e.g. "Gaziantep"' },
       lat: { type: 'number' }, lon: { type: 'number' },
@@ -65,11 +67,15 @@ function validate(body) {
 }
 
 function request(contents, context) {
+  // A new question must start with a tool call (mode ANY), so answers can't reuse or invent figures;
+  // after the tool results come back, Gemini may call more tools or answer (mode AUTO).
+  const last = contents[contents.length - 1], fresh = last.role === 'user' && last.parts.some(p => typeof p.text === 'string');
   return {
     systemInstruction: { parts: [{ text: `${RULES}\n\nWhat the user is looking at right now:\n${context}` }] },
     contents,
     tools: [{ functionDeclarations: TOOLS }],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 700 },
+    toolConfig: { functionCallingConfig: { mode: fresh ? 'ANY' : 'AUTO' } },
+    generationConfig: { temperature: 0.2, maxOutputTokens: 700, thinkingConfig: { thinkingLevel: THINKING } },
   };
 }
 
@@ -85,9 +91,11 @@ async function handler(req, res) {
   if (JSON.stringify(body || '').length > 200000) return res.status(413).json({ error: 'Conversation too long. Start a new one.' });
   const bad = validate(body);
   if (bad) return res.status(400).json({ error: bad });
+  // Give up before Vercel's 60 s function limit, so the page gets a clear message instead of an error page.
+  const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 50e3);
   try {
     const r = await fetch(ENDPOINT(MODEL), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(request(body.contents, body.context)) });
+      body: JSON.stringify(request(body.contents, body.context)), signal: abort.signal });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = r.status === 429 ? 'The assistant is busy right now. Try again in a minute.' : 'The assistant could not answer that.';
@@ -99,9 +107,10 @@ async function handler(req, res) {
     if (!parts.length) return res.status(502).json({ error: cand && cand.finishReason === 'SAFETY' ? 'The assistant declined to answer that.' : 'The assistant returned no answer.' });
     return res.status(200).json({ parts, model: MODEL });   // parts are passed back unchanged next turn (keeps thought signatures)
   } catch (e) {
+    if (e.name === 'AbortError') return res.status(504).json({ error: 'The assistant is taking too long right now. Try again, or ask something simpler.' });
     console.error('Gemini request failed', e);
     return res.status(502).json({ error: 'Could not reach the assistant. Try again.' });
-  }
+  } finally { clearTimeout(timer) }
 }
 
 module.exports = handler;

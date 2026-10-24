@@ -37,6 +37,12 @@ test('the request carries the rules, the page context and the tools',()=>{
   assert.equal(r.tools[0].functionDeclarations.length,chat.TOOLS.length);
 });
 
+test('a new question must start with a tool call; after tool results Gemini may answer',()=>{
+  assert.equal(chat.request([user('hi')],ctx).toolConfig.functionCallingConfig.mode,'ANY');
+  const after=[user('hi'),{role:'model',parts:[{functionCall:{name:'current_forecast',args:{}}}]},{role:'user',parts:[{functionResponse:{name:'current_forecast',response:{result:{}}}}]}];
+  assert.equal(chat.request(after,ctx).toolConfig.functionCallingConfig.mode,'AUTO');
+});
+
 test('handler refuses without a key, wrong methods and bad bodies',async()=>{
   const old=process.env.GEMINI_API_KEY;delete process.env.GEMINI_API_KEY;
   let r=res();await chat(req({contents:[user('hi')],context:ctx}),r);assert.equal(r.code,503);

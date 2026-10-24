@@ -36,7 +36,7 @@ Live forecasts use the same model, prior and soil coefficient as the case studie
 
 ## Assistant (Gemini)
 
-The "Ask about this forecast" box sends the question and a short description of the current view to Gemini through `api/chat.js`. Gemini may only answer from tool results; the tools (`src/assistant.js`) call the same `spot`, `SHAKE.probQ`, `SCENARIO.exposure` and `SHAKE.reentryQ` functions as the panel, so the assistant adds no new model. Its instructions forbid estimating figures itself and forbid implying a building is safe to enter. A language model can still misread or misphrase a tool result, so each answer lists the tools it called. The assistant was not evaluated for accuracy.
+The "Ask about this forecast" box sends the question and a short description of the current view to Gemini through `api/chat.js`. Gemini may only answer from tool results; the tools (`src/assistant.js`) call the same `spot`, `SHAKE.probQ`, `SCENARIO.exposure` and `SHAKE.reentryQ` functions as the panel, so the assistant adds no new model. Its instructions forbid estimating figures itself and forbid implying a building is safe to enter, and every new question must begin with a tool call. Without that, a test answer reused one figure from earlier in the conversation and invented an uncertainty range. A language model can still misread or misphrase a tool result, so each answer lists the tools it called. The assistant was not evaluated for accuracy.
 
 ## Data verification
 
