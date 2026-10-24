@@ -10,12 +10,17 @@ Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
 ## Try it
 
-Open `index.html` in a browser. It's one self-contained file (about 6 MB, with the data inside). It needs an internet connection only for Leaflet and the fonts.
+Open `index.html` in a browser. It's one self-contained file (about 6 MB, with the data and map library inside), so it works offline. Only the fonts need internet, and they fall back to system fonts without it.
+
+- **▶ Story** (top right) runs a 7-step guided demo of the Türkiye 2023 sequence. Use **→ / ←** or a presentation clicker to move between steps, and **Esc** to exit.
+- **?** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
+- [`PITCH.md`](PITCH.md) has a timed 5-minute script that follows the story, plus answers to likely questions.
 
 To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Deploy from a branch**, pick `main` and `/ (root)`, and the app will be served at `https://<your-username>.github.io/aftershock-reentry/`.
 
 ## What it does
 
+- **Story mode.** A guided 2-minute demo of the Türkiye 2023 sequence, built for pitching.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
 - **Forecast at your spot.** The chance of shaking strong enough to damage your type of building, a re-entry time at your risk limit, and a curve of how the risk fades.
 - **200 simulated futures.** Monte Carlo runs of the next 30 days, in which big simulated aftershocks trigger their own.
@@ -47,7 +52,8 @@ Run `npm run backtest` to reproduce the first check.
 ## Repo layout
 
 ```
-index.html                 built app, ready to open or host
+index.html                 built app, ready to open or host (works offline)
+PITCH.md                   5-minute pitch script and Q&A
 src/template.html          app UI and logic (placeholders filled by the build)
 src/model.js               aftershock rate model (Reasenberg–Jones + Bayesian update)
 src/shake.js               shaking at a point: intensity equation, soil term, probabilities
@@ -101,4 +107,4 @@ To rebuild only the page after editing `src/`, run `npm install` and then `npm r
 - Intensity equation: Allen, Wald & Worden (2012), via [OpenQuake](https://github.com/gem/oq-engine).
 - Coastlines and borders: [Natural Earth](https://www.naturalearthdata.com) via `world-atlas` (public domain).
 - Places and populations: [GeoNames](https://www.geonames.org) via `cities.json` and `all-the-cities` (CC BY 4.0).
-- Map library: [Leaflet](https://leafletjs.com) (BSD-2-Clause).
+- Map library: [Leaflet](https://leafletjs.com) (BSD-2-Clause), bundled into `index.html` by the build.
