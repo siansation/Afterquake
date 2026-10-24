@@ -187,6 +187,41 @@ details summary{cursor:pointer;font-weight:600}
 .changes-list li+li{margin-top:5px}
 #map.picking-comparison,#map.picking-comparison .leaflet-interactive{cursor:crosshair}
 #pickComparison[aria-pressed="true"]{background:var(--link);border-color:var(--link);color:#fff}
+/* World view: a globe over the map (z-index above Leaflet's controls) and a list panel in place of the tabs */
+#globeWrap{position:absolute;inset:0;z-index:1100;display:none;background:radial-gradient(ellipse at 50% 45%,#f5f7f9 0%,#e4e9ee 58%,#d2dae2 100%)}
+body.world #globeWrap{display:block}
+#globe{position:absolute;inset:0;width:100%;height:100%;touch-action:none;outline:none}
+#globe:focus-visible{outline:2px solid var(--link);outline-offset:-4px}
+body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .mapcard,body.world .tour,body.world #hMag,body.world #worldBtn{display:none!important}
+.wpane{overflow:auto;flex:1;padding:14px;padding-left:max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+body:not(.world) .wpane{display:none}
+.wfilter{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}
+.wfilter label{display:flex;gap:6px;align-items:center}
+.wfilter select{width:auto}
+.evlist li .fc{font:600 10.5px var(--mono);color:var(--good);text-transform:uppercase;letter-spacing:.04em}
+.ghelp{position:absolute;top:10px;left:10px;padding:8px 12px;max-width:280px;display:flex;flex-direction:column}
+.ghelp b{font-size:14px}
+.ghelp span{font-size:12px;color:var(--mute)}
+.gzoom{position:absolute;top:10px;right:max(10px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:4px}
+.gzoom .btn{width:34px;height:34px;padding:0;font-size:19px;line-height:1;box-shadow:0 1px 4px rgba(20,30,40,.18)}
+.gcard{position:absolute;left:10px;bottom:max(10px,env(safe-area-inset-bottom,0px));width:min(340px,calc(100% - 20px));padding:12px 14px;display:flex;flex-direction:column;gap:6px;border-left:5px solid var(--accent)}
+.gcard[hidden],.gload[hidden],.gtip[hidden]{display:none}
+.gcard .gk{font:500 11px var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.gcard .gh{display:flex;gap:8px;align-items:center;font-size:15px;line-height:1.2;padding-right:18px}
+.gcard p{margin:0}
+.gcard .gx{position:absolute;top:6px;right:6px;border:0;background:none;cursor:pointer;color:var(--mute);font-size:16px;line-height:1;padding:4px}
+.chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:99px;padding:1px 8px;border:1px solid var(--line);margin:0 4px 0 0;color:var(--ink2)}
+.glegend{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink2)}
+.glegend .keys{display:flex;flex-wrap:wrap;gap:4px 10px;max-width:250px}
+.glegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.45)}
+.glegend i.ring{background:#fff;box-shadow:0 0 0 1.5px #fff,0 0 0 3px #1c2128}
+.glegend .st{color:var(--accent);font-size:13px;margin-right:3px}
+.gtip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12.5px;padding:5px 8px;border-radius:4px;white-space:nowrap;z-index:5}
+.gload{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:16px 18px;width:min(360px,calc(100% - 40px));display:flex;flex-direction:column;gap:8px;z-index:6}
+.gload ol{margin:0;padding-left:20px;font-size:13.5px;color:var(--mute);display:flex;flex-direction:column;gap:2px}
+.gload li.done{color:var(--good)} .gload li.now{color:var(--ink);font-weight:700}
+.gload p{margin:0;font-size:13.5px;color:var(--ink2)}
+@media (max-width:860px){.ghelp{display:none}.glegend .keys{max-width:170px}.gcard{bottom:auto;top:10px;width:calc(100% - 70px)}}
 </style>
 </head>
 <body>
@@ -195,6 +230,7 @@ details summary{cursor:pointer;font-weight:600}
   <div class="brand">Aftershock <b>Re-entry</b></div>
   <div class="evsum"><span class="mag" id="hMag">7.8</span><span class="evtxt" id="hTxt"></span></div>
   <span class="note" id="hNote"></span>
+  <button class="hbtn" id="worldBtn" aria-label="Back to the world map">◀ World map</button>
   <button class="hbtn story" id="storyBtn">▶ Story</button>
   <button class="hbtn" id="helpBtn" aria-label="How to use">?</button>
   <button class="hbtn fs" id="fsBtn">Fullscreen</button>
@@ -204,17 +240,30 @@ details summary{cursor:pointer;font-weight:600}
     <h1 id="wTitle">After the quake, <b>how does aftershock risk change?</b></h1>
     <p class="lead">Explore recorded USGS earthquake sequences and estimates of further shaking near a chosen location. A forecast can inform decisions; building entry still needs an inspection and local authority guidance.</p>
     <ol>
-      <li><b>Pick a spot</b> on the map, or search a town.</li>
+      <li><b>Spin the globe</b> and pick an earthquake: live from USGS, or one of 13 case studies.</li>
+      <li><b>Pick a spot</b> on its map, or search a town.</li>
       <li><b>Choose your exposure time</b>, building assumption and risk limit.</li>
       <li><b>Compare places</b> and save a check to explain later changes. Projected model thresholds do not clear buildings for entry.</li>
     </ol>
-    <div class="wbtns"><button class="btn primary" id="wStory">▶ Watch the 2-minute story</button><button class="btn" id="wExplore">Explore the map</button></div>
-    <p class="fine">Real data from 13 earthquakes, 2010–2026. A prototype, not safety advice. Keys: <span class="kbd">←</span> <span class="kbd">→</span> story steps · <span class="kbd">Space</span> play the timeline · <span class="kbd">Esc</span> close</p>
+    <div class="wbtns"><button class="btn primary" id="wStory">▶ Watch the 2-minute story</button><button class="btn" id="wExplore">Explore the globe</button></div>
+    <p class="fine">Live USGS earthquakes from the last 30 days, checked every 2 minutes, plus 13 recorded sequences from 2010–2026. A prototype, not safety advice. Keys: <span class="kbd">←</span> <span class="kbd">→</span> story steps · <span class="kbd">Space</span> play the timeline · <span class="kbd">Esc</span> close</p>
   </div>
 </div>
 
 <div class="app">
   <aside class="side">
+    <section class="wpane" id="pane-world">
+      <h2>Earthquakes worldwide</h2>
+      <p class="muted" id="wStatus" role="status">Loading the USGS feed…</p>
+      <div class="wfilter">
+        <label>Show <select id="wMin" aria-label="Smallest magnitude"><option value="4.5" selected>M4.5+</option><option value="5">M5+</option><option value="6">M6+</option></select></label>
+        <label><input type="checkbox" id="wOnlyF"> Only quakes with a forecast</label>
+      </div>
+      <ul class="evlist" id="wList"></ul>
+      <h2 style="margin-top:6px">Case studies</h2>
+      <p class="muted">Recorded sequences with extra data (ground failure, curated towns) and the story.</p>
+      <ul class="evlist" id="wCases"></ul>
+    </section>
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="spot" aria-selected="true">Your spot</button>
       <button role="tab" data-tab="events" aria-selected="false">Earthquakes</button>
@@ -297,6 +346,7 @@ details summary{cursor:pointer;font-weight:600}
     </section>
 
     <section class="pane" id="pane-events" hidden>
+      <button class="btn" id="evWorld">◀ Live earthquakes on the world map</button>
       <h2>Earthquakes</h2>
       <p class="muted">13 real earthquakes from the USGS catalogue. The three from 2026 were still in progress when the data was pulled.</p>
       <ul class="evlist" id="evlist"></ul>
@@ -378,6 +428,16 @@ details summary{cursor:pointer;font-weight:600}
     </div>
     <div class="ctl mapcard" id="mapcard" role="button" tabindex="0" aria-label="Open the forecast for your spot"></div>
     <div class="ctl tour" id="tour" hidden aria-live="polite"></div>
+    <div id="globeWrap">
+      <canvas id="globe" tabindex="0" role="application" aria-label="Globe of recent earthquakes. Drag or use the arrow keys to spin, scroll or press plus and minus to zoom, click an earthquake to select it. The list beside the globe has the same earthquakes."></canvas>
+      <div class="ctl ghelp"><b>Live earthquakes · USGS</b><span>Drag to spin · scroll to zoom · click a quake</span></div>
+      <div class="gzoom"><button class="btn" id="gIn" aria-label="Zoom in">+</button><button class="btn" id="gOut" aria-label="Zoom out">−</button></div>
+      <div class="ctl glegend"><div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span></div>
+        <div class="keys"><span><i class="ring"></i>forecast available</span><span><b class="st">★</b>case study</span><span>size = magnitude</span></div></div>
+      <div class="ctl gcard" id="gCard" hidden aria-live="polite"></div>
+      <div class="gtip" id="gTip" hidden></div>
+      <div class="ctl gload" id="gLoad" hidden role="status"></div>
+    </div>
     <div class="ctl legend" id="legend"></div>
     <div class="ctl timebar">
       <button class="play" id="play" aria-label="Play the sequence"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg></button>
@@ -394,6 +454,11 @@ details summary{cursor:pointer;font-weight:600}
 <script id="d-base" type="application/json">__BASE__</script>
 <script id="d-pop" type="application/json">__POP__</script>
 <script id="d-aft" type="application/json">__AFT__</script>
+<script id="d-world" type="application/json">__WORLD__</script>
+<script id="d-towns" type="application/json">__TOWNS__</script>
+__GEOLIBS__
+<script>__LIVE__</script>
+<script>__GLOBE__</script>
 <script>__MODEL__</script>
 <script>__SHAKE__</script>
 <script>__VALIDATION__</script>
@@ -405,6 +470,8 @@ const $=id=>document.getElementById(id);
 const ORDER=['turkey','nepal','darfield','noto','kaikoura','ridgecrest','myanmar','kumamoto','ecuador','morocco','indonesia26','panama26','nagqu26'];
 const SEQ=D.sequences.sort((a,b)=>ORDER.indexOf(a.key)-ORDER.indexOf(b.key));
 const CNAME={TR:'Türkiye',NP:'Nepal',NZ:'New Zealand',JP:'Japan',US:'United States',MM:'Myanmar',EC:'Ecuador',MA:'Morocco',ID:'Indonesia',PA:'Panama',CN:'China',IN:'India',SY:'Syria',CO:'Colombia',CR:'Costa Rica',IR:'Iran'};
+const REGION=(()=>{try{return new Intl.DisplayNames(['en'],{type:'region'})}catch(e){return null}})();
+const cname=cc=>{if(!cc)return 'this area';try{return CNAME[cc]||(REGION&&REGION.of(cc))||cc}catch(e){return cc}};
 const MMI_NAME=['','not felt','weak','weak','light','moderate','strong','very strong','severe','violent','extreme'];
 const ROMAN=['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
 const R=v=>ROMAN[Math.max(1,Math.min(10,Math.round(v)))];
@@ -412,6 +479,8 @@ const ICON={wait:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15
 document.querySelectorAll('.kv').forEach(e=>e.textContent=SITEFIT.k);
 const fmtDate=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
 const fmtDT=d=>d.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
+const fmtClock=d=>d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
+const ago=ms=>ms<3600e3?Math.max(1,Math.round(ms/60e3))+' min ago':ms<48*3600e3?Math.round(ms/3600e3)+' h ago':Math.round(ms/864e5)+' days ago';
 const dur=d=>d<1/24?Math.round(d*1440)+' min':d<2?(d*24).toFixed(d<0.5?1:0)+' hours':d.toFixed(d<10?1:0)+' days';
 const pct=p=>p>=.995?'>99%':p<0.0005?'<0.1%':p<0.1?(p*100).toFixed(1)+'%':Math.round(p*100)+'%';
 const oneIn=p=>p>=.5?'more likely than not':p<0.0002?'under 1 in 5,000':'about 1 in '+Number((1/p).toPrecision(2)).toLocaleString();
@@ -440,17 +509,21 @@ const landLayer=L.layerGroup().addTo(map),overlayLayer=L.layerGroup().addTo(map)
 const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupAnchor:[0,-30],html:'<svg class="pin" viewBox="0 0 26 36" aria-hidden="true"><path d="M13 35C13 35 2 21 2 13a11 11 0 1 1 22 0c0 8-11 22-11 22z" fill="#c2391b" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.2" fill="#fff"/></svg>'});
 const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><path d="M13 1.5l3.3 7.6 8.2.7-6.2 5.4 1.9 8L13 19l-7.2 4.2 1.9-8L1.5 9.8l8.2-.7z" fill="#c2391b" stroke="#fff" stroke-width="1.6"/></svg>'});
 
+// i: index into SEQ, or a live sequence registered by registerLive()
 function pickSeq(i){
-  resetComparison();checkFeedback='';
-  S=SEQ[i];B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
-  G={...sm,mmi:b64(sm.mmi),vs:b64(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
+  enterDetail(false);resetComparison();checkFeedback='';
+  S=typeof i==='number'?SEQ[i]:i;B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
+  const bytes=v=>typeof v==='string'?b64(v):v;   // bundled grids are base64; live ones arrive as byte arrays
+  G={...sm,mmi:bytes(sm.mmi),vs:bytes(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
   G.lon1=G.lon0+(G.nc-1)*G.dlon;G.lat1=G.lat0-(G.nr-1)*G.dlat;
   G.bounds=L.latLngBounds([G.lat1-G.dlat/2,G.lon0-G.dlon/2],[G.lat0+G.dlat/2,G.lon1+G.dlon/2]);
   // coastline segments (drop edges created by clipping to the map box)
   const bx={w:G.lon0-0.3,e:G.lon1+0.3,s:G.lat1-0.3,n:G.lat0+0.3},on=(p,q)=>[['0','w'],['0','e'],['1','s'],['1','n']].some(([ax,k])=>Math.abs(p[ax]-bx[k])<2e-3&&Math.abs(q[ax]-bx[k])<2e-3);
   G.coast=[];for(const r of B.land)for(let k=0;k<r.length;k++){const a=r[k],b=r[(k+1)%r.length];if(!on(a,b))G.coast.push([...km(a[1],a[0]),...km(b[1],b[0])])}
-  $('hMag').textContent=S.M.toFixed(1);$('hTxt').innerHTML=`${S.label} <small>${fmtDate(new Date(S.t0))} · ${S.place}</small>`;
-  tMax=Math.max(1,S.daysAvailable);$('now').value=tToSlider(Math.min(tMax,S.key.endsWith('26')?tMax:1));
+  renderHeader();
+  // A live quake can be minutes old, so its timeline runs from shortly after the mainshock to now.
+  tMin=S.live?Math.min(1/24,Math.max(1/1440,S.daysAvailable/3)):1/24;tMax=S.live?Math.max(S.daysAvailable,tMin*1.5):Math.max(1,S.daysAvailable);
+  $('now').value=tToSlider(Math.min(tMax,S.live||S.key.endsWith('26')?tMax:1));
   // land
   landLayer.clearLayers();
   for(const r of B.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:true,color:'#9aa7b2',weight:1,fillColor:'#f6f5f2',fillOpacity:1,interactive:false}).addTo(landLayer);
@@ -463,8 +536,9 @@ function pickSeq(i){
   const start=lab||(t&&[t[0],t[1],t[2]]);setLoc(start?start[1]:S.lat,start?start[2]:S.lon,start?start[0]:'Epicentre area',false);
   buildBuildingOptions();renderEvents();renderLedger();renderPager();heatKey='';update();refreshCheckins();
 }
+function renderHeader(){$('hMag').textContent=S.M.toFixed(1);$('hTxt').innerHTML=`${esc(S.label)} <small>${fmtDate(new Date(S.t0))} · ${esc(S.place)}</small>`}
 function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('bld').value||'local';
-  $('bld').innerHTML=`<option value="local">Typical local building, ${CNAME[cc]||cc} (${ct?R(ct):'VIII'})</option><option value="9">Modern, built to seismic code (IX)</option><option value="8">Reinforced concrete (VIII)</option><option value="7">Older brick, stone or adobe (VII)</option><option value="6">Already cracked or damaged (VI)</option>`;$('bld').value=keep}
+  $('bld').innerHTML=`<option value="local">Typical local building, ${cname(cc)} (${ct?R(ct):'VIII'})</option><option value="9">Modern, built to seismic code (IX)</option><option value="8">Reinforced concrete (VIII)</option><option value="7">Older brick, stone or adobe (VII)</option><option value="6">Already cracked or damaged (VI)</option>`;$('bld').value=keep}
 function countryAt(lat,lon){let best=null,bd=40;for(const t of TOWNS.towns){const d=Math.hypot((t[1]-lat)*110.57,(t[2]-lon)*111.32*G.c);if(d<bd){bd=d;best=t}}return best&&POP.fatality[best[4]]?best[4]:POP.seqCountry[S.key]}
 function pinCountry(){return loc?countryAt(loc.lat,loc.lon):POP.seqCountry[S.key]}
 function setLoc(lat,lon,name,doUpdate=true){loc={lat,lon,name};$('town').value=name&&!/^(Dropped|Near)/.test(name)?name:'';if(doUpdate){buildBuildingOptions();update()}}
@@ -483,8 +557,10 @@ function update(){
   const now=sliderToT(+$('now').value),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
   const t0=Date.parse(S.t0),nowDate=new Date(t0+now*864e5);
   $('clock').innerHTML=`<b>${dur(now)}</b> after · ${fmtDT(nowDate)}`;
-  $('hNote').textContent=`Replay: ${fmtDT(nowDate)}`;
-  $('dataStatus').textContent=`Retrospective snapshot · downloaded ${fmtDate(new Date(D.fetchedAt))} · grid spacing ${(G.dlat*111).toFixed(1)} km. Not a live forecast or street-level survey.`;
+  const live=S.live&&+$('now').value>=1000;
+  if(mode==='detail')$('hNote').textContent=live?`Live · ${fmtDT(nowDate)}`:`Replay: ${fmtDT(nowDate)}`;
+  $('dataStatus').textContent=S.live?`Live USGS data · catalogue checked ${fmtClock(new Date(S.fetchedAt))} and every 2 minutes while open · ShakeMap version ${G.version||'?'} (${G.status||'status unknown'}) · grid spacing ${(G.dlat*111).toFixed(1)} km. Not an official forecast or street-level survey.`
+    :`Retrospective snapshot · downloaded ${fmtDate(new Date(D.fetchedAt))} · grid spacing ${(G.dlat*111).toFixed(1)} km. Not a live forecast or street-level survey.`;
   // Keep the complete posterior here: a fixed-length slice silently understates every
   // point probability and can move the projected threshold-crossing time too early.
   const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f),src=sources(now);
@@ -519,8 +595,13 @@ function update(){
 }
 function computeHeat(f,cp,src,calib){
   const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
+  const Q=new Float64Array(cols*rows);let qMin=Infinity,qMax=0;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=G.lat0-(r+0.5)/rows*(G.lat0-G.lat1),lon=G.lon0+(c+0.5)/cols*(G.lon1-G.lon0);
-    const tb=local?(countryThr(countryAt(lat,lon))||8):+$('bld').value;const s=spot(lat,lon,tb,calib,src);P[r*cols+c]=SHAKE.probQ(f,cp,s.qv,0,7)}
+    const tb=local?(countryThr(countryAt(lat,lon))||8):+$('bld').value,qv=spot(lat,lon,tb,calib,src).qv;Q[r*cols+c]=qv;if(qv>0){qMin=Math.min(qMin,qv);qMax=Math.max(qMax,qv)}}
+  // probQ sums the full posterior (thousands of terms), too slow for every cell. The 7-day chance depends on the cell
+  // only through qv, so shade from exact values at 200 log-spaced qv and interpolate. Displayed numbers use probQ directly.
+  if(qMax>0){const n=200,l0=Math.log(qMin),dl=(Math.log(qMax)-l0)/(n-1)||1,tab=new Float64Array(n);for(let i=0;i<n;i++)tab[i]=SHAKE.probQ(f,cp,Math.exp(l0+i*dl),0,7);
+    for(let i=0;i<Q.length;i++){if(!(Q[i]>0))continue;const x=Math.min(n-1,(Math.log(Q[i])-l0)/dl),j=Math.min(n-2,Math.floor(x)),t=x-j;P[i]=n<2?tab[0]:tab[j]+(tab[j+1]-tab[j])*t}}
   return{cols,rows,P}}
 function factorsList(){const sp=cur.sp,gv=sp.gv,cc=pinCountry(),ct=countryThr(cc),amp=SHAKE.site(gv.vs),[cls,clsN]=vsClass(gv.vs);
   let nearest=Infinity;for(let k=0;k<cur.src.length;k+=2)nearest=Math.min(nearest,Math.hypot(cur.src[k]-sp.x,cur.src[k+1]-sp.y));
@@ -532,7 +613,7 @@ function factorsList(){const sp=cur.sp,gv=sp.gv,cc=pinCountry(),ct=countryThr(cc
   L.push(['Mainshock shaking here',`${R(gv.mmi)} · ${MMI_NAME[Math.round(gv.mmi)]||''}`,sp.why.includes('mainshock')?'<span class="flag">Likely damaged</span> At or near your building\'s damage level, so the threshold drops one level.':'Below your building\'s damage level.','shakemap']);
   if(gv.liq!=null)L.push(['Liquefaction (mainshock)',pct(gv.liq),gv.liq>=0.1?'<span class="flag">High</span> Ground that liquefies can tilt or sink foundations, so the building is treated as weakened. Common near rivers, coasts and on soft soil.':'Share of nearby ground the USGS model expects to have liquefied. Low here.','gf']);
   if(gv.ls!=null)L.push(['Landslides (mainshock)',pct(gv.ls),gv.ls>=0.05?'<span class="flag">High</span> Slopes here are prone to sliding. Aftershocks can trigger more.':'Share of nearby ground the USGS model expects to have slid. Low here.','gf']);
-  L.push(['Country vulnerability proxy',`${CNAME[cc]||cc}`,fr!=null?`USGS PAGER models an intensity VIII fatality rate of ${oneIn(fr)} among exposed people. The prototype maps this model to intensity ${R(ct)} (our rule), not a measured building damage threshold.`:'No PAGER model for this country.','pager']);
+  L.push(['Country vulnerability proxy',cname(cc),fr!=null?`USGS PAGER models an intensity VIII fatality rate of ${oneIn(fr)} among exposed people. The prototype maps this model to intensity ${R(ct)} (our rule), not a measured building damage threshold.`:'No PAGER model for this country.','pager']);
   if(EX[S.key]&&EX[S.key].pager&&EX[S.key].pager.struct)L.push(['Common building types','PAGER',EX[S.key].pager.struct.replace(/^Overall, /,'').replace(/\s+/g,' '),'pager']);
   L.push(['Distance to coast',coast<400?`${coast<1?coast.toFixed(1):Math.round(coast)} km`:'inland',coast<5?`<span class="flag">Tsunami</span> This is coastal proximity, not a tsunami forecast. Regional M7+ probability over 7 days (not tsunami probability): ${pct(p7M7)}. After strong or long coastal shaking, move inland or uphill once shaking stops.`:'Distance alone cannot rule out tsunami exposure. Use official inundation maps and warnings.','catalogue']);
   return L}
@@ -645,17 +726,18 @@ function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
 // ---------- sources ----------
 function renderLedger(){const sm=D.shakemaps[S.key],ex=EX[S.key]||{},gi=ex.gfInfo||{},pg=ex.pager;const res=`${(sm.dlat*111).toFixed(1)} km`;
   const rows=[
-   ['catalogue','Quakes: times, places, sizes',`USGS ComCat: <a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">event ${S.id}</a> and ${S.events.length} M4+ quakes within ${S.radiusKm} km`,'Used as recorded. Fetched '+fmtDate(new Date(D.fetchedAt))+'.'],
+   ['catalogue','Quakes: times, places, sizes',`USGS ComCat: <a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">event ${S.id}</a> and ${S.events.length} M4+ quakes within ${S.radiusKm} km`,S.live?'Used as recorded. Fetched live from USGS and re-checked every 2 minutes while open.':'Used as recorded. Fetched '+fmtDate(new Date(D.fetchedAt))+'.'],
    ['rate','How many aftershocks','Reasenberg & Jones (1989), with global starting values from Page et al. (2016), the basis of USGS aftershock forecasts','Prototype Bayesian fit to M5+ events before the replay time. One prior everywhere, not the regional USGS operational forecast; no ETAS secondary triggering.'],
    ['shake','How hard a quake shakes a spot','Allen, Wald & Worden (2012) active-crust intensity equation, <a href="https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/allen_2012_ipe.py" target="_blank" rel="noopener">GEM OpenQuake reference</a>',`Includes its scatter plus our fitted soil term. The empirical-offset option adds ${SHAKE.BIAS}, chosen from 26 aftershock ShakeMaps; not an independent calibration.`],
    ['vs30','Ground softness (Vs30)',`USGS ShakeMap grid, version ${sm.version}, cell size about ${res}`,`Soil effect of ${SITEFIT.k} intensity per tenfold change in Vs30 (90% event-bootstrap range ${SITEFIT.k90[0]} to ${SITEFIT.k90[1]}), fitted to ${SITEFIT.cells.toLocaleString()} cells across 13 mainshock ShakeMaps using a rupture-distance equation and rupture proxy. Transfer to the hypocentral aftershock equation is experimental.`],
    ['shakemap','Mainshock shaking at your spot',`USGS ShakeMap version ${sm.version}: ${sm.stations} seismic stations and ${sm.obs.toLocaleString()} "Did You Feel It?" reports, plus USGS models`,`Read at your location. Processed ${sm.processed || 'date unavailable'}; may postdate the replay time.`],
+   S.live?['gf','Liquefaction and landslides','Not loaded for live earthquakes','The USGS ground-failure maps are GeoTIFF files this page does not read in the browser yet, so liquefaction cannot lower the damage threshold for live events.']:
    ['gf','Liquefaction and landslides',gi.lqModel?`USGS ground failure, version ${gi.version}: ${gi.lqModel} (liquefaction) and ${gi.lsModel} (landslides)`:'USGS ground failure product','Read at your location. If 10% or more of the ground is expected to have liquefied, the building counts as weakened (our rule).'],
    ['pager','Country vulnerability proxy',`USGS PAGER empirical fatality model (Jaiswal & Wald), country curves from the <a href="https://github.com/usgs/pager" target="_blank" rel="noopener">PAGER code</a>${pg?'; building notes from the PAGER report':''}`,'Prototype threshold: intensity at a modelled fatality rate of 1 in 10,000, clamped to VI–9.5. This is not a building fragility model. Country is approximated from the nearest town within 40 km, with a sequence-country fallback.'],
    ['mmi','When buildings get damaged','Modified Mercalli Intensity scale descriptions (USGS)','Fixed thresholds for the other building types.'],
    ['people','Population','GeoNames populated places (all-the-cities) and USGS PAGER exposure','Town populations are point counts; PAGER is the official gridded estimate.'],
    ['validation','Validation scope','Regional M5+/M6+ occurrence checks on revised catalogue data','No independent validation of point shaking, building damage or re-entry. Overlapping forecast windows are correlated; later ShakeMaps and fitted soil terms are retrospective.'],
-   ['map','Map','Natural Earth coastlines and borders (world-atlas)','Clipped to the area.']];
+   ['map','Map','Natural Earth coastlines and borders (world-atlas)',S.live?'1:50m scale for live earthquakes, clipped to the area. Towns of 5,000+ people from GeoNames.':'Clipped to the area.']];
   $('ledger').innerHTML='<tr><th>Number</th><th>Source</th><th>What we did</th></tr>'+rows.map(r=>`<tr id="src-${r[0]}"><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
 function bindSrc(){document.querySelectorAll('.src').forEach(b=>b.onclick=()=>{selectTab('sources');const row=$('src-'+b.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})})}
 
@@ -718,7 +800,7 @@ document.querySelectorAll('#tolSeg button').forEach(b=>b.onclick=()=>{setTol(b.d
 
 // ---------- helpers the story uses ----------
 function seqIndex(key){return SEQ.findIndex(s=>s.key===key)}
-function goSeq(key){const i=seqIndex(key);if(S&&S.key===key)return;pickSeq(i)}
+function goSeq(key){const i=seqIndex(key);if(S&&S.key===key){enterDetail();return}pickSeq(i)}
 function setDays(d){$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
 function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
 function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v)}
@@ -752,7 +834,7 @@ const STEPS=[
   b:()=>{const st=VALIDATION.summarize(validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL)),5);return `<p>We scored ${st.forecasts} complete seven-day forecast windows across ${st.sequences} of the ${SEQ.length} earthquakes, using earlier origin times in a revised catalogue. For M5+ the model scores <b>${skillTxt(5)}</b> (0 = the other-sequence reference, 1 = perfect).</p><p>M6+ occurrence performs worse than the reference. This does not validate local shaking, damage or safe entry.</p>`}},
  {t:'Built for the people waiting outside.',
   go(){setLayer('risk');selectTab('people');update()},
-  b:()=>`<p>Population per town, how many people are at risk this week, and opt-in <b>"I'm safe" / "I need help"</b> check-ins on a shared map.</p><p>The bundled USGS data can be refreshed with the download script. Live ingestion and a validated operational forecast are future work.</p>`}
+  b:()=>`<p>Population per town, how many people are at risk this week, and opt-in <b>"I'm safe" / "I need help"</b> check-ins on a shared map.</p><p>The world map shows live USGS earthquakes, checked every 2 minutes; any with a ShakeMap opens the same forecast. A validated operational forecast is future work.</p>`}
 ];
 let skillCache={};
 function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));return skillCache[M]=VALIDATION.summarize(rows,M).heldOutSkill.toFixed(2)}
@@ -778,9 +860,77 @@ addEventListener('keydown',e=>{const typing=/INPUT|SELECT|TEXTAREA/.test(e.targe
   if(typing)return;
   if(tourOn&&(e.key==='ArrowRight'||e.key==='PageDown')){e.preventDefault();tourI===STEPS.length-1?endTour():showStep(tourI+1)}
   else if(tourOn&&(e.key==='ArrowLeft'||e.key==='PageUp')){e.preventDefault();showStep(tourI-1)}
-  else if(e.key===' '&&!tourOn&&e.target===document.body){e.preventDefault();$('play').click()}});
+  else if(e.key===' '&&!tourOn&&mode==='detail'&&e.target===document.body){e.preventDefault();$('play').click()}});
 __PLANNER__
-requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen){$('welcome').hidden=false;$('wStory').focus()}});
+
+// ---------- world view: live USGS earthquakes on a globe ----------
+const WORLD=J('d-world'),WTOWNS=J('d-towns'),POLL_MS=120e3;
+const WGEO={land110:topojson.feature(WORLD.land110,WORLD.land110.objects.land),land50:topojson.feature(WORLD.land50,WORLD.land50.objects.land),
+  borders110:topojson.mesh(WORLD.countries110,WORLD.countries110.objects.countries,(a,b)=>a!==b),borders50:topojson.mesh(WORLD.countries50,WORLD.countries50.objects.countries,(a,b)=>a!==b)};
+const CASES=SEQ.map(s=>({id:'case:'+s.key,kind:'case',seq:s,lon:s.lon,lat:s.lat,M:s.M,t:Date.parse(s.t0),place:s.label}));
+let mode='detail',feed=null,feedAt=0,feedErr=null,gSel=null,gItems=[],loadingLive=false;const liveSeqs={};
+const globe=GLOBE.create($('globe'),WGEO,{onPick:it=>{gSel=it;renderGCard();markWorldList();if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
+function enterWorld(){if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
+  $('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS · last 30 days</small>';globe.resize();globe.start();renderWorld();$('globe').focus({preventScroll:true})}
+function enterDetail(refresh=true){if(mode==='detail')return;mode='detail';document.body.classList.remove('world');globe.stop();$('gTip').hidden=true;
+  if(refresh&&S){renderHeader();map.invalidateSize();update()}}
+function worldItems(){const min=+$('wMin').value,only=$('wOnlyF').checked;
+  return [...(feed?feed.quakes:[]).filter(q=>q.M>=min&&(!only||q.shakemap)).map(q=>({...q,kind:'live'})),...CASES]}
+function itemLine(it){return it.kind==='case'?`${fmtDate(new Date(it.t))} · recorded sequence`:`${ago(Date.now()-it.t)}${it.alert?` · PAGER ${it.alert}`:''}${it.tsunami?' · tsunami flag':''}`}
+function renderWorld(){
+  gItems=worldItems();globe.setItems(gItems);if(gSel)gSel=gItems.find(i=>i.id===gSel.id)||gSel;
+  const live=gItems.filter(i=>i.kind==='live').sort((a,b)=>b.t-a.t),min=$('wMin').value,nf=live.filter(q=>q.shakemap).length;
+  $('wStatus').innerHTML=feed?`<b>${live.length}</b> earthquakes M${min}+ in the last 30 days, <b>${nf}</b> with a forecast. Updated ${fmtClock(new Date(feedAt))}; checks USGS every 2 minutes.${feedErr?` Last check failed (${esc(feedErr)}).`:''}`
+    :feedErr?`Can't reach USGS right now (${esc(feedErr)}). Showing the 13 case studies; retrying every 2 minutes.`:'Loading the USGS feed…';
+  if(mode==='world')$('hNote').textContent=feed?`Live · updated ${fmtClock(new Date(feedAt))}`:'';
+  const li=it=>`<li data-id="${esc(it.id)}" tabindex="0"><span class="m">${it.M.toFixed(1)}</span><span class="t">${esc(it.place)}</span><span class="s">${itemLine(it)}${it.kind==='live'&&it.shakemap?' · <span class="fc">forecast</span>':''}</span></li>`;
+  $('wList').innerHTML=live.length?live.slice(0,100).map(li).join(''):`<li><span class="m">–</span><span class="t">${feed?'None match these filters':'Waiting for USGS'}</span><span class="s">${feed?'Try a smaller magnitude':'The case studies below work offline'}</span></li>`;
+  $('wCases').innerHTML=CASES.map(li).join('');
+  document.querySelectorAll('#wList li[data-id],#wCases li[data-id]').forEach(el=>{const it=gItems.find(i=>i.id===el.dataset.id);if(!it)return;
+    el.onclick=()=>focusItem(it);el.ondblclick=()=>openItem(it);el.onkeydown=e=>{if(e.key==='Enter'){gSel&&gSel.id===it.id?openItem(it):focusItem(it)}}});
+  markWorldList();renderGCard()}
+function markWorldList(){document.querySelectorAll('#wList li[data-id],#wCases li[data-id]').forEach(el=>{if(gSel&&el.dataset.id===gSel.id)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current')})}
+function focusItem(it){gSel=globe.select(it.id)||it;globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,2.4));renderGCard();markWorldList()}
+function hoverGlobe(it,x,y){const t=$('gTip');if(!it){t.hidden=true;return}t.hidden=false;t.textContent=`M${it.M.toFixed(1)} · ${it.place} · ${it.kind==='case'?fmtDate(new Date(it.t)):ago(Date.now()-it.t)}`;
+  const W=$('globeWrap').clientWidth;t.style.left=Math.min(x+14,W-t.offsetWidth-6)+'px';t.style.top=(y+14)+'px'}
+function renderGCard(){const c=$('gCard'),it=gSel;if(!it){c.hidden=true;return}c.hidden=false;
+  const open=label=>`<div class="row"><button class="btn primary" id="gOpen">${label}</button></div>`;
+  const head=`<button class="gx" id="gX" aria-label="Close">✕</button><div class="gh"><span class="mag">${it.M.toFixed(1)}</span><b>${esc(it.place)}</b></div>`;
+  if(it.kind==='case')c.innerHTML=`<div class="gk">Case study · recorded sequence</div>${head}<p class="muted">${fmtDate(new Date(it.t))} · ${it.seq.events.length} M4+ quakes in the bundled catalogue, with ground-failure data.</p>${open('Open the forecast')}`;
+  else{const chips=[it.alert?`<span class="chip" style="border-color:${it.alert};color:${it.alert==='yellow'?'#8a6d00':it.alert}">PAGER ${it.alert}</span>`:'',it.tsunami?'<span class="chip">Tsunami flag</span>':'',it.felt?`<span class="chip">${it.felt.toLocaleString()} felt reports</span>`:''].join('');
+    c.innerHTML=`<div class="gk">Live · USGS</div>${head}<p class="muted">${fmtDT(new Date(it.t))} · ${ago(Date.now()-it.t)} · depth ${Math.round(it.depth)} km</p>${chips?`<p>${chips}</p>`:''}`+
+      (it.shakemap?`${open('Open aftershock forecast')}<p class="muted">Downloads this quake's USGS catalogue, ShakeMap and PAGER report (a few MB).</p>`
+        :`<p class="muted">No USGS ShakeMap yet, so no local forecast. USGS usually publishes one within an hour for M5.5+ quakes, and for smaller felt quakes in some regions.</p>`)+
+      `<a href="${esc(it.url)}" target="_blank" rel="noopener">USGS event page</a>`}
+  $('gX').onclick=()=>{gSel=null;globe.select(null);renderGCard();markWorldList()};if($('gOpen'))$('gOpen').onclick=()=>openItem(it)}
+function openItem(it){if(it.kind==='case'){pickSeq(SEQ.indexOf(it.seq));selectTab('spot')}else if(it.shakemap)openLive(it)}
+function registerLive({seq,shakemap,extra}){
+  const m=LIVE.basemap({land:WGEO.land50,borders:WGEO.borders50},shakemap,seq,WTOWNS);
+  D.shakemaps[seq.key]=shakemap;EX[seq.key]=extra;BASE[seq.key]=m.base;POP.towns[seq.key]=m.towns;POP.seqCountry[seq.key]=m.country;liveSeqs[seq.id]=seq}
+async function openLive(it){
+  if(liveSeqs[it.id]){pickSeq(liveSeqs[it.id]);selectTab('spot');refreshLive();return}
+  if(loadingLive)return;loadingLive=true;
+  const box=$('gLoad'),steps=[['event','Finding the event'],['shakemap','Downloading the ShakeMap grid (the big one)'],['catalogue','Downloading the aftershock catalogue'],['pager','Reading the PAGER report']];
+  const show=s=>{const k=steps.findIndex(x=>x[0]===s);box.innerHTML=`<b>Loading M${it.M.toFixed(1)} · ${esc(it.place)}</b><ol>${steps.map(([,t],j)=>`<li class="${j<k?'done':j===k?'now':''}">${t}</li>`).join('')}</ol>`};
+  box.hidden=false;show('event');
+  try{const r=await LIVE.load(it.id,show);registerLive(r);box.hidden=true;pickSeq(r.seq);selectTab('spot')}
+  catch(e){box.innerHTML=`<b>Couldn't load this earthquake</b><p>${esc(e.message==='Failed to fetch'?'Could not reach USGS. Check the internet connection and try again.':e.message)}</p><div class="row"><button class="btn" id="gLoadX">Close</button></div>`;$('gLoadX').onclick=()=>box.hidden=true;$('gLoadX').focus()}
+  finally{loadingLive=false}}
+// While a live quake is open, re-check its catalogue on every poll; stay at "now" if the timeline was there.
+async function refreshLive(){if(mode!=='detail'||!S||!S.live||playing||tourOn)return;const seq=S;
+  try{const atEnd=+$('now').value>=1000,t=sliderToT(+$('now').value),c=await LIVE.catalogue(seq);if(S!==seq)return;
+    const changed=c.events.length!==seq.events.length;Object.assign(seq,c);tMax=Math.max(seq.daysAvailable,tMin*1.5);
+    $('now').value=atEnd?1000:tToSlider(Math.min(t,tMax));if(changed)heatKey='';update()}catch(e){/* keep the last catalogue; dataStatus shows when it was checked */}}
+async function pollFeed(){try{feed=await LIVE.feed();feedAt=Date.now();feedErr=null}catch(e){feedErr=e.message==='Failed to fetch'?'offline?':e.message}
+  renderWorld();refreshLive()}
+$('wMin').onchange=renderWorld;$('wOnlyF').onchange=renderWorld;
+$('worldBtn').onclick=enterWorld;$('evWorld').onclick=enterWorld;
+$('gIn').onclick=()=>globe.zoomBy(1.6);$('gOut').onclick=()=>globe.zoomBy(1/1.6);
+addEventListener('resize',()=>{if(mode==='world')globe.resize()});
+setInterval(pollFeed,POLL_MS);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-feedAt>POLL_MS)pollFeed()});
+
+requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen){$('welcome').hidden=false;$('wStory').focus()}});
 </script>
 </body>
 </html>

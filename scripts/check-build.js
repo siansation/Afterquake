@@ -17,8 +17,12 @@ for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
     executable.push(match[2]);
   }
 }
-assert.equal(data, 5);
-assert.ok(scripts >= 6, 'Expected bundled map, model, shaking, validation, scenario and UI scripts');
+assert.equal(data, 7);
+assert.ok(scripts >= 11, 'Expected bundled map, globe libraries, live loader, globe, model, shaking, validation, scenario and UI scripts');
+for (const name of ['LIVE', 'GLOBE']) assert.ok(executable.some(code => new RegExp(`\\bconst ${name}\\s*=`).test(code)), `Missing bundled ${name}`);
+assert.ok(executable.some(code => /geoOrthographic/.test(code)), 'Missing bundled d3-geo');
+assert.deepEqual(Object.keys(datasets.get('d-world')), ['land110', 'countries110', 'land50', 'countries50'], 'World outlines missing');
+assert.ok(datasets.get('d-towns').length > 40000, 'World towns missing');
 assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote script');
 for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonResult', 'saveCheck', 'changesResult']) {
   assert.ok(ids.includes(id), `Missing planning control ${id}`);
