@@ -119,7 +119,7 @@ docs/globe.jpg             live world view
 
 ## The assistant
 
-`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling, default model `gemini-3.8-flash`; set `GEMINI_MODEL` to change it). Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
+`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling). The default model is `gemini-3.5-flash-lite` with minimal thinking, which answers in about a second per step; `gemini-3.8-flash` took 30 to 50 s. Set `GEMINI_MODEL` or `GEMINI_THINKING` to change them. Every new question must start with a tool call, so figures can't be reused or invented. Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
 
 It needs a Gemini API key (free from [Google AI Studio](https://aistudio.google.com/apikey)) stored as a Vercel environment variable, never in the code:
 
