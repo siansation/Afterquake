@@ -34,6 +34,10 @@ Live forecasts use the same model, prior and soil coefficient as the case studie
 
 **Map shading.** The 7-day chance at a cell depends on the cell only through its shaking probability `q`. The shading evaluates the exact full-posterior `probQ` at 200 log-spaced `q` values spanning the map and interpolates linearly in `log q`. Against exact values at 400 random cells (Panama, 15 days in) the largest error was 2×10⁻⁵ in probability (0.025% relative). Every number shown as text, including towns, the pin and comparisons, still uses `probQ` directly.
 
+## Assistant (Gemini)
+
+The "Ask about this forecast" box sends the question and a short description of the current view to Gemini through `api/chat.js`. Gemini may only answer from tool results; the tools (`src/assistant.js`) call the same `spot`, `SHAKE.probQ`, `SCENARIO.exposure` and `SHAKE.reentryQ` functions as the panel, so the assistant adds no new model. Its instructions forbid estimating figures itself and forbid implying a building is safe to enter. A language model can still misread or misphrase a tool result, so each answer lists the tools it called. The assistant was not evaluated for accuracy.
+
 ## Data verification
 
 Read-only requests to the official USGS event and count services matched all 13 bundled mainshock magnitudes, origin times and coordinates. Regional M5+ counts also matched for the recorded radius and coverage window:
