@@ -36,7 +36,7 @@ To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Dep
 | How many aftershocks | Reasenberg–Jones (1989) model, updated by Bayes' rule with the sequence's own M5+ aftershocks | Global starting values from Page et al. (2016), the basis of USGS operational aftershock forecasts |
 | Where | Future aftershocks cluster around past ones (6 km smoothing, 10 km depth) | USGS ComCat catalogue |
 | How hard at your spot | Allen, Wald & Worden (2012) intensity equation, including its scatter | As implemented in OpenQuake |
-| Your ground | Soil term `ΔMMI = -1.77 × log10(Vs30/760)`, fitted by us to 86,188 ShakeMap cells (90% range -2.0 to -1.27) | USGS ShakeMap Vs30 grids |
+| Your ground | Soil term `ΔMMI = -1.76 × log10(Vs30/760)`, fitted by us to 86,234 ShakeMap cells (90% range -1.99 to -1.25) | USGS ShakeMap Vs30 grids |
 | Your building | Modified Mercalli damage levels, or for "typical local building", the intensity where the country's fatality rate reaches 1 in 10,000 | USGS PAGER empirical fatality model |
 | Already weakened | Threshold drops one level if the spot shook near that level in the mainshock, or if 10% or more of the ground is expected to have liquefied | USGS ShakeMap and ground-failure products |
 
@@ -69,14 +69,15 @@ scripts/
   fit_site_term.py         fit the soil term to the ShakeMaps
   prep_basemap.js          clip Natural Earth + GeoNames to each area
   prep_population.js       town populations + PAGER curves
-  build.py                 assemble index.html
+  build.py                 assemble index.html (inlines the fitted soil term into src/shake.js)
+  python.mjs               run Python as python3, python or py, whichever the machine has
   backtest.js              score the aftershock model
 docs/screenshot.png
 ```
 
 ## Rebuild from scratch
 
-Needs Node 18+ and Python 3 with numpy.
+Needs Node 18+ and Python 3 with numpy. Works on Windows, macOS and Linux: the npm scripts find Python whether it's installed as `python3`, `python` or `py`.
 
 ```bash
 npm install

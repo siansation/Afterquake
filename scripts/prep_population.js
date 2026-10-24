@@ -3,8 +3,10 @@
 const fs=require('fs');const cities=require('all-the-cities');
 const D=JSON.parse(fs.readFileSync('data/sequences.json'));
 // PAGER empirical fatality model (Jaiswal & Wald): rate(MMI) = Phi(ln(MMI/theta)/beta) per country
-const {execSync}=require('child_process');
-const xml=execSync('curl -sL https://raw.githubusercontent.com/usgs/pager/master/losspager/data/fatality.xml').toString();
+(async()=>{
+const res=await fetch('https://raw.githubusercontent.com/usgs/pager/master/losspager/data/fatality.xml');
+if(!res.ok)throw new Error(`PAGER fatality.xml: HTTP ${res.status}`);
+const xml=await res.text();
 const FAT={};for(const m of xml.matchAll(/<model ccode="(\w+)" theta="([\d.]+)" fform="\w+" beta="([\d.]+)"/g))FAT[m[1]]=[+m[2],+m[3]];
 const SEQC={turkey:'TR',nepal:'NP',darfield:'NZ',noto:'JP',kaikoura:'NZ',ridgecrest:'US',myanmar:'MM',kumamoto:'JP',ecuador:'EC',morocco:'MA',indonesia26:'ID',panama26:'PA',nagqu26:'CN'};
 const towns={},need=new Set(Object.values(SEQC));
@@ -15,3 +17,4 @@ for(const s of D.sequences){const sm=D.shakemaps[s.key];const w=sm.lon0,e=sm.lon
 const fatality={};for(const c of need)if(FAT[c])fatality[c]=FAT[c];
 fs.writeFileSync('data/population.json',JSON.stringify({towns,fatality,seqCountry:SEQC}));
 console.log('countries',Object.keys(fatality).length,'bytes',fs.statSync('data/population.json').size);
+})().catch(e=>{console.error(e);process.exit(1)});

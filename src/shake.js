@@ -2,10 +2,11 @@
 // Allen, Wald & Worden (2012), hypocentral-distance form (coefficients as implemented in OpenQuake):
 //   MMI = 2.085 + 1.428 M - 1.402 ln( sqrt(R^2 + (-0.209 + 2.042 e^(M-5))^2) ) + 0.078 ln(R/50) [R > 50]
 //   sigma = 0.82 + 0.37 / (1 + (R/22.9)^2)
-// Soil term fitted by us to USGS ShakeMap grids: dMMI = K * log10(Vs30/760).
+// Soil term fitted by us to USGS ShakeMap grids: dMMI = K * log10(Vs30/760). K comes from data/site-term-fit.json
+// (npm run fit); build.py swaps the require for the number so the browser build needs no file access.
 // Optional "ShakeMap calibration": USGS ShakeMaps of 26 aftershocks averaged BIAS below the equation.
 const SHAKE=(()=>{
-  const K=-1.771, BIAS=-0.90, H=10, KERNEL=6, MMAX=8.5;
+  const K=require('../data/site-term-fit.json').k, BIAS=-0.90, H=10, KERNEL=6, MMAX=8.5;
   function mu(M,R){return 2.085+1.428*M-1.402*Math.log(Math.sqrt(R*R+(-0.209+2.042*Math.exp(M-5))**2))+(R>50?0.078*Math.log(R/50):0)}
   function sig(R){return 0.82+0.37/(1+(R/22.9)**2)}
   function site(vs){return vs>0?K*Math.log10(vs/760):0}

@@ -140,4 +140,4 @@ fs.writeFileSync('data/sequences.json', JSON.stringify({ fetchedAt: new Date().t
   shakemap: 'USGS ShakeMap grid.xml (MMI, SVEL=Vs30), clipped to the aftershock zone', sequences, shakemaps }));
 fs.writeFileSync('data/ground-failure-and-pager.json', JSON.stringify(extra));
 fs.writeFileSync('data/aftershock-shakemap-check.json', JSON.stringify(check));
-console.log('Done. Next: python scripts/fit_site_term.py, node scripts/prep_basemap.js, node scripts/prep_population.js, python scripts/build.py');
+console.log('Done. Next: npm run fit, npm run prep, npm run build');
