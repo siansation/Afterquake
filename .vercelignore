@@ -1,0 +1,4 @@
+# The site is the single prebuilt index.html (npm run build). Upload only that.
+/*
+!index.html
+!vercel.json

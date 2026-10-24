@@ -19,7 +19,9 @@ Open `index.html` in a browser. It's one self-contained file (about 10 MB, with 
 - **Help** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
 - [`PITCH.md`](PITCH.md) has a timed 5-minute script that follows the story and ends on the live globe, plus answers to likely questions.
 
-To host it, push this repo to GitHub, go to **Settings → Pages**, choose **Deploy from a branch**, pick `main` and `/ (root)`, and the app will be served at `https://<your-username>.github.io/aftershock-reentry/`.
+**Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` as it is, with no install or build step, and `.vercelignore` uploads only that file. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine.
+
+It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **Deploy from a branch**, then `main` and `/ (root)`.
 
 ## What it does
 
