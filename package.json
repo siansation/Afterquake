@@ -6,8 +6,8 @@
   "scripts": {
     "fetch": "node scripts/fetch_usgs.mjs",
     "prep": "node scripts/prep_basemap.js && node scripts/prep_population.js",
-    "fit": "python scripts/fit_site_term.py",
-    "build": "python scripts/build.py",
+    "fit": "node scripts/python.mjs scripts/fit_site_term.py",
+    "build": "node scripts/python.mjs scripts/build.py",
     "backtest": "node scripts/backtest.js"
   },
   "devDependencies": {

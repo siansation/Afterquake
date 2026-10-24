@@ -1,7 +1,7 @@
 # Fit the soil (Vs30) amplification term against USGS ShakeMap grids.
-# Run from the repo root: python scripts/fit_site_term.py
+# Run from the repo root: npm run fit
 import json,base64,math,numpy as np
-D=json.load(open('data/sequences.json'))
+D=json.load(open('data/sequences.json', encoding='utf-8'))
 def aww_rrup(M,R): return 3.950+0.913*M-1.107*np.log(np.sqrt(R**2+(1+0.813*np.exp(M-5))**2))
 X=[];Y=[];G=[];stats=[]
 for gi,s in enumerate(D['sequences']):
@@ -36,4 +36,4 @@ for b in range(200):
     Ab=np.zeros((len(idx),n+1));Ab[np.arange(len(idx)),G[idx]]=1;Ab[:,n]=X[idx]
     cb=np.linalg.lstsq(Ab,Y[idx],rcond=None)[0];ks.append(cb[n])
 print('k 90% range',np.round(np.percentile(ks,[5,95]),2))
-json.dump({'k':round(float(k),3),'k90':[round(float(x),2) for x in np.percentile(ks,[5,95])],'cells':int(len(X)),'sd':round(float(sd),2)},open('data/site-term-fit.json','w'))
+json.dump({'k':round(float(k),3),'k90':[round(float(x),2) for x in np.percentile(ks,[5,95])],'cells':int(len(X)),'sd':round(float(sd),2)},open('data/site-term-fit.json', 'w', encoding='utf-8'))
