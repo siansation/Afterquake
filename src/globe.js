@@ -1,8 +1,8 @@
 // World view: an orthographic globe drawn on a canvas with d3-geo. Drag to spin, scroll or pinch to zoom,
-// click an earthquake to select it. Coastlines and borders are Natural Earth (world-atlas), like the detail map:
+// click an earthquake to select it. Drawn flat, like a printed map: no glow, shading or animation. Coastlines and borders are Natural Earth (world-atlas), like the detail map:
 // 1:110m when zoomed out or moving, 1:50m when zoomed in and still.
 const GLOBE = (() => {
-  const DEG = 180 / Math.PI, SEA = '#d6e2ea', LAND = '#f6f5f2', COAST = '#9aa7b2', ACCENT = '#c2391b';
+  const DEG = 180 / Math.PI, SEA = '#cfdce5', LAND = '#f4f4f1', COAST = '#8a959e', ACCENT = '#c80000';
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const ageColor = age => age < 3600e3 ? '#d7191c' : age < 864e5 ? '#fd8d3c' : age < 7 * 864e5 ? '#fed24c' : '#ffffff';
   const radius = M => 2.2 + Math.pow(Math.max(M - 4, 0), 1.45) * 2.1;
@@ -30,16 +30,11 @@ const GLOBE = (() => {
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-      const halo = c.createRadialGradient(cx, cy, R * 0.96, cx, cy, R * 1.14);
-      halo.addColorStop(0, 'rgba(110,150,190,.38)'); halo.addColorStop(1, 'rgba(110,150,190,0)');
-      c.fillStyle = halo; c.beginPath(); c.arc(cx, cy, R * 1.14, 0, 2 * Math.PI); c.fill();
       c.beginPath(); path({ type: 'Sphere' }); c.fillStyle = SEA; c.fill();
       c.beginPath(); path(grat); c.strokeStyle = 'rgba(70,100,130,.13)'; c.lineWidth = .6; c.stroke();
       c.beginPath(); path(fine ? geo.land50 : geo.land110); c.fillStyle = LAND; c.fill(); c.strokeStyle = COAST; c.lineWidth = .7; c.stroke();
       c.beginPath(); path(fine ? geo.borders50 : geo.borders110); c.setLineDash([3, 3]); c.strokeStyle = '#a3adb7'; c.lineWidth = .6; c.stroke(); c.setLineDash([]);
-      const shade = c.createRadialGradient(cx - R * .45, cy - R * .5, R * .1, cx, cy, R * 1.02);
-      shade.addColorStop(0, 'rgba(255,255,255,.16)'); shade.addColorStop(1, 'rgba(30,50,80,.16)');
-      c.beginPath(); path({ type: 'Sphere' }); c.fillStyle = shade; c.fill(); c.strokeStyle = '#8b9cac'; c.lineWidth = 1; c.stroke();
+      c.beginPath(); path({ type: 'Sphere' }); c.strokeStyle = '#6b7680'; c.lineWidth = 1; c.stroke();
     }
     function star(c, x, y, r) {
       c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; c.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)) } c.closePath();
@@ -53,10 +48,6 @@ const GLOBE = (() => {
         const [x, y] = proj([it.lon, it.lat]), r = sizeOf(it);
         if (it.kind === 'case') { star(ctx, x, y, Math.max(7, r * .9)); ctx.fillStyle = ACCENT; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); continue }
         const age = t - it.t;
-        if (age < 864e5) {                                             // pulse the last day's quakes
-          const ph = ((now + it.t % 1700) % 1700) / 1700; ctx.beginPath(); ctx.arc(x, y, r + 2 + ph * 16, 0, 2 * Math.PI);
-          ctx.strokeStyle = age < 3600e3 ? `rgba(215,25,28,${.7 * (1 - ph)})` : `rgba(253,141,60,${.6 * (1 - ph)})`; ctx.lineWidth = 2; ctx.stroke();
-        }
         ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = ageColor(age); ctx.globalAlpha = .92; ctx.fill(); ctx.globalAlpha = 1;
         ctx.strokeStyle = 'rgba(25,30,38,.85)'; ctx.lineWidth = .8; ctx.stroke();
         if (it.shakemap) { ctx.beginPath(); ctx.arc(x, y, r + 2.6, 0, 2 * Math.PI); ctx.strokeStyle = '#1c2128'; ctx.lineWidth = 1.4; ctx.stroke() }
@@ -72,7 +63,6 @@ const GLOBE = (() => {
       if (fly) { const p = Math.min(1, (now - fly.t0) / fly.ms), e = ease(p); rot = [fly.r0[0] + (fly.r1[0] - fly.r0[0]) * e, fly.r0[1] + (fly.r1[1] - fly.r0[1]) * e, 0];
         k = Math.exp(Math.log(fly.k0) + (Math.log(fly.k1) - Math.log(fly.k0)) * e); if (p >= 1) { const done = fly.done; fly = null; idleSince = now; if (done) done() } }
       else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); vel = [vel[0] * .93, vel[1] * .93]; if (Math.hypot(vel[0], vel[1]) < 0.002) { vel = null; idleSince = now } }
-      else if (!drag && !pinch && !selected && !hovered && now - idleSince > 6000) rot[0] += dt * 0.003;   // drift slowly when idle
       moving = !!(drag || pinch || fly || vel);
       draw(now); raf = requestAnimationFrame(frame);
     }
