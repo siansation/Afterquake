@@ -77,3 +77,41 @@ test('stale data warnings precede figures and navigating away cancels speech',()
   const text=h.synth.calls.at(-1).text;assert.ok(text.indexOf('Updates are delayed')<text.indexOf('estimated chance'));
   h.events.pagehide();assert.equal(h.node('stopSummary').disabled,true);
 });
+
+// ElevenLabs path: only when the hosted /api/speak route says it is configured.
+function cloudGlobals({fail=false,translated=true}={}){
+  const posts=[],audios=[];
+  class FakeAudio{constructor(src){this.src=src;this.paused=true;audios.push(this)}play(){this.paused=false;return Promise.resolve()}pause(){this.paused=true}}
+  const fetch=async(url,init={})=>{
+    if(!init.method)return {ok:true,json:async()=>({configured:true,languages:[{code:'en',name:'English'},{code:'tr',name:'Turkish'}]})};
+    posts.push(JSON.parse(init.body));
+    if(fail)return {ok:false,json:async()=>({error:'Voice credits have run out on this server.'})};
+    return {ok:true,json:async()=>({audio:Buffer.from('ID3').toString('base64'),mime:'audio/mpeg',transcript:translated?'Türkçe özet':posts.at(-1).text,
+      translated,lang:translated?'tr':'en',language:translated?'Turkish':'English',note:null})};
+  };
+  return {posts,audios,globals:{fetch,Audio:FakeAudio,atob:s=>Buffer.from(s,'base64').toString('binary'),Blob:class{constructor(p,o){this.p=p;this.o=o}},
+    URL:{createObjectURL:()=>'blob:x',revokeObjectURL(){}},pinCountry:()=>'TR',exposureLabel:()=>'24 hours',chance:p=>`${(p*100).toFixed(1)}%`}};
+}
+const tick=()=>new Promise(r=>setTimeout(r,0));
+test('configured server: Read summary plays ElevenLabs audio in the local language, caches it, and stops on forecast changes',async()=>{
+  const c=cloudGlobals(),h=harness({access:true,globals:c.globals});await tick();await tick();
+  assert.equal(h.node('voiceLangBox').hidden,false);assert.ok(h.node('summaryLang').innerHTML.includes('Turkish'));assert.equal(h.node('summaryLang').value,'tr');
+  await h.node('readSummary').onclick();
+  assert.equal(c.posts.length,1);assert.equal(c.posts[0].lang,'tr');assert.equal(c.posts[0].text,h.run('lastSummary'));
+  assert.equal(h.synth.calls.length,0,'device speech is not used');
+  assert.equal(c.audios.length,1);assert.equal(c.audios[0].paused,false);assert.ok(h.node('spokenText').textContent.startsWith('Türkçe özet'));
+  assert.ok(h.node('speechStatus').textContent.includes('Turkish'));
+  h.ctx.cur.exposure.probability=.4321;h.run('updateSpokenSummary()');
+  assert.equal(c.audios[0].paused,true);assert.ok(h.node('speechStatus').textContent.includes('forecast changed'));
+  await h.node('readSummary').onclick();await h.node('readSummary').onclick();
+  assert.equal(c.posts.length,2,'same summary and language is served from the page cache');
+});
+test('a voice-service error falls back to the device voice with an explanation',async()=>{
+  const c=cloudGlobals({fail:true}),h=harness({access:true,globals:c.globals});await tick();await tick();
+  await h.node('readSummary').onclick();
+  assert.equal(h.synth.calls.length,1);assert.ok(h.node('speechStatus').textContent.includes('credits'));assert.ok(h.node('speechStatus').textContent.includes('device voice'));
+});
+test('opened as a file, the page never calls the voice route and keeps device speech',async()=>{
+  const c=cloudGlobals(),h=harness({access:true,href:'file:///x/index.html',globals:c.globals});await tick();
+  assert.notEqual(h.node('voiceLangBox').hidden,false);h.node('readSummary').onclick();assert.equal(c.posts.length,0);assert.equal(h.synth.calls.length,1);
+});

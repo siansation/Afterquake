@@ -11,6 +11,10 @@ async function main() {
   try {
     await pool.query(fs.readFileSync(path.join(__dirname, '..', 'db', 'checkins.sql'), 'utf8'));
     console.log('Check-in tables are ready.');
+    await pool.query(fs.readFileSync(path.join(__dirname, '..', 'db', 'quakes.sql'), 'utf8'));
+    const ts = (await pool.query("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AS ok")).rows[0].ok;
+    console.log(ts ? 'Aftershock time series is ready: hypertable, hourly continuous aggregate, refresh and compression policies.'
+      : 'Aftershock time series is ready (plain PostgreSQL: TimescaleDB is not enabled, so it uses an ordinary table and view).');
   } finally { await pool.end(); }
 }
 main().catch(() => { console.error('Database setup failed. Check the local Tiger Data URL, TLS certificate and database access. No credentials were printed.'); process.exitCode = 1; });

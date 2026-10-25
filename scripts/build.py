@@ -59,6 +59,9 @@ out = (template
        .replace('__CHECKINS__', read('src', 'checkins.js'))
        .replace('__ACCESS__', read('src', 'access.js'))
        .replace('__LIVE_CONTROLS__', read('src', 'live-controls.js'))
+       .replace('__LIVEMOMENT__', read('src', 'livemoment.js'))
+       .replace('__QRLIB__', read('node_modules', 'qrcode-generator', 'dist', 'qrcode.js').replace('</script', '<\\/script'))
+       .replace('__TIMESERIES__', read('src', 'timeseries.js'))
        .replace('__SITEFIT__', read('data', 'site-term-fit.json')))
 with open(p('index.html'), 'w', encoding='utf-8', newline='\n') as f:  # same bytes on Windows and Linux
     f.write(out)

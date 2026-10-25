@@ -38,6 +38,17 @@ a{color:var(--link)}
 .hbtn{background:transparent;border:1px solid #5d6b78;color:var(--barInk);border-radius:3px;padding:4px 10px;cursor:pointer;font-size:13.5px;white-space:nowrap}
 .hbtn:hover{background:#33434f}
 .hbtn.story{background:#f2f4f6;border-color:#f2f4f6;color:var(--bar);font-weight:600}
+/* live moment: banner and the scan-to-join screen */
+.lm-banner{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:1900;max-width:min(640px,calc(100% - 32px));background:#fff;border:1px solid var(--line);border-radius:4px;box-shadow:0 1px 5px rgba(0,0,0,.4);padding:8px 14px;font-size:14.5px}
+.lm-modal{position:fixed;inset:0;z-index:2100;background:rgba(20,26,34,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.lm-modal[hidden]{display:none}
+.lm-box{background:#fff;border-radius:4px;max-width:720px;width:100%;padding:22px;display:grid;grid-template-columns:minmax(0,300px) 1fr;gap:20px;align-items:start}
+.lm-box h2{font-size:24px;margin:0 0 8px;font-weight:700}
+.lm-box p{margin:0 0 10px;font-size:15px;color:var(--ink2)}
+.lm-qr svg{width:100%;height:auto;display:block}
+.lm-count{font-size:17px;color:var(--ink)}
+.lm-count.lm-new b{color:var(--good)}
+@media (max-width:640px){.lm-box{grid-template-columns:1fr}.lm-qr{max-width:260px}#joinBtn{display:none}}
 
 .app{flex:1;display:grid;grid-template-columns:390px 1fr;min-height:0}
 @media (max-width:860px){body{overflow:auto;height:auto}.app{grid-template-columns:minmax(0,1fr);grid-template-rows:62vh auto}.evtxt small{display:none}.top .note{display:none}.side{order:2;border-right:0;border-top:1px solid var(--line)}.mapwrap{order:1}}
@@ -265,11 +276,27 @@ body:not(.world) .wpane{display:none}
   <div class="evsum"><span class="mag" id="hMag">7.8</span><span class="evtxt" id="hTxt"></span></div>
   <span class="note" id="hNote"></span>
   <button class="hbtn" id="worldBtn">World map</button>
+  <button class="hbtn" id="liveBtn">Live now</button>
+  <button class="hbtn" id="joinBtn">Join on your phone</button>
   <button class="hbtn story" id="storyBtn">Story</button>
   <button class="hbtn" id="helpBtn">Help</button>
   <button class="hbtn fs" id="fsBtn">Fullscreen</button>
 </header>
 <p id="sharedNotice" class="shared-notice" role="status" hidden></p>
+<div class="lm-banner" id="lmBanner" hidden role="status" aria-live="polite"></div>
+<div class="lm-modal" id="joinModal" hidden role="dialog" aria-modal="true" aria-labelledby="joinTitle">
+  <div class="lm-box">
+    <div class="lm-qr" id="joinQR"></div>
+    <div>
+      <h2 id="joinTitle">Join on your phone</h2>
+      <p id="joinHow"></p>
+      <p class="lm-count" id="joinCount" role="status" aria-live="polite"></p>
+      <label for="joinURL" class="muted">Link</label>
+      <div class="row"><input id="joinURL" type="text" readonly style="flex:1;min-width:0"><button class="btn" id="joinCopy">Copy link</button></div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="joinClose">Done</button></div>
+    </div>
+  </div>
+</div>
 <div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
   <div class="wbox">
     <h1 id="wTitle">After an earthquake, how long does the risk of strong shaking last?</h1>
@@ -316,7 +343,13 @@ body:not(.world) .wpane{display:none}
       <p class="muted" id="dataStatus"></p>
       <div class="row" id="liveActions" hidden><button class="btn" id="refreshLive">Refresh USGS</button><button class="btn" id="followLive">Go to live time</button></div>
       <div class="row"><button class="btn" id="readSummary">Read summary</button><button class="btn" id="stopSummary" disabled>Stop reading</button><button class="btn" id="shareView">Share view</button></div>
+<!-- voice:start -->
+      <div id="voiceLangBox" hidden><div class="f wide"><label for="summaryLang">Spoken language</label><select id="summaryLang"><option value="en">English</option></select></div></div>
+<!-- voice:end -->
       <p class="muted" id="speechStatus" role="status"></p>
+<!-- voice:start -->
+      <p class="muted" id="voiceCredit" hidden>Voice by <a href="https://elevenlabs.io" target="_blank" rel="noopener">ElevenLabs</a>. Other languages are translated by Gemini, and a translation is only used if every figure survives it.</p>
+<!-- voice:end -->
       <details class="access-options"><summary>Voice options and text summary</summary>
         <div class="fields"><div class="f wide"><label for="summaryVoice">English voice</label><select id="summaryVoice"><option value="">Default English voice</option></select></div>
         <div class="f wide"><label for="summarySpeed">Reading speed</label><select id="summarySpeed"><option value="0.75">Slower</option><option value="0.9" selected>Steady</option><option value="1">Normal</option></select></div></div>
@@ -365,6 +398,15 @@ body:not(.world) .wpane{display:none}
         <h2 id="curveTitle">Risk here over the coming days</h2>
         <div class="chart" id="curve"></div>
       </div>
+      <!-- tiger:start -->
+      <style>#tigerCard[hidden]{display:none}</style>
+      <div class="card" id="tigerCard" hidden>
+        <h2>Aftershock rate from Tiger Data</h2>
+        <div class="chart" id="tigerChart"></div>
+        <p class="muted" id="tigerNote"></p>
+        <p class="muted" id="tigerStatus" role="status"></p>
+      </div>
+      <!-- tiger:end -->
       <div class="card">
         <h2>200 possible next months</h2>
         <p class="muted">To see how different the next month could look, each row shows 30 days simulated from the same model. Red marks damaging shaking here that day, while grey marks an M6+ somewhere nearby.</p>
@@ -528,6 +570,7 @@ __GEOLIBS__
 <script>__SCENARIO__</script>
 <script>__VIEW_STATE__</script>
 <script>__SPOKEN__</script>
+<script>__QRLIB__</script>
 <script>
 const J=id=>JSON.parse(document.getElementById(id).textContent);
 const D=J('d-data'),EX=J('d-extra'),BASE=J('d-base'),POP=J('d-pop'),AFT=J('d-aft');const SITEFIT=__SITEFIT__;
@@ -883,27 +926,30 @@ const rateTxt=p=>'1 in '+Number((1/p).toPrecision(2)).toLocaleString();
 const STEPS=[
  {t:'6 Feb 2023, 04:17. An M7.8 hits southern Türkiye.',
   go(){resetChoices();goSeq('turkey');setLayer('mmi');setDays(1/24);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.8});selectTab('spot')},
-  b:()=>`<p>The purple shading shows the strongest mainshock shaking, with about <b>${fmtN(pagerAtLeast(8))} people</b> exposed to severe shaking or worse.</p><p>As people wait outside in the winter cold, they face a difficult question: <b>when is it safe to go back in?</b> To explore part of that decision, we can start with the chance of more shaking.</p>`},
- {t:'Start with a place and a time.',
+  b:()=>`<p>Purple is how hard the ground shook: about <b>${fmtN(pagerAtLeast(8))} people</b> felt severe shaking or worse.</p><p>That night, millions waited outside in the cold, asking one question: <b>when can we go back in?</b></p>`},
+ {t:'Pick a place and a time.',
   go(){setLayer('risk');setDays(0.3);goTown('Kahramanmaraş');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>Start in <b>${esc(loc.name)}</b>, about seven hours after the mainshock. For a typical local building, the model estimates a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>To see how the estimate varies across the area, the map shows the 7-day chance. Meanwhile, the left panel gives a <b>projected time</b> when the chance during your chosen stay falls below your limit. Building entry still needs an inspection.</p>`},
- {t:'Then, nine hours after the first quake…',
+  b:()=>`<p><b>${esc(loc.name)}</b>, seven hours in: a <b>${pct(cur.p24)}</b> chance of damaging shaking for a typical local building over the next 24 hours.</p><p>The left panel turns that into a <b>time</b> when the chance drops below the limit you choose.</p>`},
+ {t:'Nine hours after the first quake…',
   async go(){setLayer('risk');goTown('Elbistan');setDays(0.3);update();map.flyTo([38.1,37.15],8,{duration:.6});
     await animateDays(0.3,0.5,2600);
     tourPopup=L.popup({closeButton:false,autoPan:false}).setLatLng([38.011,37.196]).setContent('<div class="pp-h">M7.5, 9 hours later</div>A second huge quake, 90 km north.').openOn(map)},
-  b:()=>`<p>Then an <b>M7.5</b> struck near Elbistan. Two hours earlier, the model put the chance of an M7+ somewhere in the region over the next 24 hours at about <b>${pct(MODEL.prob(MODEL.fit(S.events,0.3),7,0,1))}</b>. That was unlikely, but far from zero.</p><p>Because a large aftershock can change the outlook, the estimate needs to be recalculated as new quakes arrive. A single "all clear" cannot settle whether a building is safe.</p>`},
- {t:'Now look at the ground beneath the town.',
+  b:()=>`<p>An <b>M7.5</b> struck near Elbistan. Two hours earlier, the model gave an M7+ in the region that day about <b>${pct(MODEL.prob(MODEL.fit(S.events,0.3),7,0,1))}</b>: unlikely, not impossible.</p><p>That's why the estimate updates with every new quake instead of giving one all-clear.</p>`},
+ {t:'Same town, different ground.',
   go(){if(tourPopup){map.closePopup(tourPopup);tourPopup=null}setLayer('vs');setDays(1);goTown('Kâhta');update();map.flyTo([loc.lat,loc.lon],11,{duration:.8});selectTab('spot');L.circle([loc.lat,loc.lon],{radius:3000,color:PAL.red,weight:2,dashArray:'6 5',fill:false,interactive:false}).addTo(tourLayer)},
-  b:()=>{return `<p>Timing is only part of the picture. Around <b>Kâhta</b>, firm and soft ground sit side by side. The darker brown marks softer ground, which can amplify shaking.</p><p>Those local differences feed into the estimate: inside the dashed 3 km circle, the 7-day chance of damaging shaking ranges from <b>${localRangeText()}</b>. That is one reason location matters even within the same town.</p>`}},
- {t:'The building assumptions matter too.',
+  b:()=>`<p>Darker brown is softer ground, which shakes harder. Inside the dashed 3 km circle around <b>Kâhta</b>, the 7-day chance ranges from <b>${localRangeText()}</b>.</p>`},
+ {t:'Same shaking, different countries.',
   go(){setLayer('risk');goSeq('noto');setDays(1);goTown('Wajima');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>We also need a way to choose a shaking threshold. Here, we use the USGS PAGER model, which estimates intensity VIII fatality rates of about <b>${rateTxt(fatRate('TR',8))}</b> in Türkiye and <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>We use those rates to set prototype intensity thresholds of <b>${R(countryThr('JP'))}</b> in Japan and <b>${R(countryThr('TR'))}</b> in Türkiye. These thresholds are our design choice; they do not describe an individual building's condition or inspection status.</p>`},
- {t:'How well do these estimates hold up?',
+  b:()=>`<p>In the USGS PAGER casualty record, severe shaking killed about <b>${rateTxt(fatRate('TR',8))}</b> exposed people in Türkiye and <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>So the damage threshold depends on the country: <b>${R(countryThr('JP'))}</b> in Japan, <b>${R(countryThr('TR'))}</b> in Türkiye. That rule is our design choice.</p>`},
+ {t:'Does it hold up?',
   go(){goSeq('turkey');setLayer('risk');setDays(1);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.6});selectTab('accuracy')},
-  b:()=>{const st=VALIDATION.summarize(validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL)),5);return `<p>To check the rate model, we scored ${st.forecasts} complete seven-day forecast windows across ${st.sequences} of the ${SEQ.length} earthquakes, using earlier origin times in a revised catalogue. For M5+, the skill score is <b>${skillTxt(5)}</b>, where 0 matches the other-sequence reference and 1 is perfect.</p><p>For M6+, though, the model performs worse than that reference. These results concern regional occurrence, so they do not validate local shaking, building damage or safe entry.</p>`}},
- {t:'Bring it back to the people waiting outside.',
+  b:()=>{const st=VALIDATION.summarize(validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL)),5);return `<p>We replayed ${st.forecasts} seven-day windows across ${st.sequences} earthquakes, using only data from before each forecast. For M5+ aftershocks the skill score is <b>${skillTxt(5)}</b> (0 = a simple reference, 1 = perfect).</p><p>For M6+ it's no better than the reference, and the Accuracy tab says so.</p>`}},
+ {t:'For the people waiting outside.',
   go(){setLayer('risk');selectTab('people');update()},
-  b:()=>`<p>With those limits in mind, the People tab brings the estimate back to the communities affected. You can see town populations and estimated exposure this week, with optional <b>"I'm safe" / "I need help"</b> check-ins where the shared service is available.</p><p>From here, you can return to the world map to explore live USGS earthquakes, checked every 2 minutes. Any quake with a ShakeMap opens the same forecast, although operational validation remains future work.</p>`}
+  b:()=>`<p>Who is at risk this week, town by town, and opt-in <b>I'm safe</b> and <b>I need help</b> check-ins on a shared map.</p><p>Shaking estimates only: a building inspection still decides whether it's safe to go back in.</p>`},
+ {t:'And it is happening right now.',
+  go(){selectTab('spot')},
+  b:()=>`<p>Everything you've seen runs on free, public USGS data, so it works on today's earthquakes too.</p><p><button class="btn primary" id="tLive">Open the latest live earthquake</button></p>`}
 ];
 let skillCache={};
 function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));return skillCache[M]=VALIDATION.summarize(rows,M).heldOutSkill.toFixed(2)}
@@ -916,7 +962,7 @@ async function showStep(i){tourI=Math.max(0,Math.min(STEPS.length-1,i));const st
   tourLayer.clearLayers();T.hidden=false;T.innerHTML=`<div class="tstep">${tourI+1} of ${STEPS.length}</div><h3>${st.t}</h3><p class="muted">…</p>`;
   await st.go();if(!tourOn||STEPS[tourI]!==st)return;
   T.innerHTML=`<div class="tstep">${tourI+1} of ${STEPS.length}</div><h3>${st.t}</h3>${st.b()}<div class="tnav"><div class="dots">${STEPS.map((_,k)=>`<i class="${k===tourI?'on':''}"></i>`).join('')}</div><button class="btn" id="tBack" ${tourI===0?'disabled':''}>Back</button><button class="btn primary" id="tNext">${tourI===STEPS.length-1?'Finish':'Next'}</button><button class="btn" id="tExit" aria-label="Exit the story">✕</button></div>`;
-  $('tBack').onclick=()=>showStep(tourI-1);$('tNext').onclick=()=>tourI===STEPS.length-1?endTour():showStep(tourI+1);$('tExit').onclick=endTour;$('tNext').focus({preventScroll:true})}
+  if($('tLive'))$('tLive').onclick=()=>liveNow();$('tBack').onclick=()=>showStep(tourI-1);$('tNext').onclick=()=>tourI===STEPS.length-1?endTour():showStep(tourI+1);$('tExit').onclick=endTour;$('tNext').focus({preventScroll:true})}
 function startTour(){$('welcome').hidden=true;tourOn=true;showStep(0)}
 function endTour(){tourOn=false;$('tour').hidden=true;tourLayer.clearLayers();if(tourPopup){map.closePopup(tourPopup);tourPopup=null}selectTab('spot')}
 $('storyBtn').onclick=startTour;$('wStory').onclick=startTour;
@@ -974,6 +1020,7 @@ function renderGCard(){const c=$('gCard'),it=gSel;if(!it){c.hidden=true;return}c
   $('gX').onclick=()=>{gSel=null;globe.select(null);renderGCard();markWorldList()};if($('gOpen'))$('gOpen').onclick=()=>openItem(it)}
 function openItem(it){if(it.kind==='case'){pickSeq(SEQ.indexOf(it.seq));selectTab('spot')}else if(it.shakemap)openLive(it)}
 __LIVE_CONTROLS__
+__TIMESERIES__
 let feedLoading=false;
 async function pollFeed(){
   const detail=refreshLive();
@@ -992,7 +1039,8 @@ setInterval(()=>{if(S&&mode==='detail'){renderDataStatus();updateSpokenSummary()
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-feedAt>POLL_MS)pollFeed()});
 
 __ACCESS__
-requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();openSharedView();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen&&!new URLSearchParams(location.hash.slice(1)).has('view')){$('welcome').hidden=false;$('wStory').focus()}});
+__LIVEMOMENT__
+requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();openSharedView();arriveFromJoin();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen&&!new URLSearchParams(location.hash.slice(1)).has('view')){$('welcome').hidden=false;$('wStory').focus()}});
 </script>
 </body>
 </html>

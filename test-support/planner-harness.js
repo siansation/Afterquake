@@ -11,7 +11,7 @@ const SCENARIO=require('../src/scenario.js');
 const code=fs.readFileSync(path.join(__dirname,'../src/planner.js'),'utf8');
 const storageKey='afterquake.saved-checks.v1';
 
-function harness({stored=null,blocked=false,access=false,speech=true,clipboard=null,href="https://afterquake.test/",hash=""}={}){
+function harness({stored=null,blocked=false,access=false,speech=true,clipboard=null,href="https://afterquake.test/",hash="",globals={}}={}){
   const nodes=new Map(),storage=new Map(stored==null?[]:[[storageKey,stored]]);
   const node=id=>{
     if(!nodes.has(id))nodes.set(id,{value:id==='exposure'?'1440':id==='bld'?'local':'',textContent:'',innerHTML:'',disabled:false,
@@ -53,6 +53,7 @@ function harness({stored=null,blocked=false,access=false,speech=true,clipboard=n
     if(access)vm.runInContext('updateSpokenSummary()',ctx);
   };
   if(speech){ctx.speechSynthesis=synth;ctx.SpeechSynthesisUtterance=class{constructor(text){this.text=text}}}
+  Object.assign(ctx,globals);
   new vm.Script(code).runInContext(ctx);
   if(access)new vm.Script(fs.readFileSync(path.join(__dirname,'../src/access.js'),'utf8')).runInContext(ctx);
   return {ctx,node,storage,events,synth,run:source=>vm.runInContext(source,ctx),advance(now){

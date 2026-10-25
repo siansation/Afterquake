@@ -26,6 +26,8 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 
 - **Live world view.** The page opens on a globe of every M4.5+ earthquake in the last 30 days, from the USGS feed and checked every 2 minutes. Drag to spin, scroll to zoom, click a quake. Any quake with a USGS ShakeMap opens the same forecast, built in the browser from its live catalogue, ShakeMap and PAGER report. While open, all three are checked every 2 minutes; revised products replace earlier versions without resetting your pins or selected time. **Refresh USGS** checks immediately; **Go to live time** resumes following the latest data. Failed or delayed updates are labelled, with the last successful data retained. The 13 case studies are the red stars.
 - **Story mode.** Follow the Türkiye 2023 sequence through a guided story, from the first shaking to the people waiting outside.
+- **Live now.** Jumps to the most significant shallow earthquake of the past week that has a USGS shaking map, flies the globe to it and opens its forecast. If USGS products for the newest quake are incomplete it tries the next one, and it says so if neither loads. The story's last step hands off to it.
+- **Join on your phone.** Shows a QR code with a short link (`#j=<earthquake>.<group>`). Scanning it opens the same earthquake on a phone, joins the check-in group and lands on the check-in buttons; check-ins on the presenting screen refresh every 3 seconds while presenting. Without the check-in service, the code simply opens the same forecast. See [`PITCH.md`](PITCH.md) for how these fit the 5-minute pitch.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
 - **Exposure duration.** Choose 5, 10 or 30 minutes, 1 hour, 8 hours or 24 hours. The probability, parameter range, projected start and curve use that entire interval. The 24-hour, 7-day and 30-day context figures remain available.
 - **Compare two places.** Keep your spot A and choose B on the map or by town search. Compare shaking over the selected duration, ground softness, mainshock intensity, modelled ground-failure extent and coast proximity. Both places use the same intensity threshold; neither is a verified shelter.
@@ -37,6 +39,7 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
 - **People.** Population near you, people at risk this week, and the official count of people who felt each shaking level.
 - **Ask about this forecast.** A chat bubble in the bottom-left corner of the forecast map, answered by Google Gemini. Gemini calls the page's own forecast as tools (forecast at a place or for a different stay, how the risk changes over time, danger factors, aftershocks so far, people at risk, method and limits), and each answer lists what it checked. Its instructions prohibit clearing a building for entry. It needs the configured assistant API (see [the assistant](#the-assistant)).
+- **Aftershock rate from Tiger Data.** Every USGS quake the app sees is stored in a Tiger Data hypertable; an hourly continuous aggregate feeds a chart of the observed aftershock rate against the forecast model's expected rate. See [the time series](docs/tiger.md).
 - **Shared safety check-ins with Tiger Data.** Create an invite-only group, share a selected map pin and short note, then update or remove your own status from this browser. The People tab shows current safe/help counts and hourly status updates; entries stop appearing after 24 hours. This needs the hosted API and a configured Tiger Data PostgreSQL service. See [database setup](docs/checkins.md).
 - **Sources and accuracy tabs.** Source links, processing dates and model assumptions, with regional occurrence checks where complete outcome windows exist.
 
@@ -93,6 +96,7 @@ src/access.js              sharing, restore and device speech controls
 src/live-controls.js       version-aware live refresh and visible update status
 src/assistant.js           "Ask about this forecast": the tools Gemini calls, run on the page's own model
 api/chat.js                Vercel serverless function: holds the Gemini key, safety rules and tool list, rate-limits
+api/speak.js               ElevenLabs voice for Read summary, with number-checked Gemini translation
 api/checkins.js            invite-group API backed by Tiger Data PostgreSQL
 server/checkins-store.js   parameterised SQL, transactions and verified TLS connections
 src/checkins.js            group invites, shared pins, status updates and expiry
@@ -141,6 +145,18 @@ npx vercel@65.2.0 deploy --prod                       # redeploy so the function
 ```
 
 Opened from a file or a static Python server, the assistant and shared check-ins are unavailable because their API routes are absent. Use `npm run dev` to run those routes locally with the corresponding environment settings; the recorded forecasts still work offline without them.
+
+## Voice (ElevenLabs)
+
+**Read summary** speaks the forecast with an [ElevenLabs](https://elevenlabs.io) voice when the hosted `api/speak.js` route is configured, in English or the earthquake's local language (for example Turkish for Türkiye, Japanese for Noto, Spanish for Ecuador and Panama). The words come from the page's own summary (`src/spoken.js`), so the figures are the model's. For other languages, Gemini translates the summary first, and the translation is discarded (falling back to English) unless every number in the English text appears in it. Without the route (opened as a file or on static hosting), the page uses the browser's own voices as before. The default model is `eleven_flash_v2_5` for low latency; the default voice is George (`JBFqnCBsd6RMkjVDRZzb`). Clips are cached per summary and language in the page, so replaying costs no extra credits. The route allows about 20 requests per visitor per 10 minutes.
+
+```bash
+npx vercel@65.2.0 env add ELEVENLABS_API_KEY production    # paste the key when asked
+npx vercel@65.2.0 env add ELEVENLABS_VOICE_ID production   # optional: another voice from your library
+npx vercel@65.2.0 deploy --prod                            # redeploy so the function sees it
+```
+
+Local languages need `GEMINI_API_KEY` too (already set for the assistant). For `npm run dev`, put the same variables in `.env.local`.
 
 ## Rebuild from scratch
 

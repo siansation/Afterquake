@@ -27,7 +27,7 @@ assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote s
 // Design guard (docs/DESIGN.md): the app's own styles, markup and scripts must not bring back stock AI-template patterns.
 // Scans whole source files (every <style> block, inline styles, JS-built markup, canvas drawing), not just one block.
 // Leaflet's CSS is only a placeholder in the template, so it is not scanned.
-for (const file of ['src/template.html', 'src/globe.js', 'src/planner.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js', 'src/checkins.js']) {
+for (const file of ['src/template.html', 'src/globe.js', 'src/planner.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js', 'src/checkins.js', 'src/timeseries.js', 'src/livemoment.js']) {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   for (const [re, what] of [[/text-transform\s*:\s*uppercase/i, 'uppercase eyebrow labels'], [/letter-spacing/i, 'tracked-out labels'],
     [/monospace|--mono/i, 'monospace for non-code text'], [/gradient\(|create(Linear|Radial)Gradient/i, 'decorative gradients'],

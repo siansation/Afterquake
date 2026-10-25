@@ -2,7 +2,7 @@
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
-function createDevServer({checkins=require('../api/checkins'),chat=require('../api/chat')}={}){
+function createDevServer({checkins=require('../api/checkins'),chat=require('../api/chat'),speak=require('../api/speak'),quakes=require('../api/quakes')}={}){
   return http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://localhost');
     res.setHeader('Cache-Control','no-store');
@@ -12,9 +12,9 @@ function createDevServer({checkins=require('../api/checkins'),chat=require('../a
       if(req.method==='HEAD'){res.end();return}
       const stream=fs.createReadStream(file);stream.on('error',()=>{res.statusCode=500;res.end('Run npm run build first.')});stream.pipe(res);return;
     }
-    const handler=url.pathname==='/api/checkins'?checkins:url.pathname==='/api/chat'?chat:null;
+    const handler=url.pathname==='/api/checkins'?checkins:url.pathname==='/api/chat'?chat:url.pathname==='/api/speak'?speak:url.pathname==='/api/quakes'?quakes:null;
     if(!handler){res.writeHead(404);res.end('Not found');return}
-    const limit=url.pathname==='/api/checkins'?2048:200000;let size=0,body='';
+    const limit=url.pathname==='/api/checkins'?2048:url.pathname==='/api/speak'?4096:200000;let size=0,body='';
     for await(const chunk of req){size+=chunk.length;if(size>limit){res.writeHead(413,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Request too large.'}));return}body+=chunk}
     req.body=body||undefined;req.query=Object.fromEntries(url.searchParams);
     res.status=code=>{res.statusCode=code;return res};
