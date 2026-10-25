@@ -34,7 +34,7 @@ for (const file of ['src/template.html', 'src/globe.js', 'src/places.js', 'src/s
     [/backdrop-filter/i, 'glass panels'], [/@keyframes|animation\s*:/i, 'decorative animation'],
     [/ · |▶|◀/, '"A · B" meta strings or glyph buttons']]) assert.ok(!re.test(src), `Design guard: no ${what} in ${file} (see docs/DESIGN.md)`);
 }
-for (const id of ['exposure', 'verdict', 'dataNotice', 'forecastDetails', 'askForm', 'askInput', 'askLog', 'shareView', 'shareURL', 'readSummary', 'stopSummary', 'spokenText', 'refreshLive', 'followLive', 'ciCreate', 'ciJoin', 'ciCopy', 'ciSafe', 'ciHelp', 'ciDel', 'ciActivity']) {
+for (const id of ['exposure', 'verdict', 'dataNotice', 'forecastDetails', 'askForm', 'askInput', 'askLog', 'shareView', 'shareURL', 'readSummary', 'stopSummary', 'spokenText', 'refreshLive', 'followLive', 'ciCreate', 'ciJoin', 'ciCopy', 'ciSafe', 'ciHelp', 'ciDel', 'ciResetDemo', 'ciActivity']) {
   assert.ok(ids.includes(id), `Missing planning control ${id}`);
 }
 for (const id of ['comparisonCard', 'savedCheckCard', 'simsOptions', 'shk', 'pane-events', 'pane-accuracy']) assert.ok(!ids.includes(id), `Removed tool returned: ${id}`);

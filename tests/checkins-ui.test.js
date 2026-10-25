@@ -85,6 +85,40 @@ test('blocked storage retains the same editing identity during this visit and wa
   const h=harness({blocked:true});await h.run('initCheckins()');const owner=h.run('ci.owner');await h.run('initCheckins()');
   assert.equal(h.run('ci.owner'),owner);assert.ok(h.node('ciStatus').textContent.includes('only during this visit'));
 });
+
+test('demo reset clears the current view, rotates the invite and opens its QR without deleting posts',async()=>{
+  const h=harness();await h.run('initCheckins()');h.run('ciSetGroup(ciRandom(16))');
+  h.node('ciNote').value='Demo help request';await h.run('checkIn("help")');
+  const oldGroup=h.run('ci.group'),owner=h.run('ci.owner'),before=h.backend.calls.length;
+  let qrGroup,boardCount;h.ctx.openJoin=()=>{qrGroup=h.run('ci.group')};h.ctx.renderBoard=()=>{boardCount=h.run('ci.items.length')};
+  await h.node('ciResetDemo').onclick();
+  const group=h.run('ci.group');assert.notEqual(group,oldGroup);assert.match(group,/^[a-f0-9]{32}$/);
+  assert.equal(h.run('ci.owner'),owner);assert.equal(h.run('ci.items.length'),0);assert.equal(h.markers.length,0);
+  assert.equal(h.run('ci.payload.counts.total'),0);assert.match(h.node('ciSummary').textContent,/0 marked safe; 0 need help/);
+  assert.equal(h.node('ciNote').value,'');assert.equal(qrGroup,group);assert.equal(boardCount,0);
+  assert.equal(h.storage.get(keys.group),group);assert.equal(new URLSearchParams(h.ctx.location.hash.slice(1)).get('checkins'),group);
+  assert.equal(VIEW_STATE.parse(h.ctx.location.hash).event.id,'example');assert.ok(!h.ctx.location.href.includes(owner));
+  assert.equal(h.backend.records.size,1,'The old room must keep its own posts');
+  assert.ok(h.backend.calls.slice(before).every(c=>c.options.method==='GET'));
+  const reloaded=harness({backend:h.backend,stored:Object.fromEntries(h.storage),href:h.ctx.location.href});
+  await reloaded.run('initCheckins()');assert.equal(reloaded.run('ci.group'),group);assert.equal(reloaded.run('ci.items.length'),0);
+});
+
+test('a late response from the previous demo cannot bring its people back',async()=>{
+  const h=harness();await h.run('initCheckins()');h.run('ciSetGroup(ciRandom(16))');await h.run('checkIn("help")');
+  const normal=h.backend.fetch.bind(h.backend);let finish;
+  h.backend.fetch=()=>new Promise(resolve=>finish=resolve);const oldRead=h.run('refreshCheckins()');
+  const oldItems=JSON.parse(h.run('JSON.stringify(ci.items)'));h.backend.fetch=normal;
+  await h.node('ciResetDemo').onclick();
+  finish({ok:true,json:async()=>({items:oldItems,counts:{total:1,safe:0,help:1},activity:[],limited:false,checkedAt:new Date().toISOString()})});
+  await oldRead;assert.equal(h.run('ci.items.length'),0);assert.equal(h.markers.length,0);assert.equal(h.run('ci.payload.counts.total'),0);
+});
+
+test('demo reset is unavailable before joining and cannot interrupt a pending post',async()=>{
+  const h=harness();await h.run('initCheckins()');assert.equal(h.node('ciResetDemo').disabled,true);
+  h.run('ciSetGroup(ciRandom(16))');const group=h.run('ci.group');h.run('ci.busy=true;renderCheckins()');
+  assert.equal(h.node('ciResetDemo').disabled,true);await h.node('ciResetDemo').onclick();assert.equal(h.run('ci.group'),group);
+});
 test('earthquake navigation clears old markers immediately and ignores an out-of-order read',async()=>{
   const h=harness();await h.run('initCheckins()');h.run('ciSetGroup(ciRandom(16))');await h.run('checkIn("safe")');assert.equal(h.markers.length,1);
   const normal=h.backend.fetch.bind(h.backend);let finish;h.backend.fetch=()=>new Promise(resolve=>finish=resolve);

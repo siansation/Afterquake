@@ -115,6 +115,7 @@ function renderCheckins(){
   $('ciSetup').hidden=joined;$('ciPosting').hidden=!joined;$('ciGroupOptions').hidden=!ci.group;renderCheckinLocation();
   $('ciCreate').disabled=!ci.ready||ci.busy;$('ciJoin').disabled=!ci.ready||ci.busy;
   $('ciCopy').disabled=!joined||ci.busy;$('ciLeave').disabled=!ci.group||ci.busy;
+  $('ciResetDemo').disabled=!joined||ci.busy;
   $('ciReconnect').hidden=ci.ready;$('ciReconnect').disabled=ci.connecting;$('ciRefresh').disabled=!joined||ci.busy;
   $('ciSafe').disabled=!joined||ci.busy;$('ciHelp').disabled=!joined||ci.busy;$('ciNote').disabled=!joined||ci.busy;
   const items=ci.items.filter(d=>Date.parse(d.expiresAt)>Date.now()).sort((a,b)=>Number(b.status==='help')-Number(a.status==='help')||b.ts-a.ts);
@@ -141,7 +142,28 @@ async function checkIn(status){
   }catch(e){if(ciCurrent(context))ci.error=e.name==='AbortError'?'Your change was not confirmed. Refresh to check before trying again.':e.message}
   finally{clearTimeout(timer);ci.busy=false;renderCheckins()}
 }
+async function startFreshDemo(){
+  if(!ci.ready||!ci.group||ci.busy||!S)return;
+  const sequence=S;let group;
+  ci.busy=true;
+  try{
+    group=ciRandom(16);
+    const url=new URL(VIEW_STATE.url(location.href,currentView())),params=new URLSearchParams(url.hash.slice(1));
+    params.set('checkins',group);url.hash=params.toString();
+    // Rotate the invite instead of deleting other people's posts. Updating both
+    // storage and the URL prevents a reload or delayed read restoring the old room.
+    ciSetGroup(group);history.replaceState(null,'',url.href);
+    $('ciNote').value='';$('ciGroupInput').value='';$('ciInviteURL').value=url.href;
+    if(typeof renderBoard==='function')renderBoard();
+    await refreshCheckins();
+    if(ci.group!==group||S!==sequence)return;
+    ci.message='Fresh demo started. Share the new invite or QR code so everyone joins this group.';
+    if(typeof openJoin==='function')openJoin();
+  }catch{ci.error='Could not start a fresh demo. Try again.'}
+  finally{ci.busy=false;renderCheckins()}
+}
 $('ciCreate').onclick=()=>{try{ciSetGroup(ciRandom(16));refreshCheckins()}catch{ci.error='This browser cannot create a secure group code.';renderCheckins()}};
+$('ciResetDemo').onclick=startFreshDemo;
 $('ciJoin').onclick=()=>{try{ciSetGroup(ciParseGroup($('ciGroupInput').value));$('ciGroupInput').value='';refreshCheckins()}catch(e){ci.error=e.message;renderCheckins()}};
 $('ciLeave').onclick=()=>{
   ciSetGroup(null);const params=new URLSearchParams(location.hash.slice(1));params.delete('checkins');

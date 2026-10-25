@@ -42,6 +42,8 @@ The app is deployed on Vercel. To run the project locally or configure shared ch
 
 - **Group check-ins and notes with Tiger Data.** Open **Check in** to create a group or join one using an invite link, code or phone QR. Choose **I'm safe here** or **I need help here**, add an optional short note at your map pin, and update or remove your own post. Red flags labelled **Needs help** and green **Safe** shields distinguish people from the earthquake circles. Help requests appear first in the list and above other map symbols; **Show** opens the person's note at their location. Your group can see shared pins, notes, safe/help counts and hourly status updates; posts expire after 24 hours. These updates do not contact emergency services. Requires the hosted API and a configured Tiger Data PostgreSQL service. See [database setup](docs/checkins.md).
 
+  For a clean demo, open **Check in → Invite and group settings → Start fresh for demo**. This opens a new empty group, clears the displayed check-ins and counts, and shows a fresh phone QR code. Share that new code for the next run. The old group's posts remain in its own invite until they expire; the selected earthquake, forecast settings and your editing identity stay in place.
+
 - **Sources and accuracy tabs.** View source links, processing dates and model assumptions, with regional occurrence checks where complete outcome windows exist.
 
 ## How the forecast works

@@ -452,12 +452,14 @@ body:not(.world) .wpane{display:none}
         <div><button class="btn" id="ciReconnect">Connect again</button></div>
         <p class="p" id="ciSummary"></p>
         <div><button class="src" data-src="checkins">How check-ins are shared</button></div>
-        <div id="ciList"></div>
         <details class="tool-options" id="ciGroupOptions" hidden><summary>Invite and group settings</summary>
           <div class="row"><button class="btn" id="ciCopy" disabled>Copy group invite</button><button class="btn" id="ciLeave" disabled>Leave group</button><button class="btn" id="ciRefresh" disabled>Refresh check-ins</button></div>
+          <div class="row"><button class="btn" id="ciResetDemo" disabled>Start fresh for demo</button></div>
+          <p class="muted">Starts an empty group with a new invite and QR code for the next demo.</p>
           <div id="ciInviteBox" hidden><label for="ciInviteURL">Group invite</label><input id="ciInviteURL" type="text" readonly></div>
           <details><summary>Group status updates</summary><div id="ciActivity"></div></details>
         </details>
+        <div id="ciList"></div>
       </div>
       <details class="card tool-options" id="peopleDetails"><summary>People living nearby</summary>
         <div id="nearPeople"></div>
