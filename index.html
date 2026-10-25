@@ -5497,7 +5497,7 @@ function joinLink(){
   const base=['http:','https:'].includes(location.protocol)?location.origin+location.pathname:HOSTED_ORIGIN;
   return base+'#j='+encodeURIComponent(S.key)+(ci.ready&&ci.group?'.'+ci.group:'');
 }
-function drawQR(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:6,margin:2,scalable:true,alt:'QR code for the link below'})}
+function drawQR(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:6,margin:24,scalable:true,alt:'QR code for the link below'})}
 function renderJoin(){
   if($('joinModal').hidden)return;
   const items=(ci.items||[]).filter(d=>Date.parse(d.expiresAt)>Date.now()),safe=items.filter(d=>d.status==='safe').length,help=items.length-safe;

@@ -67,6 +67,14 @@ function createStore(pool) {
     async totalStored() {
       return (await q('SELECT count(*)::int AS n FROM afterquake.quakes')).rows[0].n;
     },
+    async refreshRange(since, until) {
+      // Historic imports sit outside the rolling 30-day refresh policy. Include
+      // complete UTC buckets explicitly, while leaving the live hour unmaterialised.
+      const hour = 3600e3, end = Math.min(Math.ceil(Date.parse(until) / hour) * hour, Math.floor(Date.now() / hour) * hour);
+      const start = Math.floor(Date.parse(since) / hour) * hour;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      await q("CALL refresh_continuous_aggregate('afterquake.quake_rate_hourly', $1::timestamptz, $2::timestamptz)", [new Date(start).toISOString(), new Date(end).toISOString()]);
+    },
     async lastIngest(key = 'feed') {
       const r = (await q('SELECT at FROM afterquake.ingest_meta WHERE key = $1', [key])).rows[0];
       return r ? new Date(r.at).toISOString() : null;

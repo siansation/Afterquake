@@ -26,6 +26,18 @@ async function getJSON(url) {
   if (!res.ok) throw new Error('USGS returned ' + res.status);
   return res.json();
 }
+async function refreshImported(store, rows) {
+  if (!rows.length || !await store.timescale()) return;
+  // Keep disconnected case-study date ranges separate instead of refreshing
+  // years of empty buckets between earthquakes. Live imports use one range.
+  const ranges = new Map();
+  for (const row of rows) {
+    const key = row.id.startsWith('case:') ? row.id.split(':')[1] : 'usgs';
+    const time = Date.parse(row.at), range = ranges.get(key) || [time, time];
+    ranges.set(key, [Math.min(range[0], time), Math.max(range[1], time)]);
+  }
+  for (const [start, end] of ranges.values()) await store.refreshRange(new Date(start).toISOString(), new Date(end + 1).toISOString());
+}
 async function main() {
   const envFile = path.join(__dirname, '..', '.env.local');
   if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
@@ -47,6 +59,7 @@ async function main() {
       rows = (await getJSON(FEED)).features.map(rowFromFeature).filter(Boolean); key = 'month';
     }
     const written = await store.upsert(rows);
+    await refreshImported(store, rows);
     await store.markIngest(key, rows.length);
     if (key === 'month') await store.markIngest('feed', rows.length);
     console.log(`Stored ${written} of ${rows.length} quakes (${key}). Total in Tiger Data: ${await store.totalStored()}.`);
@@ -56,4 +69,4 @@ if (require.main === module) main().catch(e => {
   console.error('Ingest failed: ' + (/USGS|event ID|TIGER_DATABASE_URL/.test(e.message) ? e.message : 'check the Tiger Data URL, TLS certificate and network. No credentials were printed.'));
   process.exitCode = 1;
 });
-module.exports = { caseRows };
+module.exports = { caseRows, refreshImported };

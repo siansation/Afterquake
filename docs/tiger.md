@@ -26,6 +26,9 @@ There is no paid cron. `GET /api/quakes?lat=&lon=&radiusKm=&since=&until=` first
    - `npm run db:ingest` loads the last 30 days of M2.5+ worldwide.
    - `npm run db:ingest -- --event us6000u43g` loads the region and first 60 days around one USGS event.
    - `npm run db:ingest -- --cases` loads the 13 bundled case studies from `data/sequences.json` (no network needed), so the Türkiye story also shows the chart.
+   Each import explicitly refreshes its completed hourly buckets on TimescaleDB,
+   including older case studies outside the rolling 30-day refresh policy. The
+   latest incomplete hour remains available through real-time aggregation.
 5. Add `TIGER_DATABASE_URL` to Vercel and redeploy: `npx vercel@65.2.0 env add TIGER_DATABASE_URL production`, then `npx vercel@65.2.0 deploy --prod`.
 
 The card stays hidden when the page is opened from a file, on a static host, when the database is not configured, or when nothing is stored for a case study's area.
@@ -33,3 +36,8 @@ The card stays hidden when the page is opened from a file, on a static host, whe
 ## Tested here, and not
 
 `tests/quakes-database.test.js` runs the migration (twice), upserts, revisions, area queries (including across the 180-degree meridian), the case-study backfill and the HTTP route against real PostgreSQL (PGlite). `tests/quakes-api.test.js` covers validation, lazy ingestion, USGS timeouts and failures, regional backfill throttling, rate limits and private errors with a mocked store. PGlite has no TimescaleDB, so `create_hypertable`, the continuous aggregate and the refresh and compression policies only run on a real Tiger Data service: check the `npm run db:setup` output there.
+
+`tests/ingest-refresh.test.js` checks historical refresh windows, including separate
+case-study date ranges and the live-hour cutoff. `tests/qr.test.js` rasterises and
+independently decodes the generated QR SVG, checking its invite payload and white
+border. These automated checks do not replace scanning it with a physical phone.
