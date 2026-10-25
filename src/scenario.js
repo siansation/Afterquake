@@ -49,11 +49,14 @@ const SCENARIO = (() => {
       Number.isFinite(s.savedAt) && typeof s.building === 'string' &&
       typeof s.calibrated === 'boolean' && typeof s.dataVersion === 'string' &&
       typeof s.gridVersion === 'string' && typeof s.modelVersion === 'string' &&
+      (s.at==null||(typeof s.at==='string'&&Number.isFinite(Date.parse(s.at)))) &&
+      (s.origin==null||(typeof s.origin==='string'&&Number.isFinite(Date.parse(s.origin)))) &&
+      (s.comparison==null||(Number.isFinite(s.comparison.lat)&&Math.abs(s.comparison.lat)<=90&&Number.isFinite(s.comparison.lon)&&Math.abs(s.comparison.lon)<=360&&typeof s.comparison.name==='string')) &&
       Array.isArray(s.events) && s.events.every(e => Array.isArray(e) && e.length === 4 &&
         e.every(Number.isFinite) && e[0] >= -.001 && e[0] <= s.now);
   }
   function capture(input) {
-    const s = { ...input, version: VERSION, location: { ...input.location }, events: knownEvents(input.events, input.now) };
+    const s = { ...input, version: VERSION, location: { ...input.location }, comparison:input.comparison?{...input.comparison}:null,events: knownEvents(input.events, input.now) };
     if (!validSnapshot(s)) throw new RangeError('Cannot save an incomplete forecast check.');
     return s;
   }
@@ -78,16 +81,24 @@ const SCENARIO = (() => {
     if (previous.calibrated !== current.calibrated) reasons.push('The shaking equation option changed.');
     if (previous.tolerance !== current.tolerance) reasons.push('Your chosen risk limit changed; this changes the projected crossing time, not the shaking probability.');
     if (thresholdChanged) reasons.push('The modelled intensity threshold changed.');
-    const forward = current.now - previous.now > 1e-8, backward = previous.now - current.now > 1e-8;
-    const commonTime = Math.min(previous.now, current.now);
-    const revised = catalogueSignature(previous.events, commonTime) !== catalogueSignature(current.events, commonTime);
+    // Origin revisions change every relative day value. Compare in UTC whenever
+    // saved checks carry absolute times; otherwise an origin shift looks like replay.
+    const absolute=!!previous.at&&!!current.at,unit=absolute?864e5:1;
+    const origin=s=>s.origin?Date.parse(s.origin):Date.parse(s.at)-s.now*864e5;
+    const previousTime=absolute?Date.parse(previous.at):previous.now,currentTime=absolute?Date.parse(current.at):current.now;
+    const absoluteEvents=s=>absolute?s.events.map(e=>[origin(s)+e[0]*864e5,...e.slice(1)]):s.events;
+    const beforeEvents=absoluteEvents(previous),afterEvents=absoluteEvents(current);
+    if(absolute&&Math.abs(origin(previous)-origin(current))>1)reasons.push('The mainshock origin time was revised; replay times are compared in UTC.');
+    const forward = (currentTime-previousTime)/unit > 1e-8, backward = (previousTime-currentTime)/unit > 1e-8;
+    const commonTime = Math.min(previousTime,currentTime);
+    const revised = catalogueSignature(beforeEvents, commonTime) !== catalogueSignature(afterEvents, commonTime);
     if (revised) reasons.push('Catalogue entries at or before the earlier replay time changed.');
     if (current.dataVersion !== previous.dataVersion) reasons.push('The downloaded data snapshot was refreshed.');
-    if (current.gridVersion !== previous.gridVersion) reasons.push('The mainshock or ground-failure data version changed.');
+    if (current.gridVersion !== previous.gridVersion) reasons.push('The mainshock or ground-failure data version changed, or the PAGER report was updated.');
     if (current.modelVersion !== previous.modelVersion) reasons.push('The model configuration or fitted coefficient changed.');
     if (forward) {
-      reasons.push(`Replay time advanced by ${durationLabelForElapsed((current.now - previous.now) * 1440)}.`);
-      const added = current.events.filter(e => e[0] > previous.now && e[0] <= current.now);
+      reasons.push(`Replay time advanced by ${durationLabelForElapsed((currentTime-previousTime)/unit * 1440)}.`);
+      const added = afterEvents.filter(e => e[0] > previousTime && e[0] <= currentTime);
       if (added.length) {
         const large = added.filter(e => e[1] >= 5), max = Math.max(...added.map(e => e[1]));
         reasons.push(`${added.length} additional catalogue event${added.length === 1 ? '' : 's'} became visible (${large.length} M5+; largest M${max.toFixed(1)}). New events affect the fit or source locations; they do not always increase the estimate.`);

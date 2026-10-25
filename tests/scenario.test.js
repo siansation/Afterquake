@@ -127,3 +127,12 @@ test('comparison distance handles identical pins and the date line',()=>{
   close(SCENARIO.distanceKm({lat:0,lon:0},{lat:0,lon:0}),0);
   close(SCENARIO.distanceKm({lat:0,lon:179.9},{lat:0,lon:-179.9}),22.2389853289,1e-8);
 });
+
+test('origin revisions compare saved times in UTC instead of inventing backwards replay',()=>{
+  const origin='2026-10-01T00:00:00Z',at='2026-10-02T00:00:00Z';
+  const before=snapshot({now:1,origin,at});
+  const after=snapshot({now:1-1/1440,origin:'2026-10-01T00:01:00Z',at});
+  const diff=SCENARIO.changes(before,after);
+  assert.ok(diff.reasons.some(r=>/origin time was revised/.test(r)));
+  assert.ok(!diff.reasons.some(r=>/backwards|advanced by/.test(r)));
+});

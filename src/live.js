@@ -6,10 +6,21 @@
 const LIVE = (() => {
   const FEED = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson';
   const API = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&';
-  const get = async (u, how) => { const r = await fetch(u); if (!r.ok) throw new Error(`USGS returned HTTP ${r.status}`); return r[how]() };
+  const get = async (u, how) => {
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try{const r=await fetch(u,{signal:controller.signal});if(!r.ok)throw new Error(`USGS returned HTTP ${r.status}`);return await r[how]()}
+    catch(e){if(e.name==='AbortError')throw new Error('USGS request timed out.');throw e}finally{clearTimeout(timer)}
+  };
   const q = p => get(API + new URLSearchParams(p), 'json');
   const wrap = (lon, ref) => lon + 360 * Math.round((ref - lon) / 360);   // same side of 180° as ref
   const lon180 = lon => ((lon + 540) % 360) - 180;
+  // ComCat preference is weight first, then update time. A withdrawn product must
+  // not silently remain preferred just because it occupies the first array slot.
+  function preferred(products,type){return [...(products[type]||[])].filter(p=>p.status!=='DELETE')
+    .sort((a,b)=>(Number(b.preferredWeight)||0)-(Number(a.preferredWeight)||0)||(Number(b.updateTime)||0)-(Number(a.updateTime)||0))[0]||null}
+  function productVersion(p){return p?JSON.stringify([p.source,p.code,p.updateTime,p.preferredWeight,p.status,p.contents]):''}
+  function geometryVersion(s){return JSON.stringify([s.M,s.t0,s.lat,+lon180(s.lon).toFixed(8),s.radiusKm])}
+  function catalogueChanged(a,b){return JSON.stringify(a)!==JSON.stringify(b)}
 
   async function feed() {
     const j = await get(FEED, 'json');
@@ -27,12 +38,16 @@ const LIVE = (() => {
     const t0 = Date.parse(s.t0), end = Date.now();
     const d = await q({ starttime: new Date(t0 - 2 * 864e5).toISOString(), endtime: new Date(end).toISOString(),
       latitude: s.lat, longitude: lon180(s.lon), maxradiuskm: s.radiusKm, minmagnitude: 4, orderby: 'time-asc', limit: 20000 });
-    const events = d.features.filter(f => f.properties.mag != null).map(f => [+((f.properties.time - t0) / 864e5).toFixed(5), f.properties.mag,
+    if(!Array.isArray(d.features))throw new Error('USGS returned an invalid catalogue.');
+    if(d.features.length>=20000)throw new Error('The catalogue reached the 20,000-event limit; a complete refresh is unavailable.');
+    const events = d.features.filter(f => f.properties.mag != null&&f.id!==s.id).map(f => [+((f.properties.time - t0) / 864e5).toFixed(5), f.properties.mag,
       +f.geometry.coordinates[1].toFixed(3), +wrap(f.geometry.coordinates[0], s.lon).toFixed(3)]);
-    // The mainshock is in the catalogue at t = 0; keep it even if a revision moved its time by a fraction of a second.
-    if (!events.some(e => Math.abs(e[0]) < 1e-4)) events.push([0, s.M, +s.lat.toFixed(3), +s.lon.toFixed(3)]);
+    if(events.some(e=>e.some(v=>!Number.isFinite(v))))throw new Error('USGS returned invalid event coordinates or magnitudes.');
+    // Use the current event-detail origin and magnitude for the mainshock even if
+    // the catalogue response was generated before the same revision.
+    events.push([0,s.M,+s.lat.toFixed(3),+s.lon.toFixed(3)]);
     events.sort((a, b) => a[0] - b[0]);
-    return { events, daysAvailable: +((end - t0) / 864e5).toFixed(4), fetchedAt: new Date(end).toISOString() };
+    return { events, daysAvailable: (end - t0) / 864e5, fetchedAt: new Date(end).toISOString() };
   }
 
   function parseGrid(txt) {
@@ -53,7 +68,8 @@ const LIVE = (() => {
     if (!(nc > 1 && nr > 1)) throw new Error('The ShakeMap does not cover the aftershock zone.');
     const mmi = new Uint8Array(nc * nr), vs = new Uint8Array(nc * nr);
     for (let rr = 0; rr < nr; rr++) for (let cc = 0; cc < nc; cc++) {
-      const line = g.body[(r0 + rr) * g.nlon + c0 + cc]; if (!line) continue; const v = line.split(' ');
+      const line = g.body[(r0 + rr) * g.nlon + c0 + cc]; if (!line) throw new Error('The ShakeMap grid is incomplete.'); const v = line.trim().split(/\s+/);
+      if(!Number.isFinite(+v[g.fields.MMI])||!(+v[g.fields.SVEL]>0))throw new Error('The ShakeMap has invalid shaking or ground data.');
       mmi[rr * nc + cc] = Math.round(+v[g.fields.MMI] * 20);
       vs[rr * nc + cc] = Math.min(255, Math.round(+v[g.fields.SVEL] / 8));
     }
@@ -65,7 +81,9 @@ const LIVE = (() => {
   // XML text comes back entity-encoded; decode it to plain text (the page escapes it again when showing it)
   const unxml = t => t && t.replace(/&(lt|gt|quot|apos|amp);/g, (m, e) => ({ lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' })[e]);
   function parsePager(x) {
-    return { version: (x.match(/version_number="(\d+)"/) || [])[1],
+    // Current PAGER XML uses event.number for the report revision; pager.version
+    // is the schema version. Keep support for older version_number snapshots.
+    return { version: (x.match(/version_number="(\d+)"/) || x.match(/<event\b[^>]*\bnumber="(\d+)"/) || [])[1],
       alerts: [...x.matchAll(/<alert type="(\w+)" level="(\w+)"/g)].map(m => [m[1], m[2]]),
       struct: unxml((x.match(/<structcomment>([\s\S]*?)<\/structcomment>/) || [])[1]?.trim()),
       secondary: unxml((x.match(/<secondary_effects>([\s\S]*?)<\/secondary_effects>/) || [])[1]?.trim()),
@@ -73,22 +91,47 @@ const LIVE = (() => {
   }
 
   // step(name) reports progress: 'event', 'catalogue', 'shakemap', 'pager'
-  async function load(id, step = () => {}) {
+  async function load(id, step = () => {}, previous=null) {
     step('event');
     const ev = await q({ eventid: id }), P = ev.properties.products || {};
-    if (!P.shakemap) throw new Error('USGS has not published a ShakeMap for this earthquake yet, so there is no ground-shaking data to forecast from.');
+    const smProduct=preferred(P,'shakemap'),pagerProduct=preferred(P,'losspager');
+    if (!smProduct) throw new Error('USGS has no current ShakeMap for this earthquake.');
     const M = ev.properties.mag, [lon, lat, depth] = ev.geometry.coordinates;
-    const seq = { key: 'live:' + ev.id, id: ev.id, live: true, label: ev.properties.place || ev.properties.title, place: 'live USGS data',
-      M, t0: new Date(ev.properties.time).toISOString(), lat, lon, depth, radiusKm: radiusKm(M) };
+    if(!Number.isFinite(M)||![lon,lat,depth,ev.properties.time].every(Number.isFinite))throw new Error('USGS returned invalid earthquake details.');
+    const seq = { key: previous?previous.seq.key:'live:' + ev.id, id: ev.id, live: true, label: ev.properties.place || ev.properties.title, place: 'live USGS data',
+      M, t0: new Date(ev.properties.time).toISOString(), lat, lon, depth, radiusKm: radiusKm(M),eventUpdated:ev.properties.updated,
+      productVersions:{shakemap:productVersion(smProduct),pager:''},warnings:[] };
     step('shakemap');
-    const g = parseGrid(await get(P.shakemap[0].contents['download/grid.xml'].url, 'text'));
-    if (seq.lon < g.lon0 - 180) seq.lon += 360;                          // work in the grid's longitude frame near 180°
-    const shakemap = clipGrid(g, seq);
+    let shakemap;
+    if(previous&&previous.seq.productVersions?.shakemap===seq.productVersions.shakemap&&geometryVersion(previous.seq)===geometryVersion(seq)){
+      shakemap=previous.shakemap;seq.lon=wrap(seq.lon,previous.seq.lon);
+    }else{
+      const url=smProduct.contents?.['download/grid.xml']?.url;
+      if(!url)throw new Error('The current ShakeMap has no downloadable grid.');
+      const g=parseGrid(await get(url,'text'));
+      if(seq.lon<g.lon0-180)seq.lon+=360;
+      shakemap=clipGrid(g,seq);
+    }
     step('catalogue');
     Object.assign(seq, await catalogue(seq));
     step('pager');
     let pager = null;
-    if (P.losspager) try { pager = parsePager(await get(P.losspager[0].contents['pager.xml'].url, 'text')) } catch (e) { /* PAGER is optional */ }
+    const pagerVersion=productVersion(pagerProduct);
+    if(pagerProduct){
+      if(previous&&previous.seq.productVersions?.pager===pagerVersion&&previous.extra.pager){pager=previous.extra.pager;seq.productVersions.pager=pagerVersion}
+      else try{
+        const url=pagerProduct.contents?.['pager.xml']?.url;if(!url)throw new Error('No report download');
+        pager=parsePager(await get(url,'text'));
+        if(!pager.version)throw new Error('USGS returned an invalid PAGER report.');
+        seq.productVersions.pager=pagerVersion;
+      }catch(e){
+        // Keep optional report failures separate from fresh catalogue/shaking data.
+        // Retain its OLD signature so the next poll retries the failed new version.
+        pager=previous?.extra.pager||null;seq.productVersions.pager=previous?.seq.productVersions?.pager||'';
+        seq.warnings.push(pager?'PAGER refresh failed; the previous report is still shown.':'PAGER is currently unavailable.');
+      }
+    }
+    seq.checkedAt=new Date().toISOString();
     return { seq, shakemap, extra: pager ? { pager } : {} };
   }
 
@@ -129,6 +172,6 @@ const LIVE = (() => {
       towns: { towns: inGrid, country }, country };
   }
 
-  return { FEED, feed, load, catalogue, parseGrid, clipGrid, parsePager, basemap, radiusKm };
+  return { FEED, feed, load, catalogue, parseGrid, clipGrid, parsePager, basemap, radiusKm,preferred,productVersion,geometryVersion,catalogueChanged };
 })();
 if (typeof module !== 'undefined') module.exports = LIVE;

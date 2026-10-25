@@ -18,7 +18,7 @@ for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
   }
 }
 assert.equal(data, 7);
-assert.ok(scripts >= 11, 'Expected bundled map, globe libraries, live loader, globe, model, shaking, validation, scenario and UI scripts');
+assert.ok(scripts >= 13, 'Expected bundled map, globe libraries, live loader, globe, numerical modules, view state, speech and UI scripts');
 for (const name of ['LIVE', 'GLOBE']) assert.ok(executable.some(code => new RegExp(`\\bconst ${name}\\s*=`).test(code)), `Missing bundled ${name}`);
 assert.ok(executable.some(code => /geoOrthographic/.test(code)), 'Missing bundled d3-geo');
 assert.deepEqual(Object.keys(datasets.get('d-world')), ['land110', 'countries110', 'land50', 'countries50'], 'World outlines missing');
@@ -27,21 +27,21 @@ assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote s
 // Design guard (docs/DESIGN.md): the app's own styles, markup and scripts must not bring back stock AI-template patterns.
 // Scans whole source files (every <style> block, inline styles, JS-built markup, canvas drawing), not just one block.
 // Leaflet's CSS is only a placeholder in the template, so it is not scanned.
-for (const file of ['src/template.html', 'src/globe.js', 'src/planner.js', 'src/assistant.js']) {
+for (const file of ['src/template.html', 'src/globe.js', 'src/planner.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js']) {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   for (const [re, what] of [[/text-transform\s*:\s*uppercase/i, 'uppercase eyebrow labels'], [/letter-spacing/i, 'tracked-out labels'],
     [/monospace|--mono/i, 'monospace for non-code text'], [/gradient\(|create(Linear|Radial)Gradient/i, 'decorative gradients'],
     [/backdrop-filter/i, 'glass panels'], [/@keyframes|animation\s*:/i, 'decorative animation'],
     [/ · |▶|◀/, '"A · B" meta strings or glyph buttons']]) assert.ok(!re.test(src), `Design guard: no ${what} in ${file} (see docs/DESIGN.md)`);
 }
-for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonResult', 'saveCheck', 'changesResult', 'askForm', 'askInput', 'askLog']) {
+for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonResult', 'saveCheck', 'restoreCheck', 'changesResult', 'askForm', 'askInput', 'askLog', 'shareView', 'shareURL', 'readSummary', 'stopSummary', 'spokenText', 'refreshLive', 'followLive']) {
   assert.ok(ids.includes(id), `Missing planning control ${id}`);
 }
 // Execute the bundled numerical modules in a browser-like global scope with no
 // CommonJS require/module. Syntax checks alone cannot catch a missed build-time
 // replacement of the fitted soil coefficient or a stale generated model module.
 const browser = vm.createContext({});
-for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO']) {
+for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO', 'VIEW_STATE', 'SPOKEN']) {
   const source = executable.find(code => new RegExp(`\\bconst ${name}\\s*=`).test(code));
   assert.ok(source, `Missing bundled ${name}`);
   assert.ok(!/\brequire\s*\(/.test(source), `${name} still needs CommonJS in the browser`);

@@ -19,18 +19,20 @@ Open `index.html` in a browser. It's one self-contained file (about 10 MB, with 
 - **Help** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
 - [`PITCH.md`](PITCH.md) has a timed 5-minute script that follows the story and ends on the live globe, plus answers to likely questions.
 
-**Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` as it is, with no install or build step, and `.vercelignore` uploads only that file. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header), so it is reachable only by link. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine.
+**Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` as it is, with no install or build step, and `.vercelignore` also includes the assistant's API function. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header); the URL is still public. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine.
 
 It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **Deploy from a branch**, then `main` and `/ (root)`.
 
 ## What it does
 
-- **Live world view.** The page opens on a globe of every M4.5+ earthquake in the last 30 days, from the USGS feed and checked every 2 minutes. Drag to spin, scroll to zoom, click a quake. Any quake with a USGS ShakeMap opens the same forecast, built in the browser from its live catalogue, ShakeMap and PAGER report; while it's open, the catalogue is re-checked every 2 minutes. The 13 case studies are the red stars.
+- **Live world view.** The page opens on a globe of every M4.5+ earthquake in the last 30 days, from the USGS feed and checked every 2 minutes. Drag to spin, scroll to zoom, click a quake. Any quake with a USGS ShakeMap opens the same forecast, built in the browser from its live catalogue, ShakeMap and PAGER report. While open, all three are checked every 2 minutes; revised products replace earlier versions without resetting your pins or selected time. **Refresh USGS** checks immediately; **Go to live time** resumes following the latest data. Failed or delayed updates are labelled, with the last successful data retained. The 13 case studies are the red stars.
 - **Story mode.** A guided 2-minute demo of the Türkiye 2023 sequence, built for pitching.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
 - **Exposure duration.** Choose 5, 10 or 30 minutes, 1 hour, 8 hours or 24 hours. The probability, parameter range, projected start and curve use that entire interval. The 24-hour, 7-day and 30-day context figures remain available.
 - **Compare two places.** Keep your spot A and choose B on the map or by town search. Compare shaking over the selected duration, ground softness, mainshock intensity, modelled ground-failure extent and coast proximity. Both places use the same intensity threshold; neither is a verified shelter.
-- **Since your saved check.** Save a check, then move the replay timeline, change assumptions or return after a data update. The explanation distinguishes elapsed time, newly visible events, revised past entries, location/settings changes and data/model updates. Checks remain in this browser, with a session-only fallback if storage is blocked. This is not a live news or alert feed.
+- **Since your saved check.** Save a check, then move the replay timeline, change assumptions or return after a data update. The explanation distinguishes elapsed time, newly visible events, revised past entries, location/settings changes and data/model updates. **Restore saved setup** restores A, B and settings while keeping the current forecast time and the saved baseline. Checks remain in this browser, with a session-only fallback if storage is blocked. This is not a live news or alert feed.
+- **Share a comparison.** **Share view** copies a link containing the earthquake, both pins, settings and exact selected UTC time. Opening it recalculates the figures using the available data, so later revisions can change the result. Links require an HTTP(S)-hosted copy; clipboard restrictions fall back to manual copying. The link includes the coordinates and place names you choose to share.
+- **Read the figures aloud.** **Read summary** uses English voices supplied by the browser or device, with stop and speed controls and a text transcript. It reads the calculated figures directly, includes stale-data warnings and stops if the forecast changes. No speech API key is needed; available voices depend on the device.
 - **Forecast at your spot.** Modelled intensity exceedance from M5+ aftershocks, a projected threshold-crossing time, and a curve of how the estimate changes. A 90% parameter range describes fitted rate uncertainty, excluding other model errors.
 - **200 simulated futures.** Monte Carlo runs from the same posterior and marked Poisson process as the displayed formula. This model does not simulate secondary triggering (ETAS).
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
@@ -87,6 +89,10 @@ src/shake.js               shaking, uncertainty ranges and consistent Monte Carl
 src/validation.js          regional occurrence checks shared by the UI and CLI
 src/scenario.js            duration estimates and saved-check change explanations
 src/planner.js             browser controls for comparison pins and local saved checks
+src/view-state.js          validated share-link inputs and saved-setup conversion
+src/spoken.js              deterministic captions from the current calculated figures
+src/access.js              sharing, restore and device speech controls
+src/live-controls.js       version-aware live refresh and visible update status
 src/assistant.js           "Ask about this forecast": the tools Gemini calls, run on the page's own model
 api/chat.js                Vercel serverless function: holds the Gemini key, safety rules and tool list, rate-limits
 src/globe.js               world view: canvas globe drawn with d3-geo
@@ -95,6 +101,10 @@ tests/forecast.test.js      numerical, simulation and data-integrity regression 
 tests/scenario.test.js      exposure windows, threshold crossings and change attribution
 tests/planner.test.js       controller workflows with DOM/map/storage test doubles
 tests/live.test.js          live loader: grid parsing, 180° handling, coast clipping, PAGER
+tests/live-refresh.test.js  revised products, retries, timeouts and invalid responses
+tests/live-controls.test.js refresh caching, time/pin preservation and navigation races
+tests/view-state.test.js    share-link validation and deterministic summary wording
+tests/access.test.js        sharing, restore and speech controller workflows
 tests/chat.test.js          assistant endpoint: input validation, tool list, error handling, rate limit
 data/                      everything the app embeds
   sequences.json           catalogue + ShakeMap grids (MMI, Vs30) for 13 quakes

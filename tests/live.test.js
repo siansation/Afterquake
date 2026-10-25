@@ -59,6 +59,11 @@ test('PAGER text is decoded from XML entities to plain text',()=>{
   assert.equal(p.struct,'Brick & adobe, <b>weak</b>');   // plain text: the page escapes it before display
 });
 
+test('current PAGER XML uses the event revision rather than the schema version',()=>{
+  const p=LIVE.parsePager('<pager version="2.1" xml_version="1"><event eventcode="usTest" number="7" shakeversion="9"/></pager>');
+  assert.equal(p.version,'7');
+});
+
 test('aftershock radius matches the bundled download',()=>{
   assert.equal(LIVE.radiusKm(7.8),Math.round(Math.pow(10,-2.44+0.59*7.8)*1.2+30));
 });

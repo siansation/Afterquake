@@ -250,6 +250,12 @@ body:not(.world) .wpane{display:none}
 .gload li.done{color:var(--good)} .gload li.now{color:var(--ink);font-weight:600}
 .gload p{margin:0;font-size:14px;color:var(--ink2)}
 @media (max-width:860px){.ghelp{display:none}.glegend .keys{max-width:170px}.gcard{bottom:auto;top:10px;width:calc(100% - 60px)}}
+.shared-notice{margin:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);font-size:14px}
+.data-delayed{color:var(--warn)}
+#liveActions[hidden]{display:none}
+.access-options{margin:8px 0}
+.access-options .fields{margin-top:8px}
+#shareURL{width:100%;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -263,6 +269,7 @@ body:not(.world) .wpane{display:none}
   <button class="hbtn" id="helpBtn">Help</button>
   <button class="hbtn fs" id="fsBtn">Fullscreen</button>
 </header>
+<p id="sharedNotice" class="shared-notice" role="status" hidden></p>
 <div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
   <div class="wbox">
     <h1 id="wTitle">After an earthquake, how long does the risk of strong shaking last?</h1>
@@ -307,6 +314,16 @@ body:not(.world) .wpane{display:none}
       </div>
       <div><p class="place" id="place"></p><span class="coords" id="coords"></span></div>
       <p class="muted" id="dataStatus"></p>
+      <div class="row" id="liveActions" hidden><button class="btn" id="refreshLive">Refresh USGS</button><button class="btn" id="followLive">Go to live time</button></div>
+      <div class="row"><button class="btn" id="readSummary">Read summary</button><button class="btn" id="stopSummary" disabled>Stop reading</button><button class="btn" id="shareView">Share view</button></div>
+      <p class="muted" id="speechStatus" role="status"></p>
+      <details class="access-options"><summary>Voice options and text summary</summary>
+        <div class="fields"><div class="f wide"><label for="summaryVoice">English voice</label><select id="summaryVoice"><option value="">Default English voice</option></select></div>
+        <div class="f wide"><label for="summarySpeed">Reading speed</label><select id="summarySpeed"><option value="0.75">Slower</option><option value="0.9" selected>Steady</option><option value="1">Normal</option></select></div></div>
+        <p class="p" id="spokenText"></p>
+      </details>
+      <div id="shareLinkBox" hidden><label for="shareURL">Comparison link</label><input id="shareURL" type="text" readonly aria-describedby="shareStatus"></div>
+      <p class="muted" id="shareStatus" role="status"></p>
       <div class="verdict" id="verdict" aria-live="polite"></div>
       <div class="fields">
         <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
@@ -335,7 +352,7 @@ body:not(.world) .wpane{display:none}
       <div class="card">
         <h2>Since your saved check</h2>
         <div id="changesResult"></div>
-        <div class="row"><button class="btn" id="saveCheck">Save this check</button><button class="btn" id="forgetCheck" disabled>Forget check</button></div>
+        <div class="row"><button class="btn" id="saveCheck">Save this check</button><button class="btn" id="restoreCheck" disabled>Restore saved setup</button><button class="btn" id="forgetCheck" disabled>Forget check</button></div>
         <p class="muted" id="changesFeedback" role="status"></p>
       </div>
       <div class="card">
@@ -501,6 +518,8 @@ __GEOLIBS__
 <script>__SHAKE__</script>
 <script>__VALIDATION__</script>
 <script>__SCENARIO__</script>
+<script>__VIEW_STATE__</script>
+<script>__SPOKEN__</script>
 <script>
 const J=id=>JSON.parse(document.getElementById(id).textContent);
 const D=J('d-data'),EX=J('d-extra'),BASE=J('d-base'),POP=J('d-pop'),AFT=J('d-aft');const SITEFIT=__SITEFIT__;
@@ -534,7 +553,7 @@ function countryThr(cc){const f=POP.fatality[cc];if(!f)return null;return Math.m
 function fatRate(cc,mmi){const f=POP.fatality[cc];return f?PhiN(Math.log(mmi/f[0])/f[1]):null}
 
 // ---------- state ----------
-let S,G,B,TOWNS,tMin=1/24,tMax=1,layer='risk',loc=null,heat=null,heatKey='',playing=false,cur={};
+let S,G,B,TOWNS,tMin=1/24,tMax=1,layer='risk',loc=null,heat=null,heatKey='',playing=false,cur={},replayTimeOverride=null;
 const sliderToT=v=>tMin*Math.pow(tMax/tMin,v/1000),tToSlider=t=>Math.round(1000*Math.log(t/tMin)/Math.log(tMax/tMin));
 const km=(lat,lon)=>[(lon-S.lon)*111.32*G.c,(lat-S.lat)*110.57];
 function gridAt(lat,lon){const c=Math.round((lon-G.lon0)/G.dlon),r=Math.round((G.lat0-lat)/G.dlat);if(c<0||r<0||c>=G.nc||r>=G.nr)return null;const i=r*G.nc+c;return{mmi:G.mmi[i]/20,vs:G.vs[i]*8,liq:G.liq?G.liq[i]/500:null,ls:G.ls?G.ls[i]/1000:null}}
@@ -550,10 +569,9 @@ const landLayer=L.layerGroup().addTo(map),overlayLayer=L.layerGroup().addTo(map)
 const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupAnchor:[0,-30],html:'<svg class="pin" viewBox="0 0 26 36" aria-hidden="true"><path d="M13 35C13 35 2 21 2 13a11 11 0 1 1 22 0c0 8-11 22-11 22z" fill="'+PAL.red+'" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.2" fill="#fff"/></svg>'});
 const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><path d="M13 1.5l3.3 7.6 8.2.7-6.2 5.4 1.9 8L13 19l-7.2 4.2 1.9-8L1.5 9.8l8.2-.7z" fill="'+PAL.red+'" stroke="#fff" stroke-width="1.6"/></svg>'});
 
-// i: index into SEQ, or a live sequence registered by registerLive()
-function pickSeq(i){
-  enterDetail(false);resetComparison();checkFeedback='';
-  S=typeof i==='number'?SEQ[i]:i;B=BASE[S.key];resetAsk();TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
+// Reinstall a revised grid without resetting the user's pins, camera or selected time.
+function installSequenceGrid(fit=true){
+  B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
   const bytes=v=>typeof v==='string'?b64(v):v;   // bundled grids are base64; live ones arrive as byte arrays
   G={...sm,mmi:bytes(sm.mmi),vs:bytes(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
   G.lon1=G.lon0+(G.nc-1)*G.dlon;G.lat1=G.lat0-(G.nr-1)*G.dlat;
@@ -561,21 +579,35 @@ function pickSeq(i){
   // coastline segments (drop edges created by clipping to the map box)
   const bx={w:G.lon0-0.3,e:G.lon1+0.3,s:G.lat1-0.3,n:G.lat0+0.3},on=(p,q)=>[['0','w'],['0','e'],['1','s'],['1','n']].some(([ax,k])=>Math.abs(p[ax]-bx[k])<2e-3&&Math.abs(q[ax]-bx[k])<2e-3);
   G.coast=[];for(const r of B.land)for(let k=0;k<r.length;k++){const a=r[k],b=r[(k+1)%r.length];if(!on(a,b))G.coast.push([...km(a[1],a[0]),...km(b[1],b[0])])}
-  renderHeader();
-  // A live quake can be minutes old, so its timeline runs from shortly after the mainshock to now.
-  tMin=S.live?Math.min(1/24,Math.max(1/1440,S.daysAvailable/3)):1/24;tMax=S.live?Math.max(S.daysAvailable,tMin*1.5):Math.max(1,S.daysAvailable);
-  $('now').value=tToSlider(Math.min(tMax,S.live||S.key.endsWith('26')?tMax:1));
   // land
   landLayer.clearLayers();
   for(const r of B.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:true,color:'#8a959e',weight:1,fillColor:'#f4f4f1',fillOpacity:1,interactive:false}).addTo(landLayer);
   for(const l of B.borders)L.polyline(l.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',color:'#7d8893',weight:1.2,dashArray:'4 4',interactive:false}).addTo(landLayer);
   G.mask=null;
-  map.invalidateSize();map.fitBounds(G.bounds.pad(-0.08));map.setMaxBounds(G.bounds.pad(0.4));
-  $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${n}"></option>`).join('');
+  map.invalidateSize();map.setMaxBounds(G.bounds.pad(0.4));if(fit)map.fitBounds(G.bounds.pad(-0.08));
+  $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${esc(n)}"></option>`).join('');
+}
+function defaultSpot(){
   const t=TOWNS.towns.find(t=>B.labels.includes(t[0]))||TOWNS.towns[0];
   const lab=B.labels.map(n=>B.towns.find(x=>x[0]===n)).filter(Boolean)[0];
   const start=lab||(t&&[t[0],t[1],t[2]]);setLoc(start?start[1]:S.lat,start?start[2]:S.lon,start?start[0]:'Epicentre area',false);
-  buildBuildingOptions();renderEvents();renderLedger();renderPager();heatKey='';update();refreshCheckins();
+}
+function timelineBounds(){
+  const age=Math.max(1e-9,S.daysAvailable);
+  tMin=S.live?Math.min(1/24,age/3):1/24;tMax=S.live?age:Math.max(1,age);
+}
+function selectedDays(){return replayTimeOverride==null?sliderToT(+$('now').value):Math.max(tMin,Math.min(tMax,(replayTimeOverride-Date.parse(S.t0))/864e5))}
+function setAbsoluteReplayTime(timestamp){
+  const requested=(timestamp-Date.parse(S.t0))/864e5,days=Math.max(tMin,Math.min(tMax,requested));
+  replayTimeOverride=Date.parse(S.t0)+days*864e5;$('now').value=tToSlider(days);
+  return Math.abs(days-requested)>1e-9;
+}
+// i: index into SEQ, or a registered live sequence.
+function pickSeq(i){
+  liveOpenToken++;enterDetail(false);stopSummary();resetComparison();checkFeedback='';replayTimeOverride=null;
+  S=typeof i==='number'?SEQ[i]:i;$('gLoad').hidden=true;resetAsk();installSequenceGrid();renderHeader();timelineBounds();
+  $('now').value=tToSlider(Math.min(tMax,S.live||S.key.endsWith('26')?tMax:1));
+  defaultSpot();buildBuildingOptions();renderEvents();renderLedger();renderPager();heatKey='';update();refreshCheckins();
 }
 function renderHeader(){$('hMag').textContent=S.M.toFixed(1);$('hTxt').innerHTML=`${esc(S.label)} <small>${fmtDate(new Date(S.t0))}, ${esc(S.place)}</small>`}
 function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('bld').value||'local';
@@ -595,13 +627,12 @@ function spot(lat,lon,thrBase,calib,src){
   if(why.length)thr=Math.max(6,thrBase-1);
   const [x,y]=km(lat,lon);return{gv,thr,why,x,y,qv:SHAKE.q(src,x,y,gv.vs,thr,calib)}}
 function update(){
-  const now=sliderToT(+$('now').value),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
+  const now=selectedDays(),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
   const t0=Date.parse(S.t0),nowDate=new Date(t0+now*864e5);
   $('clock').innerHTML=`<b>${dur(now)}</b> after the mainshock (${fmtDT(nowDate)})`;
-  const live=S.live&&+$('now').value>=1000;
+  const live=S.live&&replayTimeOverride==null&&+$('now').value>=1000;
   if(mode==='detail')$('hNote').textContent=live?`Live, ${fmtDT(nowDate)}`:`Replay: ${fmtDT(nowDate)}`;
-  $('dataStatus').textContent=S.live?`Live from USGS, last checked ${fmtClock(new Date(S.fetchedAt))} (every 2 minutes). ShakeMap version ${G.version||'?'}${G.status?', '+G.status:''}; ${(G.dlat*111).toFixed(1)} km grid. Not an official USGS forecast.`
-    :`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;
+  renderDataStatus();
   // Keep the complete posterior here: a fixed-length slice silently understates every
   // point probability and can move the projected threshold-crossing time too early.
   const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f),src=sources(now);
@@ -632,7 +663,7 @@ function update(){
   renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
-  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();bindSrc();
+  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();updateSpokenSummary();bindSrc();
 }
 function computeHeat(f,cp,src,calib){
   const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
@@ -768,9 +799,11 @@ function renderPeople(){const sp=cur.sp;const near=TOWNS.towns.map(t=>({t,d:Math
   const ts=TOWNS.towns.filter(t=>t.p7!=null);const exp=ts.reduce((a,t)=>a+t[3]*t.p7,0),hi=ts.filter(t=>t.p7>=0.1);
   $('atRisk').innerHTML=`<p class="p">Across the ${ts.length} largest towns in the area, the forecast expects about <b>${fmtN(exp)}</b> people to feel damaging shaking for their local buildings in the next 7 days.${hi.length?` ${hi.length} town${hi.length>1?'s have':' has'} a 1-in-10 chance or higher: ${hi.slice(0,5).map(t=>t[0]).join(', ')}.`:''}</p><p class="muted">Each town's population times its 7-day chance, as on the map.</p>`}
 function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
-  if(!p||!p.exposure||!p.exposure.length){$('pagerNote').textContent='No USGS PAGER exposure estimate was published for this earthquake.';$('pagerExp').innerHTML='';return}
+  const warnings=[...(S.warnings||[]),S.refreshError?'Live updates are delayed; the last successful data is shown.':''].filter(Boolean).join(' ');
+  if(!p||!p.exposure||!p.exposure.length){$('pagerNote').textContent='No USGS PAGER exposure figures are available for this earthquake.'+(warnings?' '+warnings:'');$('pagerExp').innerHTML='';return}
   const rows=p.exposure.filter(r=>r[2]>0&&r[0]>=3.5).reverse();const al=Object.fromEntries(p.alerts||[]);
   $('pagerNote').innerHTML=`USGS PAGER estimate${p.version?` (version ${p.version})`:''}: people exposed to each shaking level in the mainshock.${al.fatality?` PAGER alert: <b>${al.fatality}</b> for deaths, <b>${al.economic}</b> for losses.`:''}`;
+  if(warnings)$('pagerNote').insertAdjacentText('beforeend',' '+warnings);
   const mx=Math.max(...rows.map(r=>r[2]));
   $('pagerExp').innerHTML=`<table><tr><th>Intensity</th><th class="num">People</th><th style="width:40%"></th></tr>${rows.map(r=>`<tr><td>${R((r[0]+r[1])/2)} ${MMI_NAME[Math.round((r[0]+r[1])/2)]}</td><td class="num">${fmtN(r[2])}</td><td><div style="height:8px;background:#7d5cb5;opacity:.75;border-radius:2px;width:${Math.max(1,r[2]/mx*100)}%"></div></td></tr>`).join('')}</table>`}
 
@@ -832,10 +865,10 @@ $('ciDel').onclick=async()=>{if(!ciDB||!ciUid)return;try{await ciDB.doc('checkin
 function selectTab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);if(t==='spot'){drawCurve();drawSims()}}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>selectTab(b.dataset.tab));
 ['bld','tol','shk','reveal','exposure'].forEach(id=>$(id).onchange=()=>update());
-let sT;$('now').oninput=()=>{clearTimeout(sT);sT=setTimeout(update,60)};
+let sT;$('now').oninput=()=>{replayTimeOverride=null;clearTimeout(sT);sT=setTimeout(update,60)};
 $('town').addEventListener('change',()=>{const n=$('town').value.trim().toLowerCase();const t=TOWNS.towns.find(t=>t[0].toLowerCase()===n)||B.towns.find(t=>t[0].toLowerCase()===n);if(t){setLoc(t[1],t[2],t[0]);map.setView([t[1],t[2]],Math.max(map.getZoom(),9))}});
 let playT=null;
-$('play').onclick=()=>{playing=!playing;$('playIcon').setAttribute('d',playing?'M3 1.5h3v11H3zM8 1.5h3v11H8z':'M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label',playing?'Pause':'Play the sequence');
+$('play').onclick=()=>{replayTimeOverride=null;playing=!playing;$('playIcon').setAttribute('d',playing?'M3 1.5h3v11H3zM8 1.5h3v11H8z':'M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label',playing?'Pause':'Play the sequence');
   if(playing){if(+$('now').value>=1000)$('now').value=0;const step=()=>{if(!playing)return;const v=Math.min(1000,+$('now').value+8);$('now').value=v;update();if(v>=1000){$('play').click();return}playT=setTimeout(step,90)};step()}
   else{clearTimeout(playT);heatKey='';update()}};
 let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.invalidateSize();update()},150)});
@@ -848,7 +881,7 @@ document.querySelectorAll('#tolSeg button').forEach(b=>b.onclick=()=>{setTol(b.d
 // ---------- helpers the story uses ----------
 function seqIndex(key){return SEQ.findIndex(s=>s.key===key)}
 function goSeq(key){const i=seqIndex(key);if(S&&S.key===key){enterDetail();return}pickSeq(i)}
-function setDays(d){$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
+function setDays(d){replayTimeOverride=null;$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
 function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
 function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v);renderLayTgl()}
 function resetChoices(){$('bld').value='local';setTol('0.01');$('shk').value='0';$('exposure').value='1440';$('reveal').checked=true;resetComparison()}
@@ -917,7 +950,7 @@ const WGEO={land110:topojson.feature(WORLD.land110,WORLD.land110.objects.land),l
 const CASES=SEQ.map(s=>({id:'case:'+s.key,kind:'case',seq:s,lon:s.lon,lat:s.lat,M:s.M,t:Date.parse(s.t0),place:s.label}));
 let mode='detail',feed=null,feedAt=0,feedErr=null,gSel=null,gItems=[],loadingLive=false;const liveSeqs={};
 const globe=GLOBE.create($('globe'),WGEO,{accent:PAL.red,onPick:it=>{gSel=it;renderGCard();markWorldList();const row=document.querySelector('#wList li[aria-current]');if(row)row.scrollIntoView({block:'nearest'});if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
-function enterWorld(){if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
+function enterWorld(){liveOpenToken++;stopSummary();if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
   $('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS</small>';globe.resize();globe.start();renderWorld()}
 function enterDetail(refresh=true){if(mode==='detail')return;mode='detail';document.body.classList.remove('world');globe.stop();$('gTip').hidden=true;
   if(refresh&&S){renderHeader();map.invalidateSize();update()}}
@@ -927,7 +960,7 @@ function itemLine(it){return it.kind==='case'?fmtDate(new Date(it.t)):`${ago(Dat
 function renderWorld(){
   gItems=worldItems();globe.setItems(gItems);if(gSel)gSel=gItems.find(i=>i.id===gSel.id)||gSel;
   const live=gItems.filter(i=>i.kind==='live').sort((a,b)=>b.t-a.t),min=$('wMin').value,nf=live.filter(q=>q.shakemap).length;
-  $('wStatus').innerHTML=feed?`${live.length} of magnitude ${min} or more; ${nf} have a forecast. Updated ${fmtClock(new Date(feedAt))}.${feedErr?` The last check failed (${esc(feedErr)}).`:''}`
+  $('wStatus').innerHTML=feed?`${live.length} of magnitude ${min} or more; ${nf} have a forecast. Feed generated ${fmtDT(new Date(feed.generated))}; checked ${fmtClock(new Date(feedAt))}.${feedErr?` The last check failed (${esc(feedErr)}).`:''}`
     :feedErr?`Can't reach USGS right now (${esc(feedErr)}). Showing the ${SEQ.length} case studies; retrying every 2 minutes.`:'Loading the USGS feed…';
   if(mode==='world')$('hNote').textContent=feed?`Updated ${fmtClock(new Date(feedAt))}`:'';
   const li=it=>`<li data-id="${esc(it.id)}" tabindex="0"><span class="m">${it.M.toFixed(1)}</span><span class="t">${esc(it.place)}</span><span class="s">${itemLine(it)}${it.kind==='live'&&it.shakemap?', <span class="fc">forecast available</span>':''}</span></li>`;
@@ -951,34 +984,26 @@ function renderGCard(){const c=$('gCard'),it=gSel;if(!it){c.hidden=true;return}c
       `<a href="${esc(it.url)}" target="_blank" rel="noopener">USGS event page</a>`}
   $('gX').onclick=()=>{gSel=null;globe.select(null);renderGCard();markWorldList()};if($('gOpen'))$('gOpen').onclick=()=>openItem(it)}
 function openItem(it){if(it.kind==='case'){pickSeq(SEQ.indexOf(it.seq));selectTab('spot')}else if(it.shakemap)openLive(it)}
-function registerLive({seq,shakemap,extra}){
-  const m=LIVE.basemap({land:WGEO.land50,borders:WGEO.borders50},shakemap,seq,WTOWNS);
-  D.shakemaps[seq.key]=shakemap;EX[seq.key]=extra;BASE[seq.key]=m.base;POP.towns[seq.key]=m.towns;POP.seqCountry[seq.key]=m.country;liveSeqs[seq.id]=seq}
-async function openLive(it){
-  if(liveSeqs[it.id]){pickSeq(liveSeqs[it.id]);selectTab('spot');refreshLive();return}
-  if(loadingLive)return;loadingLive=true;
-  const box=$('gLoad'),steps=[['event','Finding the event'],['shakemap','Downloading the ShakeMap grid (the big one)'],['catalogue','Downloading the aftershock catalogue'],['pager','Reading the PAGER report']];
-  const show=s=>{const k=steps.findIndex(x=>x[0]===s);box.innerHTML=`<b>Loading M${it.M.toFixed(1)}, ${esc(it.place)}</b><ol>${steps.map(([,t],j)=>`<li class="${j<k?'done':j===k?'now':''}">${t}</li>`).join('')}</ol>`};
-  box.hidden=false;show('event');
-  try{const r=await LIVE.load(it.id,show);registerLive(r);box.hidden=true;pickSeq(r.seq);selectTab('spot')}
-  catch(e){box.innerHTML=`<b>Couldn't load this earthquake</b><p>${esc(e.message==='Failed to fetch'?'Could not reach USGS. Check the internet connection and try again.':e.message)}</p><div class="row"><button class="btn" id="gLoadX">Close</button></div>`;$('gLoadX').onclick=()=>box.hidden=true;$('gLoadX').focus()}
-  finally{loadingLive=false}}
-// While a live quake is open, re-check its catalogue on every poll; stay at "now" if the timeline was there.
-async function refreshLive(){if(mode!=='detail'||!S||!S.live||playing||tourOn)return;const seq=S;
-  try{const atEnd=+$('now').value>=1000,t=sliderToT(+$('now').value),c=await LIVE.catalogue(seq);if(S!==seq)return;
-    const changed=c.events.length!==seq.events.length;Object.assign(seq,c);tMax=Math.max(seq.daysAvailable,tMin*1.5);
-    $('now').value=atEnd?1000:tToSlider(Math.min(t,tMax));if(changed)heatKey='';update()}catch(e){/* keep the last catalogue; dataStatus shows when it was checked */}}
-async function pollFeed(){try{feed=await LIVE.feed();feedAt=Date.now();feedErr=null}catch(e){feedErr=e.message==='Failed to fetch'?'offline?':e.message}
-  renderWorld();refreshLive()}
+__LIVE_CONTROLS__
+let feedLoading=false;
+async function pollFeed(){
+  const detail=refreshLive();
+  if(feedLoading){await detail;return}feedLoading=true;
+  try{feed=await LIVE.feed();feedAt=Date.now();feedErr=null}catch(e){feedErr=e.message==='Failed to fetch'?'offline?':e.message}
+  finally{feedLoading=false;renderWorld()}
+  await detail;
+}
 $('wMin').onchange=renderWorld;$('wOnlyF').onchange=renderWorld;
 const toWorld=()=>{enterWorld();$('globe').focus({preventScroll:true})};   // the button that was clicked is hidden in world view
 $('worldBtn').onclick=toWorld;$('evWorld').onclick=toWorld;
 $('gIn').onclick=()=>globe.zoomBy(1.6);$('gOut').onclick=()=>globe.zoomBy(1/1.6);
 addEventListener('resize',()=>{if(mode==='world')globe.resize()});
 setInterval(pollFeed,POLL_MS);
+setInterval(()=>{if(S&&mode==='detail'){renderDataStatus();updateSpokenSummary()}},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-feedAt>POLL_MS)pollFeed()});
 
-requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen){$('welcome').hidden=false;$('wStory').focus()}});
+__ACCESS__
+requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();openSharedView();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen&&!new URLSearchParams(location.hash.slice(1)).has('view')){$('welcome').hidden=false;$('wStory').focus()}});
 </script>
 </body>
 </html>

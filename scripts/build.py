@@ -23,6 +23,8 @@ world = '{' + ','.join(f'"{k}":' + read('node_modules', 'world-atlas', f + '.jso
                        for k, f in [('land110', 'land-110m'), ('countries110', 'countries-110m'), ('land50', 'land-50m'), ('countries50', 'countries-50m')]) + '}'
 validation = read('src', 'validation.js').replace("if (typeof module !== 'undefined') module.exports = VALIDATION;", '')
 scenario = read('src', 'scenario.js').replace("if (typeof module !== 'undefined') module.exports = SCENARIO;", '')
+view_state = read('src', 'view-state.js').replace("if(typeof module!=='undefined')module.exports=VIEW_STATE;", '')
+spoken = read('src', 'spoken.js').replace("if(typeof module!=='undefined')module.exports=SPOKEN;", '')
 extra = json.loads(read('data', 'ground-failure-and-pager.json'))
 for v in extra.values():
     if v.get('pager'):
@@ -50,8 +52,12 @@ out = (template
        .replace('__SHAKE__', shake)
        .replace('__VALIDATION__', validation)
        .replace('__SCENARIO__', scenario)
+       .replace('__VIEW_STATE__', view_state)
+       .replace('__SPOKEN__', spoken)
        .replace('__PLANNER__', read('src', 'planner.js'))
        .replace('__ASSISTANT__', read('src', 'assistant.js'))
+       .replace('__ACCESS__', read('src', 'access.js'))
+       .replace('__LIVE_CONTROLS__', read('src', 'live-controls.js'))
        .replace('__SITEFIT__', read('data', 'site-term-fit.json')))
 with open(p('index.html'), 'w', encoding='utf-8', newline='\n') as f:  # same bytes on Windows and Linux
     f.write(out)

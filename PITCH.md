@@ -52,7 +52,7 @@ Emergency agencies and NGOs deciding when to send people home or where to put sh
 Opt-in only. Only people with contributor access to the page can see them, and you can delete yours at any time.
 
 **Is it really live?**
-Yes. The globe reads the USGS feed of M4.5+ quakes from the last 30 days every two minutes. Opening a quake downloads its catalogue, ShakeMap and PAGER report straight from USGS, and the catalogue is re-checked while it's open. Only quakes with a ShakeMap (usually M5.5+) get a forecast, ground-failure maps are not loaded for live quakes yet, and it is not an official USGS forecast.
+Yes. The globe reads the USGS feed of M4.5+ quakes from the last 30 days every two minutes. Opening a quake downloads its catalogue, ShakeMap and PAGER report straight from USGS, and checks for revisions to all three while it is open. Failed updates are labelled and the last successful data stays visible. Only quakes with a ShakeMap (usually M5.5+) get a forecast, ground-failure maps are not loaded for live quakes yet, and it is not an official USGS forecast.
 
 **Can I trust the chatbot?**
 It's Gemini, but it doesn't make numbers up: it can only answer by calling our forecast (the same model as the panel), and under each answer it lists exactly what it checked. Its instructions forbid saying a building is safe to enter. It can still phrase things badly, which is why the checks are shown.
@@ -64,10 +64,13 @@ Ground-failure maps for live quakes, finer city soil maps, building data from Op
 
 Numbers changed after fixing discarded posterior probability and aligning the simulations with the formula. Use the current screen values. The 13 case studies are a retrospective snapshot, not an as-issued hindcast; the live globe uses current USGS data but is not an official forecast. See [the model audit](docs/model-audit.md).
 
-## Optional 3.1 feature demonstration
+## Optional feature demonstration
 
 0. Open the chat bubble at the bottom left of the map and click "What if I'm only inside for 20 minutes?". Gemini runs the forecast for a 20-minute stay and answers; point out the "Checked:" line under the answer.
 
 1. Change the exposure from 10 minutes to 8 hours. The estimate, parameter range, projected start and curve update for that whole interval.
 2. Select **Choose B on map**, then click another place. A stays fixed; the blue B pin is compared at the same intensity threshold and replay time. These are model comparisons, not verified shelters.
 3. Select **Save this check**, then advance the replay past more earthquakes. **Since your saved check** explains newly visible catalogue entries, elapsed time and any settings changes. The baseline stays fixed until explicitly saved again.
+4. Change the pins or settings, then select **Restore saved setup**. The saved comparison returns while the current time stays selected.
+5. On the hosted site, select **Share view** and open the link. Both pins, settings and the exact UTC time return; figures are recalculated from the available data.
+6. Select **Read summary**. It reads the calculated estimate, parameter range and limits using a device voice. Open **Voice options and text summary** to slow it down or read the transcript.

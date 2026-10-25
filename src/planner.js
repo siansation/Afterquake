@@ -82,19 +82,21 @@ function currentCheck(){
   // parameters so a rebuilt snapshot cannot silently compare two different models.
   const modelVersion=JSON.stringify({algorithm:1,rate:MODEL.params,k:SHAKE.K,bias:SHAKE.BIAS,depth:SHAKE.H,kernel:SHAKE.KERNEL,maxMagnitude:SHAKE.MMAX});
   return SCENARIO.capture({sequence:S.key,location:loc,now:cur.now,minutes:cur.exposure.minutes,
+    at:cur.nowDate?cur.nowDate.toISOString():new Date(Date.parse(S.t0)+cur.now*864e5).toISOString(),origin:S.t0,
+    comparison:comparisonLocation?{...comparisonLocation}:null,
     probability:cur.exposure.probability,q:cur.sp.qv,threshold:cur.sp.thr,
     building:$('bld').value,calibrated:cur.calib,tolerance:cur.tol,savedAt:Date.now(),
     // Live catalogues refresh every 2 minutes; new events show up through the events comparison instead.
-    dataVersion:S.live?'live USGS':D.fetchedAt,gridVersion:JSON.stringify([G.version,G.processed,(EX[S.key]||{}).gfInfo||null]),
+    dataVersion:S.live?'live USGS':D.fetchedAt,gridVersion:JSON.stringify([G.version,G.processed,(EX[S.key]||{}).gfInfo||null,(EX[S.key]||{}).pager?.version||null]),
     modelVersion,events:S.events});
 }
 function renderChanges(){
   const previous=savedChecks[S.key],current=currentCheck(),diff=SCENARIO.changes(previous,current);
-  $('forgetCheck').disabled=!previous;$('changesFeedback').textContent=checkFeedback;
+  $('forgetCheck').disabled=!previous;$('restoreCheck').disabled=!previous;$('changesFeedback').textContent=checkFeedback;
   if(diff.status==='missing'){
     $('changesResult').innerHTML='<p class="p">Save your spot A now, then move the replay timeline or change a setting to see what affected the estimate. Saved checks stay in this browser.</p>';return;
   }
-  const savedDate=new Date(Date.parse(S.t0)+previous.now*864e5);
+  const savedDate=new Date(previous.at||Date.parse(S.t0)+previous.now*864e5);
   const earlier=`${chance(previous.probability)} over ${SCENARIO.durationLabel(previous.minutes)}`;
   const latest=`${chance(current.probability)} over ${SCENARIO.durationLabel(current.minutes)}`;
   const summary=diff.status==='same'?'No inputs changed since your saved check.':`Saved estimate: ${earlier}. Current estimate: ${latest}.`;

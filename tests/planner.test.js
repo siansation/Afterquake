@@ -1,46 +1,9 @@
-// Unit checks for browser controller behaviour with DOM/map/storage test doubles.
-// These verify interactions and persistence, not visual layout or real Leaflet input.
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const vm=require('node:vm');
-const MODEL=require('../src/model.js');
 const SHAKE=require('../src/shake.js');
 const SCENARIO=require('../src/scenario.js');
-const code=fs.readFileSync(path.join(__dirname,'../src/planner.js'),'utf8');
-const storageKey='afterquake.saved-checks.v1';
+const {harness,storageKey}=require('../test-support/planner-harness.js');
 
-function harness({stored=null,blocked=false}={}){
-  const nodes=new Map(),storage=new Map(stored==null?[]:[[storageKey,stored]]);
-  const node=id=>{
-    if(!nodes.has(id))nodes.set(id,{value:id==='exposure'?'1440':id==='bld'?'local':'',textContent:'',innerHTML:'',disabled:false,
-      attributes:{},setAttribute(key,value){this.attributes[key]=value},classList:{toggle(){}}});
-    return nodes.get(id);
-  };
-  const layer=()=>({items:[],addTo(){return this},clearLayers(){this.items=[]}});
-  const L={layerGroup:layer,divIcon:options=>options,marker:(position,options)=>({position,options,
-    bindPopup(html){this.popup=html;return this},addTo(target){target.items.push(this);return this}})};
-  const seq={key:'example',t0:'2023-02-06T00:00:00Z',events:[[0,7.5,0,0],[.1,5.2,.1,.1],[1.5,5.8,.2,.2]]};
-  const location={lat:0,lon:0,name:'Town A'},q=SHAKE.q([0,0],0,0,760,7,false);
-  const f=MODEL.fit(seq.events,1),cp=SHAKE.compact(f);
-  const ctx=vm.createContext({SCENARIO,SHAKE,MODEL,L,$:node,loc:location,S:seq,SEQ:[seq],
-    G:{coast:[],version:1,processed:'2023-02-07'},EX:{},D:{fetchedAt:'2026-10-24T17:32:53.517Z'},
-    cur:{f,cp,now:1,sp:{qv:q,thr:7,gv:{vs:760,mmi:6,liq:0,ls:null}},src:[0,0],calib:false,tol:.01,
-      exposure:SCENARIO.exposure(SHAKE,f,cp,q,1440),p24:SHAKE.probQ(f,cp,q,0,1)},
-    B:{towns:[['Town B',.1,.2]]},TOWNS:{towns:[['Town B',.1,.2]]},
-    map:{panTo(position){this.position=position}},selectTab(){},
-    gridAt:(lat,lon)=>Math.abs(lat)>5||Math.abs(lon)>5?null:{vs:lat===0&&lon===0?760:380,mmi:6,liq:.03,ls:null},
-    km:(lat,lon)=>[lon*111.32,lat*110.57],R:v=>String(v),pct:p=>`${(p*100).toFixed(1)}%`,
-    fmtDT:d=>d.toISOString(),esc:s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
-    localStorage:{getItem(key){if(blocked)throw new Error('blocked');return storage.get(key)||null},
-      setItem(key,value){if(blocked)throw new Error('blocked');storage.set(key,value)}}});
-  new vm.Script(code).runInContext(ctx);
-  return {ctx,node,storage,run:source=>vm.runInContext(source,ctx),advance(now){
-    const f=MODEL.fit(seq.events,now),cp=SHAKE.compact(f);
-    Object.assign(ctx.cur,{now,f,cp,exposure:SCENARIO.exposure(SHAKE,f,cp,q,+node('exposure').value)});
-  }};
-}
 
 test('choosing comparison B leaves A fixed and compares the same intensity and duration',()=>{
   const h=harness();h.node('pickComparison').onclick();

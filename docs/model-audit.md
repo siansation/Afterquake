@@ -1,6 +1,6 @@
 # Afterquake model and data audit
 
-Reviewed 24 October 2026, including the latest upstream changes through `e2eb709`.
+Reviewed 25 October 2026, including upstream changes through `8ac2827` and the version 3.2 refresh, sharing and speech controls.
 The source snapshot was downloaded from USGS at `2026-10-24T17:32:53.517Z`.
 The upstream cross-platform build and fitted soil coefficient (`k=-1.757`) are preserved.
 
@@ -20,6 +20,10 @@ The upstream cross-platform build and fitted soil coefficient (`k=-1.757`) are p
 The integral now uses `log1p` and `expm1` for numerical stability. The likelihood uses sufficient statistics without changing the statistical model. Repeated interval rates are cached to keep the full posterior practical for the map. Even so, summing the full posterior for every map cell took about 16 s per redraw, so the 7-day shading now interpolates exact values instead (see below).
 
 Version 3.1 adds selected exposure windows from 5 minutes to 24 hours. The projected start and curve integrate that full window after each candidate start; the 24-hour default preserves the earlier behaviour. Location comparisons hold the intensity threshold fixed at both pins. Saved-check explanations distinguish elapsed time, newly visible catalogue entries, revised earlier entries and changed assumptions; they use browser-local storage with a session-only fallback and do not provide live alerts.
+
+Version 3.2 changes the delivery of these estimates without changing model parameters. Live refresh checks event details and preferred ShakeMap/PAGER product signatures, invalidates shading even when catalogue revisions leave the event count unchanged, and preserves selected UTC time and valid comparison pins. Failed mandatory downloads retain the prior forecast and show a delayed-update warning. Optional PAGER failures retain the previous report with a warning and retry on the next check. A missing or withdrawn ShakeMap cannot silently produce a new forecast. Requests time out after 20 seconds and catalogue truncation is rejected.
+
+Shared links contain validated inputs and an absolute UTC time, not forecast outputs. The receiving page recalculates using its available data and reports timeline clamping; a link is not an immutable as-issued forecast. Restoring a saved setup keeps the current time. Spoken summaries use formatted figures from the panel, with freshness warnings before probabilities, and device-provided English voices; no language model generates the wording. Forecast changes and navigation stop playback.
 
 ## Live world view
 
@@ -89,11 +93,14 @@ The next scientific priorities are an independent local-shaking evaluation by he
 
 ## Verification and primary sources
 
-- `npm test`: 39 numerical, simulation, data-integrity, controller and live-loader tests (the live tests use synthetic grids, not the network). These cover 60,000 monthly Monte Carlo futures, cache invalidation, fitted-coefficient consistency, duration-specific threshold crossings, catalogue change explanations and local saved-check workflows. Controller tests use DOM/map/storage doubles and do not verify visual layout.
+- `npm test`: 81 numerical, simulation, data-integrity, controller, live-loader and assistant endpoint tests (the live tests use synthetic grids, not the network). These cover 60,000 monthly Monte Carlo futures, cache invalidation, fitted-coefficient consistency, duration-specific threshold crossings, catalogue change explanations, saved-check restoration, shared views, product revisions, download races and speech cancellation. Controller tests use DOM/map/storage/speech doubles and do not verify visual layout or actual audio.
 - `npm run backtest`: reproducible regional metrics from the same code as the Accuracy tab.
 - `npm run build` and `npm run check`: standalone artifact rebuilt; inline scripts parsed, embedded datasets decoded and bundled numerical modules executed without CommonJS. The bundled catalogue and soil coefficient must match the source files, and browser-module forecasts must match Node forecasts.
 - Browser check in Chrome after the live world view: globe rendering, drag and zoom, opening a live quake (Panama M7.7) and the case studies, the story from the globe, and no console errors.
+- No browser surface was available for a new visual or device-audio check of version 3.2. Its controller workflows and the rebuilt standalone artifact were checked automatically.
+- A live load and refresh of USGS event `us6000u4mn` retrieved ShakeMap revision 2 and PAGER event revision 2, with unchanged products reused and no warnings. This also caught the current XML's `event.number` revision field, which is distinct from the PAGER schema version.
 - [USGS FDSN event service](https://earthquake.usgs.gov/fdsnws/event/1/) documents the source queries.
+- [USGS ComCat products](https://earthquake.usgs.gov/data/comcat/products.php) documents preferred product weights and update times used to select revised ShakeMaps and PAGER reports.
 - [USGS aftershock scientific background](https://earthquake.usgs.gov/data/oaf/background.php) describes the Reasenberg–Jones family, regionalisation, Bayesian mixture and secondary-triggering limitations.
 - [GEM OpenQuake Allen 2012 implementation](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/allen_2012_ipe.py) supplies the published hypocentral coefficients, checked against the implementation.
 - [USGS aftershock forecast overview](https://earthquake.usgs.gov/data/oaf/overview.php) explains changing forecasts and product scope.

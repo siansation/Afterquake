@@ -911,6 +911,12 @@ body:not(.world) .wpane{display:none}
 .gload li.done{color:var(--good)} .gload li.now{color:var(--ink);font-weight:600}
 .gload p{margin:0;font-size:14px;color:var(--ink2)}
 @media (max-width:860px){.ghelp{display:none}.glegend .keys{max-width:170px}.gcard{bottom:auto;top:10px;width:calc(100% - 60px)}}
+.shared-notice{margin:0;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);font-size:14px}
+.data-delayed{color:var(--warn)}
+#liveActions[hidden]{display:none}
+.access-options{margin:8px 0}
+.access-options .fields{margin-top:8px}
+#shareURL{width:100%;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -924,6 +930,7 @@ body:not(.world) .wpane{display:none}
   <button class="hbtn" id="helpBtn">Help</button>
   <button class="hbtn fs" id="fsBtn">Fullscreen</button>
 </header>
+<p id="sharedNotice" class="shared-notice" role="status" hidden></p>
 <div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
   <div class="wbox">
     <h1 id="wTitle">After an earthquake, how long does the risk of strong shaking last?</h1>
@@ -968,6 +975,16 @@ body:not(.world) .wpane{display:none}
       </div>
       <div><p class="place" id="place"></p><span class="coords" id="coords"></span></div>
       <p class="muted" id="dataStatus"></p>
+      <div class="row" id="liveActions" hidden><button class="btn" id="refreshLive">Refresh USGS</button><button class="btn" id="followLive">Go to live time</button></div>
+      <div class="row"><button class="btn" id="readSummary">Read summary</button><button class="btn" id="stopSummary" disabled>Stop reading</button><button class="btn" id="shareView">Share view</button></div>
+      <p class="muted" id="speechStatus" role="status"></p>
+      <details class="access-options"><summary>Voice options and text summary</summary>
+        <div class="fields"><div class="f wide"><label for="summaryVoice">English voice</label><select id="summaryVoice"><option value="">Default English voice</option></select></div>
+        <div class="f wide"><label for="summarySpeed">Reading speed</label><select id="summarySpeed"><option value="0.75">Slower</option><option value="0.9" selected>Steady</option><option value="1">Normal</option></select></div></div>
+        <p class="p" id="spokenText"></p>
+      </details>
+      <div id="shareLinkBox" hidden><label for="shareURL">Comparison link</label><input id="shareURL" type="text" readonly aria-describedby="shareStatus"></div>
+      <p class="muted" id="shareStatus" role="status"></p>
       <div class="verdict" id="verdict" aria-live="polite"></div>
       <div class="fields">
         <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
@@ -996,7 +1013,7 @@ body:not(.world) .wpane{display:none}
       <div class="card">
         <h2>Since your saved check</h2>
         <div id="changesResult"></div>
-        <div class="row"><button class="btn" id="saveCheck">Save this check</button><button class="btn" id="forgetCheck" disabled>Forget check</button></div>
+        <div class="row"><button class="btn" id="saveCheck">Save this check</button><button class="btn" id="restoreCheck" disabled>Restore saved setup</button><button class="btn" id="forgetCheck" disabled>Forget check</button></div>
         <p class="muted" id="changesFeedback" role="status"></p>
       </div>
       <div class="card">
@@ -1182,10 +1199,21 @@ body:not(.world) .wpane{display:none}
 const LIVE = (() => {
   const FEED = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson';
   const API = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&';
-  const get = async (u, how) => { const r = await fetch(u); if (!r.ok) throw new Error(`USGS returned HTTP ${r.status}`); return r[how]() };
+  const get = async (u, how) => {
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try{const r=await fetch(u,{signal:controller.signal});if(!r.ok)throw new Error(`USGS returned HTTP ${r.status}`);return await r[how]()}
+    catch(e){if(e.name==='AbortError')throw new Error('USGS request timed out.');throw e}finally{clearTimeout(timer)}
+  };
   const q = p => get(API + new URLSearchParams(p), 'json');
   const wrap = (lon, ref) => lon + 360 * Math.round((ref - lon) / 360);   // same side of 180° as ref
   const lon180 = lon => ((lon + 540) % 360) - 180;
+  // ComCat preference is weight first, then update time. A withdrawn product must
+  // not silently remain preferred just because it occupies the first array slot.
+  function preferred(products,type){return [...(products[type]||[])].filter(p=>p.status!=='DELETE')
+    .sort((a,b)=>(Number(b.preferredWeight)||0)-(Number(a.preferredWeight)||0)||(Number(b.updateTime)||0)-(Number(a.updateTime)||0))[0]||null}
+  function productVersion(p){return p?JSON.stringify([p.source,p.code,p.updateTime,p.preferredWeight,p.status,p.contents]):''}
+  function geometryVersion(s){return JSON.stringify([s.M,s.t0,s.lat,+lon180(s.lon).toFixed(8),s.radiusKm])}
+  function catalogueChanged(a,b){return JSON.stringify(a)!==JSON.stringify(b)}
 
   async function feed() {
     const j = await get(FEED, 'json');
@@ -1203,12 +1231,16 @@ const LIVE = (() => {
     const t0 = Date.parse(s.t0), end = Date.now();
     const d = await q({ starttime: new Date(t0 - 2 * 864e5).toISOString(), endtime: new Date(end).toISOString(),
       latitude: s.lat, longitude: lon180(s.lon), maxradiuskm: s.radiusKm, minmagnitude: 4, orderby: 'time-asc', limit: 20000 });
-    const events = d.features.filter(f => f.properties.mag != null).map(f => [+((f.properties.time - t0) / 864e5).toFixed(5), f.properties.mag,
+    if(!Array.isArray(d.features))throw new Error('USGS returned an invalid catalogue.');
+    if(d.features.length>=20000)throw new Error('The catalogue reached the 20,000-event limit; a complete refresh is unavailable.');
+    const events = d.features.filter(f => f.properties.mag != null&&f.id!==s.id).map(f => [+((f.properties.time - t0) / 864e5).toFixed(5), f.properties.mag,
       +f.geometry.coordinates[1].toFixed(3), +wrap(f.geometry.coordinates[0], s.lon).toFixed(3)]);
-    // The mainshock is in the catalogue at t = 0; keep it even if a revision moved its time by a fraction of a second.
-    if (!events.some(e => Math.abs(e[0]) < 1e-4)) events.push([0, s.M, +s.lat.toFixed(3), +s.lon.toFixed(3)]);
+    if(events.some(e=>e.some(v=>!Number.isFinite(v))))throw new Error('USGS returned invalid event coordinates or magnitudes.');
+    // Use the current event-detail origin and magnitude for the mainshock even if
+    // the catalogue response was generated before the same revision.
+    events.push([0,s.M,+s.lat.toFixed(3),+s.lon.toFixed(3)]);
     events.sort((a, b) => a[0] - b[0]);
-    return { events, daysAvailable: +((end - t0) / 864e5).toFixed(4), fetchedAt: new Date(end).toISOString() };
+    return { events, daysAvailable: (end - t0) / 864e5, fetchedAt: new Date(end).toISOString() };
   }
 
   function parseGrid(txt) {
@@ -1229,7 +1261,8 @@ const LIVE = (() => {
     if (!(nc > 1 && nr > 1)) throw new Error('The ShakeMap does not cover the aftershock zone.');
     const mmi = new Uint8Array(nc * nr), vs = new Uint8Array(nc * nr);
     for (let rr = 0; rr < nr; rr++) for (let cc = 0; cc < nc; cc++) {
-      const line = g.body[(r0 + rr) * g.nlon + c0 + cc]; if (!line) continue; const v = line.split(' ');
+      const line = g.body[(r0 + rr) * g.nlon + c0 + cc]; if (!line) throw new Error('The ShakeMap grid is incomplete.'); const v = line.trim().split(/\s+/);
+      if(!Number.isFinite(+v[g.fields.MMI])||!(+v[g.fields.SVEL]>0))throw new Error('The ShakeMap has invalid shaking or ground data.');
       mmi[rr * nc + cc] = Math.round(+v[g.fields.MMI] * 20);
       vs[rr * nc + cc] = Math.min(255, Math.round(+v[g.fields.SVEL] / 8));
     }
@@ -1241,7 +1274,9 @@ const LIVE = (() => {
   // XML text comes back entity-encoded; decode it to plain text (the page escapes it again when showing it)
   const unxml = t => t && t.replace(/&(lt|gt|quot|apos|amp);/g, (m, e) => ({ lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' })[e]);
   function parsePager(x) {
-    return { version: (x.match(/version_number="(\d+)"/) || [])[1],
+    // Current PAGER XML uses event.number for the report revision; pager.version
+    // is the schema version. Keep support for older version_number snapshots.
+    return { version: (x.match(/version_number="(\d+)"/) || x.match(/<event\b[^>]*\bnumber="(\d+)"/) || [])[1],
       alerts: [...x.matchAll(/<alert type="(\w+)" level="(\w+)"/g)].map(m => [m[1], m[2]]),
       struct: unxml((x.match(/<structcomment>([\s\S]*?)<\/structcomment>/) || [])[1]?.trim()),
       secondary: unxml((x.match(/<secondary_effects>([\s\S]*?)<\/secondary_effects>/) || [])[1]?.trim()),
@@ -1249,22 +1284,47 @@ const LIVE = (() => {
   }
 
   // step(name) reports progress: 'event', 'catalogue', 'shakemap', 'pager'
-  async function load(id, step = () => {}) {
+  async function load(id, step = () => {}, previous=null) {
     step('event');
     const ev = await q({ eventid: id }), P = ev.properties.products || {};
-    if (!P.shakemap) throw new Error('USGS has not published a ShakeMap for this earthquake yet, so there is no ground-shaking data to forecast from.');
+    const smProduct=preferred(P,'shakemap'),pagerProduct=preferred(P,'losspager');
+    if (!smProduct) throw new Error('USGS has no current ShakeMap for this earthquake.');
     const M = ev.properties.mag, [lon, lat, depth] = ev.geometry.coordinates;
-    const seq = { key: 'live:' + ev.id, id: ev.id, live: true, label: ev.properties.place || ev.properties.title, place: 'live USGS data',
-      M, t0: new Date(ev.properties.time).toISOString(), lat, lon, depth, radiusKm: radiusKm(M) };
+    if(!Number.isFinite(M)||![lon,lat,depth,ev.properties.time].every(Number.isFinite))throw new Error('USGS returned invalid earthquake details.');
+    const seq = { key: previous?previous.seq.key:'live:' + ev.id, id: ev.id, live: true, label: ev.properties.place || ev.properties.title, place: 'live USGS data',
+      M, t0: new Date(ev.properties.time).toISOString(), lat, lon, depth, radiusKm: radiusKm(M),eventUpdated:ev.properties.updated,
+      productVersions:{shakemap:productVersion(smProduct),pager:''},warnings:[] };
     step('shakemap');
-    const g = parseGrid(await get(P.shakemap[0].contents['download/grid.xml'].url, 'text'));
-    if (seq.lon < g.lon0 - 180) seq.lon += 360;                          // work in the grid's longitude frame near 180°
-    const shakemap = clipGrid(g, seq);
+    let shakemap;
+    if(previous&&previous.seq.productVersions?.shakemap===seq.productVersions.shakemap&&geometryVersion(previous.seq)===geometryVersion(seq)){
+      shakemap=previous.shakemap;seq.lon=wrap(seq.lon,previous.seq.lon);
+    }else{
+      const url=smProduct.contents?.['download/grid.xml']?.url;
+      if(!url)throw new Error('The current ShakeMap has no downloadable grid.');
+      const g=parseGrid(await get(url,'text'));
+      if(seq.lon<g.lon0-180)seq.lon+=360;
+      shakemap=clipGrid(g,seq);
+    }
     step('catalogue');
     Object.assign(seq, await catalogue(seq));
     step('pager');
     let pager = null;
-    if (P.losspager) try { pager = parsePager(await get(P.losspager[0].contents['pager.xml'].url, 'text')) } catch (e) { /* PAGER is optional */ }
+    const pagerVersion=productVersion(pagerProduct);
+    if(pagerProduct){
+      if(previous&&previous.seq.productVersions?.pager===pagerVersion&&previous.extra.pager){pager=previous.extra.pager;seq.productVersions.pager=pagerVersion}
+      else try{
+        const url=pagerProduct.contents?.['pager.xml']?.url;if(!url)throw new Error('No report download');
+        pager=parsePager(await get(url,'text'));
+        if(!pager.version)throw new Error('USGS returned an invalid PAGER report.');
+        seq.productVersions.pager=pagerVersion;
+      }catch(e){
+        // Keep optional report failures separate from fresh catalogue/shaking data.
+        // Retain its OLD signature so the next poll retries the failed new version.
+        pager=previous?.extra.pager||null;seq.productVersions.pager=previous?.seq.productVersions?.pager||'';
+        seq.warnings.push(pager?'PAGER refresh failed; the previous report is still shown.':'PAGER is currently unavailable.');
+      }
+    }
+    seq.checkedAt=new Date().toISOString();
     return { seq, shakemap, extra: pager ? { pager } : {} };
   }
 
@@ -1305,7 +1365,7 @@ const LIVE = (() => {
       towns: { towns: inGrid, country }, country };
   }
 
-  return { FEED, feed, load, catalogue, parseGrid, clipGrid, parsePager, basemap, radiusKm };
+  return { FEED, feed, load, catalogue, parseGrid, clipGrid, parsePager, basemap, radiusKm,preferred,productVersion,geometryVersion,catalogueChanged };
 })();
 
 </script>
@@ -1726,11 +1786,14 @@ const SCENARIO = (() => {
       Number.isFinite(s.savedAt) && typeof s.building === 'string' &&
       typeof s.calibrated === 'boolean' && typeof s.dataVersion === 'string' &&
       typeof s.gridVersion === 'string' && typeof s.modelVersion === 'string' &&
+      (s.at==null||(typeof s.at==='string'&&Number.isFinite(Date.parse(s.at)))) &&
+      (s.origin==null||(typeof s.origin==='string'&&Number.isFinite(Date.parse(s.origin)))) &&
+      (s.comparison==null||(Number.isFinite(s.comparison.lat)&&Math.abs(s.comparison.lat)<=90&&Number.isFinite(s.comparison.lon)&&Math.abs(s.comparison.lon)<=360&&typeof s.comparison.name==='string')) &&
       Array.isArray(s.events) && s.events.every(e => Array.isArray(e) && e.length === 4 &&
         e.every(Number.isFinite) && e[0] >= -.001 && e[0] <= s.now);
   }
   function capture(input) {
-    const s = { ...input, version: VERSION, location: { ...input.location }, events: knownEvents(input.events, input.now) };
+    const s = { ...input, version: VERSION, location: { ...input.location }, comparison:input.comparison?{...input.comparison}:null,events: knownEvents(input.events, input.now) };
     if (!validSnapshot(s)) throw new RangeError('Cannot save an incomplete forecast check.');
     return s;
   }
@@ -1755,16 +1818,24 @@ const SCENARIO = (() => {
     if (previous.calibrated !== current.calibrated) reasons.push('The shaking equation option changed.');
     if (previous.tolerance !== current.tolerance) reasons.push('Your chosen risk limit changed; this changes the projected crossing time, not the shaking probability.');
     if (thresholdChanged) reasons.push('The modelled intensity threshold changed.');
-    const forward = current.now - previous.now > 1e-8, backward = previous.now - current.now > 1e-8;
-    const commonTime = Math.min(previous.now, current.now);
-    const revised = catalogueSignature(previous.events, commonTime) !== catalogueSignature(current.events, commonTime);
+    // Origin revisions change every relative day value. Compare in UTC whenever
+    // saved checks carry absolute times; otherwise an origin shift looks like replay.
+    const absolute=!!previous.at&&!!current.at,unit=absolute?864e5:1;
+    const origin=s=>s.origin?Date.parse(s.origin):Date.parse(s.at)-s.now*864e5;
+    const previousTime=absolute?Date.parse(previous.at):previous.now,currentTime=absolute?Date.parse(current.at):current.now;
+    const absoluteEvents=s=>absolute?s.events.map(e=>[origin(s)+e[0]*864e5,...e.slice(1)]):s.events;
+    const beforeEvents=absoluteEvents(previous),afterEvents=absoluteEvents(current);
+    if(absolute&&Math.abs(origin(previous)-origin(current))>1)reasons.push('The mainshock origin time was revised; replay times are compared in UTC.');
+    const forward = (currentTime-previousTime)/unit > 1e-8, backward = (previousTime-currentTime)/unit > 1e-8;
+    const commonTime = Math.min(previousTime,currentTime);
+    const revised = catalogueSignature(beforeEvents, commonTime) !== catalogueSignature(afterEvents, commonTime);
     if (revised) reasons.push('Catalogue entries at or before the earlier replay time changed.');
     if (current.dataVersion !== previous.dataVersion) reasons.push('The downloaded data snapshot was refreshed.');
-    if (current.gridVersion !== previous.gridVersion) reasons.push('The mainshock or ground-failure data version changed.');
+    if (current.gridVersion !== previous.gridVersion) reasons.push('The mainshock or ground-failure data version changed, or the PAGER report was updated.');
     if (current.modelVersion !== previous.modelVersion) reasons.push('The model configuration or fitted coefficient changed.');
     if (forward) {
-      reasons.push(`Replay time advanced by ${durationLabelForElapsed((current.now - previous.now) * 1440)}.`);
-      const added = current.events.filter(e => e[0] > previous.now && e[0] <= current.now);
+      reasons.push(`Replay time advanced by ${durationLabelForElapsed((currentTime-previousTime)/unit * 1440)}.`);
+      const added = afterEvents.filter(e => e[0] > previousTime && e[0] <= currentTime);
       if (added.length) {
         const large = added.filter(e => e[1] >= 5), max = Math.max(...added.map(e => e[1]));
         reasons.push(`${added.length} additional catalogue event${added.length === 1 ? '' : 's'} became visible (${large.length} M5+; largest M${max.toFixed(1)}). New events affect the fit or source locations; they do not always increase the estimate.`);
@@ -1785,6 +1856,66 @@ const SCENARIO = (() => {
     return `${Number((minutes / 1440).toFixed(1))} days`;
   }
   return { durationDays, durationLabel, formatProbability, exposure, distanceKm, capture, validSnapshot, changes };
+})();
+
+</script>
+<script>// Small, validated view descriptions. Links carry inputs, never cached probabilities.
+// The URL fragment stays client-side until the user explicitly shares the link.
+const VIEW_STATE=(()=>{
+  const MINUTES=[5,10,30,60,480,1440],BUILDINGS=['local','6','7','8','9'],LIMITS=[.001,.01,.02,.1];
+  const lon180=lon=>lon>=-180&&lon<=180?lon:((lon+540)%360)-180;
+  function point(p){
+    if(!p||!Number.isFinite(p.lat)||Math.abs(p.lat)>90||!Number.isFinite(p.lon)||Math.abs(p.lon)>360||typeof p.name!=='string'||p.name.length>160)throw new Error('The link contains an invalid map pin.');
+    return {lat:p.lat,lon:lon180(p.lon),name:p.name};
+  }
+  function clean(s){
+    if(!s||s.v!==1||!s.event||!['case','live'].includes(s.event.kind)||typeof s.event.id!=='string'||!/^[a-z0-9_-]{1,80}$/i.test(s.event.id))throw new Error('This view link is invalid or uses an unsupported version.');
+    if(!MINUTES.includes(s.minutes)||!BUILDINGS.includes(s.building)||!LIMITS.includes(s.tolerance)||typeof s.calibrated!=='boolean')throw new Error('The view has unsupported forecast settings.');
+    if(typeof s.at!=='string'||!Number.isFinite(Date.parse(s.at)))throw new Error('The view has an invalid forecast time.');
+    if(typeof s.dataAt!=='string'||s.dataAt.length>80)throw new Error('The view has an invalid data timestamp.');
+    return {v:1,event:{kind:s.event.kind,id:s.event.id},a:point(s.a),b:s.b==null?null:point(s.b),
+      minutes:s.minutes,building:s.building,tolerance:s.tolerance,calibrated:s.calibrated,
+      at:new Date(s.at).toISOString(),dataAt:s.dataAt};
+  }
+  function fragment(s){return '#'+new URLSearchParams({view:JSON.stringify(clean(s))}).toString()}
+  function parse(hash){
+    if(!hash||!new URLSearchParams(hash.replace(/^#/, '')).has('view'))return null;
+    if(hash.length>6000)throw new Error('This view link is too long.');
+    const raw=new URLSearchParams(hash.replace(/^#/, '')).get('view');
+    try{return clean(JSON.parse(raw))}catch(e){throw new Error('Could not open this view link: '+e.message)}
+  }
+  function url(base,s){
+    const u=new URL(base);if(!['https:','http:'].includes(u.protocol))throw new Error('Open the hosted app to create a link others can use.');
+    u.username='';u.password='';u.search='';
+    u.hash=fragment(s);return u.href;
+  }
+  function fromCheck(s){
+    const live=s.sequence.startsWith('live:');
+    return clean({v:1,event:{kind:live?'live':'case',id:live?s.sequence.slice(5):s.sequence},a:s.location,b:s.comparison||null,
+      minutes:s.minutes,building:s.building,tolerance:s.tolerance,calibrated:s.calibrated,
+      // New saved checks record absolute time so later origin revisions do not move it.
+      at:s.at,dataAt:s.dataVersion});
+  }
+  return {clean,parse,fragment,url,fromCheck,point,lon180};
+})();
+
+</script>
+<script>// Deterministic captions and speech text built from the calculated forecast.
+// Device voices change pronunciation, not the language or the underlying figures.
+const SPOKEN=(()=>{
+  function percentage(text){return text.replace(/^</,'less than ').replace('%',' percent')}
+  function summary(s){
+    return [
+      `Forecast for ${s.place}, following ${s.earthquake}.`,
+      `Selected time: ${s.time}.`,
+      s.freshness,
+      `For a stay of ${s.duration}, the estimated chance of shaking above your selected intensity threshold is ${percentage(s.probability)}.`,
+      `The range from aftershock-rate uncertainty alone is ${percentage(s.low)} to ${percentage(s.high)}. Ground, building and model errors add uncertainty.`,
+      s.decision,
+      'These are estimates for magnitude five or larger aftershocks. Building entry needs an inspection and local authority guidance.'
+    ].filter(Boolean).join(' ');
+  }
+  return {summary};
 })();
 
 </script>
@@ -1821,7 +1952,7 @@ function countryThr(cc){const f=POP.fatality[cc];if(!f)return null;return Math.m
 function fatRate(cc,mmi){const f=POP.fatality[cc];return f?PhiN(Math.log(mmi/f[0])/f[1]):null}
 
 // ---------- state ----------
-let S,G,B,TOWNS,tMin=1/24,tMax=1,layer='risk',loc=null,heat=null,heatKey='',playing=false,cur={};
+let S,G,B,TOWNS,tMin=1/24,tMax=1,layer='risk',loc=null,heat=null,heatKey='',playing=false,cur={},replayTimeOverride=null;
 const sliderToT=v=>tMin*Math.pow(tMax/tMin,v/1000),tToSlider=t=>Math.round(1000*Math.log(t/tMin)/Math.log(tMax/tMin));
 const km=(lat,lon)=>[(lon-S.lon)*111.32*G.c,(lat-S.lat)*110.57];
 function gridAt(lat,lon){const c=Math.round((lon-G.lon0)/G.dlon),r=Math.round((G.lat0-lat)/G.dlat);if(c<0||r<0||c>=G.nc||r>=G.nr)return null;const i=r*G.nc+c;return{mmi:G.mmi[i]/20,vs:G.vs[i]*8,liq:G.liq?G.liq[i]/500:null,ls:G.ls?G.ls[i]/1000:null}}
@@ -1837,10 +1968,9 @@ const landLayer=L.layerGroup().addTo(map),overlayLayer=L.layerGroup().addTo(map)
 const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupAnchor:[0,-30],html:'<svg class="pin" viewBox="0 0 26 36" aria-hidden="true"><path d="M13 35C13 35 2 21 2 13a11 11 0 1 1 22 0c0 8-11 22-11 22z" fill="'+PAL.red+'" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.2" fill="#fff"/></svg>'});
 const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><path d="M13 1.5l3.3 7.6 8.2.7-6.2 5.4 1.9 8L13 19l-7.2 4.2 1.9-8L1.5 9.8l8.2-.7z" fill="'+PAL.red+'" stroke="#fff" stroke-width="1.6"/></svg>'});
 
-// i: index into SEQ, or a live sequence registered by registerLive()
-function pickSeq(i){
-  enterDetail(false);resetComparison();checkFeedback='';
-  S=typeof i==='number'?SEQ[i]:i;B=BASE[S.key];resetAsk();TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
+// Reinstall a revised grid without resetting the user's pins, camera or selected time.
+function installSequenceGrid(fit=true){
+  B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
   const bytes=v=>typeof v==='string'?b64(v):v;   // bundled grids are base64; live ones arrive as byte arrays
   G={...sm,mmi:bytes(sm.mmi),vs:bytes(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
   G.lon1=G.lon0+(G.nc-1)*G.dlon;G.lat1=G.lat0-(G.nr-1)*G.dlat;
@@ -1848,21 +1978,35 @@ function pickSeq(i){
   // coastline segments (drop edges created by clipping to the map box)
   const bx={w:G.lon0-0.3,e:G.lon1+0.3,s:G.lat1-0.3,n:G.lat0+0.3},on=(p,q)=>[['0','w'],['0','e'],['1','s'],['1','n']].some(([ax,k])=>Math.abs(p[ax]-bx[k])<2e-3&&Math.abs(q[ax]-bx[k])<2e-3);
   G.coast=[];for(const r of B.land)for(let k=0;k<r.length;k++){const a=r[k],b=r[(k+1)%r.length];if(!on(a,b))G.coast.push([...km(a[1],a[0]),...km(b[1],b[0])])}
-  renderHeader();
-  // A live quake can be minutes old, so its timeline runs from shortly after the mainshock to now.
-  tMin=S.live?Math.min(1/24,Math.max(1/1440,S.daysAvailable/3)):1/24;tMax=S.live?Math.max(S.daysAvailable,tMin*1.5):Math.max(1,S.daysAvailable);
-  $('now').value=tToSlider(Math.min(tMax,S.live||S.key.endsWith('26')?tMax:1));
   // land
   landLayer.clearLayers();
   for(const r of B.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:true,color:'#8a959e',weight:1,fillColor:'#f4f4f1',fillOpacity:1,interactive:false}).addTo(landLayer);
   for(const l of B.borders)L.polyline(l.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',color:'#7d8893',weight:1.2,dashArray:'4 4',interactive:false}).addTo(landLayer);
   G.mask=null;
-  map.invalidateSize();map.fitBounds(G.bounds.pad(-0.08));map.setMaxBounds(G.bounds.pad(0.4));
-  $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${n}"></option>`).join('');
+  map.invalidateSize();map.setMaxBounds(G.bounds.pad(0.4));if(fit)map.fitBounds(G.bounds.pad(-0.08));
+  $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${esc(n)}"></option>`).join('');
+}
+function defaultSpot(){
   const t=TOWNS.towns.find(t=>B.labels.includes(t[0]))||TOWNS.towns[0];
   const lab=B.labels.map(n=>B.towns.find(x=>x[0]===n)).filter(Boolean)[0];
   const start=lab||(t&&[t[0],t[1],t[2]]);setLoc(start?start[1]:S.lat,start?start[2]:S.lon,start?start[0]:'Epicentre area',false);
-  buildBuildingOptions();renderEvents();renderLedger();renderPager();heatKey='';update();refreshCheckins();
+}
+function timelineBounds(){
+  const age=Math.max(1e-9,S.daysAvailable);
+  tMin=S.live?Math.min(1/24,age/3):1/24;tMax=S.live?age:Math.max(1,age);
+}
+function selectedDays(){return replayTimeOverride==null?sliderToT(+$('now').value):Math.max(tMin,Math.min(tMax,(replayTimeOverride-Date.parse(S.t0))/864e5))}
+function setAbsoluteReplayTime(timestamp){
+  const requested=(timestamp-Date.parse(S.t0))/864e5,days=Math.max(tMin,Math.min(tMax,requested));
+  replayTimeOverride=Date.parse(S.t0)+days*864e5;$('now').value=tToSlider(days);
+  return Math.abs(days-requested)>1e-9;
+}
+// i: index into SEQ, or a registered live sequence.
+function pickSeq(i){
+  liveOpenToken++;enterDetail(false);stopSummary();resetComparison();checkFeedback='';replayTimeOverride=null;
+  S=typeof i==='number'?SEQ[i]:i;$('gLoad').hidden=true;resetAsk();installSequenceGrid();renderHeader();timelineBounds();
+  $('now').value=tToSlider(Math.min(tMax,S.live||S.key.endsWith('26')?tMax:1));
+  defaultSpot();buildBuildingOptions();renderEvents();renderLedger();renderPager();heatKey='';update();refreshCheckins();
 }
 function renderHeader(){$('hMag').textContent=S.M.toFixed(1);$('hTxt').innerHTML=`${esc(S.label)} <small>${fmtDate(new Date(S.t0))}, ${esc(S.place)}</small>`}
 function buildBuildingOptions(){const cc=pinCountry(),ct=countryThr(cc),keep=$('bld').value||'local';
@@ -1882,13 +2026,12 @@ function spot(lat,lon,thrBase,calib,src){
   if(why.length)thr=Math.max(6,thrBase-1);
   const [x,y]=km(lat,lon);return{gv,thr,why,x,y,qv:SHAKE.q(src,x,y,gv.vs,thr,calib)}}
 function update(){
-  const now=sliderToT(+$('now').value),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
+  const now=selectedDays(),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
   const t0=Date.parse(S.t0),nowDate=new Date(t0+now*864e5);
   $('clock').innerHTML=`<b>${dur(now)}</b> after the mainshock (${fmtDT(nowDate)})`;
-  const live=S.live&&+$('now').value>=1000;
+  const live=S.live&&replayTimeOverride==null&&+$('now').value>=1000;
   if(mode==='detail')$('hNote').textContent=live?`Live, ${fmtDT(nowDate)}`:`Replay: ${fmtDT(nowDate)}`;
-  $('dataStatus').textContent=S.live?`Live from USGS, last checked ${fmtClock(new Date(S.fetchedAt))} (every 2 minutes). ShakeMap version ${G.version||'?'}${G.status?', '+G.status:''}; ${(G.dlat*111).toFixed(1)} km grid. Not an official USGS forecast.`
-    :`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;
+  renderDataStatus();
   // Keep the complete posterior here: a fixed-length slice silently understates every
   // point probability and can move the projected threshold-crossing time too early.
   const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f),src=sources(now);
@@ -1919,7 +2062,7 @@ function update(){
   renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
-  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();bindSrc();
+  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();updateSpokenSummary();bindSrc();
 }
 function computeHeat(f,cp,src,calib){
   const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
@@ -2055,9 +2198,11 @@ function renderPeople(){const sp=cur.sp;const near=TOWNS.towns.map(t=>({t,d:Math
   const ts=TOWNS.towns.filter(t=>t.p7!=null);const exp=ts.reduce((a,t)=>a+t[3]*t.p7,0),hi=ts.filter(t=>t.p7>=0.1);
   $('atRisk').innerHTML=`<p class="p">Across the ${ts.length} largest towns in the area, the forecast expects about <b>${fmtN(exp)}</b> people to feel damaging shaking for their local buildings in the next 7 days.${hi.length?` ${hi.length} town${hi.length>1?'s have':' has'} a 1-in-10 chance or higher: ${hi.slice(0,5).map(t=>t[0]).join(', ')}.`:''}</p><p class="muted">Each town's population times its 7-day chance, as on the map.</p>`}
 function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
-  if(!p||!p.exposure||!p.exposure.length){$('pagerNote').textContent='No USGS PAGER exposure estimate was published for this earthquake.';$('pagerExp').innerHTML='';return}
+  const warnings=[...(S.warnings||[]),S.refreshError?'Live updates are delayed; the last successful data is shown.':''].filter(Boolean).join(' ');
+  if(!p||!p.exposure||!p.exposure.length){$('pagerNote').textContent='No USGS PAGER exposure figures are available for this earthquake.'+(warnings?' '+warnings:'');$('pagerExp').innerHTML='';return}
   const rows=p.exposure.filter(r=>r[2]>0&&r[0]>=3.5).reverse();const al=Object.fromEntries(p.alerts||[]);
   $('pagerNote').innerHTML=`USGS PAGER estimate${p.version?` (version ${p.version})`:''}: people exposed to each shaking level in the mainshock.${al.fatality?` PAGER alert: <b>${al.fatality}</b> for deaths, <b>${al.economic}</b> for losses.`:''}`;
+  if(warnings)$('pagerNote').insertAdjacentText('beforeend',' '+warnings);
   const mx=Math.max(...rows.map(r=>r[2]));
   $('pagerExp').innerHTML=`<table><tr><th>Intensity</th><th class="num">People</th><th style="width:40%"></th></tr>${rows.map(r=>`<tr><td>${R((r[0]+r[1])/2)} ${MMI_NAME[Math.round((r[0]+r[1])/2)]}</td><td class="num">${fmtN(r[2])}</td><td><div style="height:8px;background:#7d5cb5;opacity:.75;border-radius:2px;width:${Math.max(1,r[2]/mx*100)}%"></div></td></tr>`).join('')}</table>`}
 
@@ -2119,10 +2264,10 @@ $('ciDel').onclick=async()=>{if(!ciDB||!ciUid)return;try{await ciDB.doc('checkin
 function selectTab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);if(t==='spot'){drawCurve();drawSims()}}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>selectTab(b.dataset.tab));
 ['bld','tol','shk','reveal','exposure'].forEach(id=>$(id).onchange=()=>update());
-let sT;$('now').oninput=()=>{clearTimeout(sT);sT=setTimeout(update,60)};
+let sT;$('now').oninput=()=>{replayTimeOverride=null;clearTimeout(sT);sT=setTimeout(update,60)};
 $('town').addEventListener('change',()=>{const n=$('town').value.trim().toLowerCase();const t=TOWNS.towns.find(t=>t[0].toLowerCase()===n)||B.towns.find(t=>t[0].toLowerCase()===n);if(t){setLoc(t[1],t[2],t[0]);map.setView([t[1],t[2]],Math.max(map.getZoom(),9))}});
 let playT=null;
-$('play').onclick=()=>{playing=!playing;$('playIcon').setAttribute('d',playing?'M3 1.5h3v11H3zM8 1.5h3v11H8z':'M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label',playing?'Pause':'Play the sequence');
+$('play').onclick=()=>{replayTimeOverride=null;playing=!playing;$('playIcon').setAttribute('d',playing?'M3 1.5h3v11H3zM8 1.5h3v11H8z':'M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label',playing?'Pause':'Play the sequence');
   if(playing){if(+$('now').value>=1000)$('now').value=0;const step=()=>{if(!playing)return;const v=Math.min(1000,+$('now').value+8);$('now').value=v;update();if(v>=1000){$('play').click();return}playT=setTimeout(step,90)};step()}
   else{clearTimeout(playT);heatKey='';update()}};
 let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.invalidateSize();update()},150)});
@@ -2135,7 +2280,7 @@ document.querySelectorAll('#tolSeg button').forEach(b=>b.onclick=()=>{setTol(b.d
 // ---------- helpers the story uses ----------
 function seqIndex(key){return SEQ.findIndex(s=>s.key===key)}
 function goSeq(key){const i=seqIndex(key);if(S&&S.key===key){enterDetail();return}pickSeq(i)}
-function setDays(d){$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
+function setDays(d){replayTimeOverride=null;$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
 function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
 function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v);renderLayTgl()}
 function resetChoices(){$('bld').value='local';setTol('0.01');$('shk').value='0';$('exposure').value='1440';$('reveal').checked=true;resetComparison()}
@@ -2278,19 +2423,21 @@ function currentCheck(){
   // parameters so a rebuilt snapshot cannot silently compare two different models.
   const modelVersion=JSON.stringify({algorithm:1,rate:MODEL.params,k:SHAKE.K,bias:SHAKE.BIAS,depth:SHAKE.H,kernel:SHAKE.KERNEL,maxMagnitude:SHAKE.MMAX});
   return SCENARIO.capture({sequence:S.key,location:loc,now:cur.now,minutes:cur.exposure.minutes,
+    at:cur.nowDate?cur.nowDate.toISOString():new Date(Date.parse(S.t0)+cur.now*864e5).toISOString(),origin:S.t0,
+    comparison:comparisonLocation?{...comparisonLocation}:null,
     probability:cur.exposure.probability,q:cur.sp.qv,threshold:cur.sp.thr,
     building:$('bld').value,calibrated:cur.calib,tolerance:cur.tol,savedAt:Date.now(),
     // Live catalogues refresh every 2 minutes; new events show up through the events comparison instead.
-    dataVersion:S.live?'live USGS':D.fetchedAt,gridVersion:JSON.stringify([G.version,G.processed,(EX[S.key]||{}).gfInfo||null]),
+    dataVersion:S.live?'live USGS':D.fetchedAt,gridVersion:JSON.stringify([G.version,G.processed,(EX[S.key]||{}).gfInfo||null,(EX[S.key]||{}).pager?.version||null]),
     modelVersion,events:S.events});
 }
 function renderChanges(){
   const previous=savedChecks[S.key],current=currentCheck(),diff=SCENARIO.changes(previous,current);
-  $('forgetCheck').disabled=!previous;$('changesFeedback').textContent=checkFeedback;
+  $('forgetCheck').disabled=!previous;$('restoreCheck').disabled=!previous;$('changesFeedback').textContent=checkFeedback;
   if(diff.status==='missing'){
     $('changesResult').innerHTML='<p class="p">Save your spot A now, then move the replay timeline or change a setting to see what affected the estimate. Saved checks stay in this browser.</p>';return;
   }
-  const savedDate=new Date(Date.parse(S.t0)+previous.now*864e5);
+  const savedDate=new Date(previous.at||Date.parse(S.t0)+previous.now*864e5);
   const earlier=`${chance(previous.probability)} over ${SCENARIO.durationLabel(previous.minutes)}`;
   const latest=`${chance(current.probability)} over ${SCENARIO.durationLabel(current.minutes)}`;
   const summary=diff.status==='same'?'No inputs changed since your saved check.':`Saved estimate: ${earlier}. Current estimate: ${latest}.`;
@@ -2468,7 +2615,7 @@ const WGEO={land110:topojson.feature(WORLD.land110,WORLD.land110.objects.land),l
 const CASES=SEQ.map(s=>({id:'case:'+s.key,kind:'case',seq:s,lon:s.lon,lat:s.lat,M:s.M,t:Date.parse(s.t0),place:s.label}));
 let mode='detail',feed=null,feedAt=0,feedErr=null,gSel=null,gItems=[],loadingLive=false;const liveSeqs={};
 const globe=GLOBE.create($('globe'),WGEO,{accent:PAL.red,onPick:it=>{gSel=it;renderGCard();markWorldList();const row=document.querySelector('#wList li[aria-current]');if(row)row.scrollIntoView({block:'nearest'});if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
-function enterWorld(){if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
+function enterWorld(){liveOpenToken++;stopSummary();if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
   $('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS</small>';globe.resize();globe.start();renderWorld()}
 function enterDetail(refresh=true){if(mode==='detail')return;mode='detail';document.body.classList.remove('world');globe.stop();$('gTip').hidden=true;
   if(refresh&&S){renderHeader();map.invalidateSize();update()}}
@@ -2478,7 +2625,7 @@ function itemLine(it){return it.kind==='case'?fmtDate(new Date(it.t)):`${ago(Dat
 function renderWorld(){
   gItems=worldItems();globe.setItems(gItems);if(gSel)gSel=gItems.find(i=>i.id===gSel.id)||gSel;
   const live=gItems.filter(i=>i.kind==='live').sort((a,b)=>b.t-a.t),min=$('wMin').value,nf=live.filter(q=>q.shakemap).length;
-  $('wStatus').innerHTML=feed?`${live.length} of magnitude ${min} or more; ${nf} have a forecast. Updated ${fmtClock(new Date(feedAt))}.${feedErr?` The last check failed (${esc(feedErr)}).`:''}`
+  $('wStatus').innerHTML=feed?`${live.length} of magnitude ${min} or more; ${nf} have a forecast. Feed generated ${fmtDT(new Date(feed.generated))}; checked ${fmtClock(new Date(feedAt))}.${feedErr?` The last check failed (${esc(feedErr)}).`:''}`
     :feedErr?`Can't reach USGS right now (${esc(feedErr)}). Showing the ${SEQ.length} case studies; retrying every 2 minutes.`:'Loading the USGS feed…';
   if(mode==='world')$('hNote').textContent=feed?`Updated ${fmtClock(new Date(feedAt))}`:'';
   const li=it=>`<li data-id="${esc(it.id)}" tabindex="0"><span class="m">${it.M.toFixed(1)}</span><span class="t">${esc(it.place)}</span><span class="s">${itemLine(it)}${it.kind==='live'&&it.shakemap?', <span class="fc">forecast available</span>':''}</span></li>`;
@@ -2502,34 +2649,208 @@ function renderGCard(){const c=$('gCard'),it=gSel;if(!it){c.hidden=true;return}c
       `<a href="${esc(it.url)}" target="_blank" rel="noopener">USGS event page</a>`}
   $('gX').onclick=()=>{gSel=null;globe.select(null);renderGCard();markWorldList()};if($('gOpen'))$('gOpen').onclick=()=>openItem(it)}
 function openItem(it){if(it.kind==='case'){pickSeq(SEQ.indexOf(it.seq));selectTab('spot')}else if(it.shakemap)openLive(it)}
+// Apply a complete, version-checked live update without resetting the user's view.
+let liveOpenToken=0,latestLiveLoad=0;
 function registerLive({seq,shakemap,extra}){
-  const m=LIVE.basemap({land:WGEO.land50,borders:WGEO.borders50},shakemap,seq,WTOWNS);
-  D.shakemaps[seq.key]=shakemap;EX[seq.key]=extra;BASE[seq.key]=m.base;POP.towns[seq.key]=m.towns;POP.seqCountry[seq.key]=m.country;liveSeqs[seq.id]=seq}
+  if(D.shakemaps[seq.key]!==shakemap||!BASE[seq.key]){
+    const m=LIVE.basemap({land:WGEO.land50,borders:WGEO.borders50},shakemap,seq,WTOWNS);
+    BASE[seq.key]=m.base;POP.towns[seq.key]=m.towns;POP.seqCountry[seq.key]=m.country;
+  }
+  D.shakemaps[seq.key]=shakemap;EX[seq.key]=extra;liveSeqs[seq.id]=seq;
+}
 async function openLive(it){
-  if(liveSeqs[it.id]){pickSeq(liveSeqs[it.id]);selectTab('spot');refreshLive();return}
-  if(loadingLive)return;loadingLive=true;
-  const box=$('gLoad'),steps=[['event','Finding the event'],['shakemap','Downloading the ShakeMap grid (the big one)'],['catalogue','Downloading the aftershock catalogue'],['pager','Reading the PAGER report']];
-  const show=s=>{const k=steps.findIndex(x=>x[0]===s);box.innerHTML=`<b>Loading M${it.M.toFixed(1)}, ${esc(it.place)}</b><ol>${steps.map(([,t],j)=>`<li class="${j<k?'done':j===k?'now':''}">${t}</li>`).join('')}</ol>`};
+  if(liveSeqs[it.id]){const seq=liveSeqs[it.id];pickSeq(seq);selectTab('spot');await refreshLive();return S===seq?seq:null}
+  loadingLive=true;const load=++latestLiveLoad,token=++liveOpenToken;
+  const box=$('gLoad'),steps=[['event','Finding the event'],['shakemap','Checking the shaking map'],['catalogue','Downloading the aftershock catalogue'],['pager','Checking the PAGER report']];
+  const show=s=>{if(token!==liveOpenToken)return;const k=steps.findIndex(x=>x[0]===s);box.innerHTML=`<b>Loading ${esc(it.place||it.id)}</b><ol>${steps.map(([,text],j)=>`<li class="${j<k?'done':j===k?'now':''}">${text}</li>`).join('')}</ol>`};
   box.hidden=false;show('event');
-  try{const r=await LIVE.load(it.id,show);registerLive(r);box.hidden=true;pickSeq(r.seq);selectTab('spot')}
-  catch(e){box.innerHTML=`<b>Couldn't load this earthquake</b><p>${esc(e.message==='Failed to fetch'?'Could not reach USGS. Check the internet connection and try again.':e.message)}</p><div class="row"><button class="btn" id="gLoadX">Close</button></div>`;$('gLoadX').onclick=()=>box.hidden=true;$('gLoadX').focus()}
-  finally{loadingLive=false}}
-// While a live quake is open, re-check its catalogue on every poll; stay at "now" if the timeline was there.
-async function refreshLive(){if(mode!=='detail'||!S||!S.live||playing||tourOn)return;const seq=S;
-  try{const atEnd=+$('now').value>=1000,t=sliderToT(+$('now').value),c=await LIVE.catalogue(seq);if(S!==seq)return;
-    const changed=c.events.length!==seq.events.length;Object.assign(seq,c);tMax=Math.max(seq.daysAvailable,tMin*1.5);
-    $('now').value=atEnd?1000:tToSlider(Math.min(t,tMax));if(changed)heatKey='';update()}catch(e){/* keep the last catalogue; dataStatus shows when it was checked */}}
-async function pollFeed(){try{feed=await LIVE.feed();feedAt=Date.now();feedErr=null}catch(e){feedErr=e.message==='Failed to fetch'?'offline?':e.message}
-  renderWorld();refreshLive()}
+  try{
+    const result=await LIVE.load(it.id,show);
+    if(token!==liveOpenToken)return null;
+    // An older request for the same event must not replace the selected grid's cache.
+    registerLive(result);
+    box.hidden=true;pickSeq(result.seq);selectTab('spot');return result.seq;
+  }catch(e){
+    if(token===liveOpenToken){box.innerHTML=`<b>Could not load this earthquake</b><p>${esc(e.message)}</p><button class="btn" id="gLoadX">Close</button>`;$('gLoadX').onclick=()=>box.hidden=true;$('gLoadX').focus()}
+    return null;
+  }finally{if(load===latestLiveLoad){loadingLive=false;if(token!==liveOpenToken)box.hidden=true}}
+}
+function renderDataStatus(){
+  if(!S)return;
+  $('liveActions').hidden=!S.live;
+  if(!S.live){$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
+  const age=Date.now()-Date.parse(S.fetchedAt),delayed=!!S.refreshError||age>POLL_MS*2;
+  const text=[`Catalogue through ${fmtDT(new Date(S.fetchedAt))}.`,
+    `Shaking products checked ${fmtDT(new Date(S.checkedAt||S.fetchedAt))}; ShakeMap ${G.version||'version unavailable'}${G.status?', '+G.status:''}.`,
+    delayed?'Updates delayed. Showing the last successful data.':'Checks every 2 minutes.',
+    S.refreshError?`Last refresh failed: ${S.refreshError}`:'',...(S.warnings||[]),
+    `${(G.dlat*111).toFixed(1)} km grid. This is not an official USGS forecast.`];
+  $('dataStatus').textContent=text.filter(Boolean).join(' ');
+  $('dataStatus').classList.toggle('data-delayed',delayed||!!S.warnings?.length);
+  $('refreshLive').disabled=!!S.refreshing||playing||tourOn;
+  $('followLive').disabled=playing||tourOn;
+  $('refreshLive').textContent=S.refreshing?'Checking USGS...':'Refresh USGS';
+  if(delayed&&mode==='detail'&&replayTimeOverride==null&&+$('now').value>=1000)$('hNote').textContent=`Updates delayed; last data ${fmtClock(new Date(S.fetchedAt))}`;
+}
+async function refreshLive(){
+  if(mode!=='detail'||!S?.live||playing||tourOn)return null;
+  const seq=S;if(seq.refreshing)return null;
+  seq.refreshing=true;seq.lastAttemptAt=new Date().toISOString();renderDataStatus();
+  const oldGrid=D.shakemaps[seq.key];
+  try{
+    const result=await LIVE.load(seq.id,()=>{},{seq,shakemap:oldGrid,extra:EX[seq.key]||{}});
+    // Navigating while a request is pending must not overwrite another forecast.
+    if(S!==seq||mode!=='detail')return null;
+    const following=replayTimeOverride==null&&+$('now').value>=1000;
+    const absoluteTime=Date.parse(seq.t0)+selectedDays()*864e5;
+    const gridChanged=result.shakemap!==oldGrid;
+    Object.assign(seq,result.seq,{refreshError:null});result.seq=seq;registerLive(result);
+    if(gridChanged){
+      installSequenceGrid(false);
+      const wrap=p=>({...p,lon:p.lon+360*Math.round((S.lon-p.lon)/360)});
+      const a=wrap(loc);
+      if(gridAt(a.lat,a.lon)?.vs)setLoc(a.lat,a.lon,a.name,false);
+      else{defaultSpot();seq.warnings.push('The previous A pin is outside the revised grid; a new initial spot is shown.')}
+      if(comparisonLocation){const b=wrap(comparisonLocation);if(gridAt(b.lat,b.lon)?.vs)comparisonLocation=b;
+        else{resetComparison();$('comparisonStatus').textContent='The previous B pin is outside the revised grid. Choose B again.'}}
+      buildBuildingOptions();
+    }
+    timelineBounds();
+    if(following){replayTimeOverride=null;$('now').value=1000}else setAbsoluteReplayTime(absoluteTime);
+    // Invalidate on every successful refresh, including magnitude/location revisions
+    // that leave the event count unchanged. The old count-only check missed these.
+    heatKey='';renderHeader();renderLedger();renderPager();renderEvents();update();return seq;
+  }catch(e){
+    if(S===seq){seq.refreshError=e.message||'Could not reach USGS.';renderDataStatus();renderPager();updateSpokenSummary()}
+    return null;
+  }finally{seq.refreshing=false;if(S===seq)renderDataStatus()}
+}
+$('refreshLive').onclick=()=>refreshLive();
+$('followLive').onclick=()=>{replayTimeOverride=null;$('now').value=1000;update()};
+
+let feedLoading=false;
+async function pollFeed(){
+  const detail=refreshLive();
+  if(feedLoading){await detail;return}feedLoading=true;
+  try{feed=await LIVE.feed();feedAt=Date.now();feedErr=null}catch(e){feedErr=e.message==='Failed to fetch'?'offline?':e.message}
+  finally{feedLoading=false;renderWorld()}
+  await detail;
+}
 $('wMin').onchange=renderWorld;$('wOnlyF').onchange=renderWorld;
 const toWorld=()=>{enterWorld();$('globe').focus({preventScroll:true})};   // the button that was clicked is hidden in world view
 $('worldBtn').onclick=toWorld;$('evWorld').onclick=toWorld;
 $('gIn').onclick=()=>globe.zoomBy(1.6);$('gOut').onclick=()=>globe.zoomBy(1/1.6);
 addEventListener('resize',()=>{if(mode==='world')globe.resize()});
 setInterval(pollFeed,POLL_MS);
+setInterval(()=>{if(S&&mode==='detail'){renderDataStatus();updateSpokenSummary()}},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-feedAt>POLL_MS)pollFeed()});
 
-requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen){$('welcome').hidden=false;$('wStory').focus()}});
+// Explicit sharing, saved setup restoration, and device-provided speech.
+// Shared links carry inputs and an absolute time; figures are recalculated on arrival.
+let shareOpenToken=0;
+function currentView(){
+  return VIEW_STATE.clean({v:1,event:{kind:S.live?'live':'case',id:S.live?S.id:S.key},a:loc,b:comparisonLocation,
+    minutes:cur.exposure.minutes,building:$('bld').value,tolerance:cur.tol,calibrated:cur.calib,
+    at:cur.nowDate.toISOString(),dataAt:S.live?S.fetchedAt:D.fetchedAt});
+}
+function applyViewSetup(input,{keepTime=false}={}){
+  const view=VIEW_STATE.clean(input),wrap=p=>({...p,lon:p.lon+360*Math.round((S.lon-p.lon)/360)});
+  const a=wrap(view.a),b=view.b?wrap(view.b):null;
+  // Validate both pins before changing anything; a newer grid may cover a different area.
+  if(!gridAt(a.lat,a.lon)?.vs||(b&&!gridAt(b.lat,b.lon)?.vs))throw new Error('A saved pin is outside the current shaking grid. The setup was not applied.');
+  if(playing)$('play').click();if(tourOn)endTour();
+  setLoc(a.lat,a.lon,a.name,false);$('bld').value=view.building;buildBuildingOptions();
+  $('exposure').value=String(view.minutes);$('shk').value=view.calibrated?'1':'0';setTol(String(view.tolerance));
+  comparisonLocation=b;$('comparisonTown').value=b?b.name:'';$('clearComparison').disabled=!b;setComparisonPicking(false);
+  const clamped=!keepTime&&setAbsoluteReplayTime(Date.parse(view.at));
+  heatKey='';update();selectTab('spot');
+  if(b)map.fitBounds(L.latLngBounds([[a.lat,a.lon],[b.lat,b.lon]]).pad(.15));else map.setView([a.lat,a.lon],Math.max(map.getZoom(),9));
+  return {clamped};
+}
+$('restoreCheck').onclick=()=>{
+  const saved=savedChecks[S.key];if(!saved)return;
+  try{
+    // Legacy checks did not store absolute time or B. Restore their location/settings
+    // while leaving the CURRENT time and live-following state intact.
+    const view=VIEW_STATE.fromCheck({...saved,at:saved.at||new Date(Date.parse(S.t0)+saved.now*864e5).toISOString()});
+    applyViewSetup(view,{keepTime:true});checkFeedback='Saved location and settings restored. The current forecast time was kept.';renderChanges();
+  }catch(e){checkFeedback=e.message;renderChanges()}
+};
+$('shareView').onclick=async()=>{
+  try{
+    const link=VIEW_STATE.url(location.href,currentView());$('shareURL').value=link;$('shareLinkBox').hidden=false;
+    if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(link);$('shareStatus').textContent='Link copied. It includes both pins, settings and the selected time.';return}catch(e){/* Manual copying remains available. */}}
+    $('shareURL').focus();$('shareURL').select();$('shareStatus').textContent='Copy the selected link. It includes both pins, settings and the selected time.';
+  }catch(e){$('shareStatus').textContent=e.message}
+};
+async function openSharedView(){
+  const token=++shareOpenToken;let view;
+  try{view=VIEW_STATE.parse(location.hash)}catch(e){$('sharedNotice').hidden=false;$('sharedNotice').textContent=e.message;return false}
+  if(!view){$('sharedNotice').hidden=true;return false}
+  $('sharedNotice').hidden=false;$('sharedNotice').textContent='Opening the shared view...';
+  try{
+    if(view.event.kind==='case'){
+      const index=SEQ.findIndex(s=>s.key===view.event.id);if(index<0)throw new Error('This case study is not available.');pickSeq(index);
+    }else{
+      const seq=await openLive({id:view.event.id,place:view.event.id});if(!seq)throw new Error('The shared earthquake could not be loaded. Try the link again.');
+    }
+    if(token!==shareOpenToken)return false;
+    const result=applyViewSetup(view);
+    $('sharedNotice').textContent=`Shared view opened at ${fmtDT(cur.nowDate)}. Recalculated using the available data; figures can differ after data revisions.${result.clamped?' The shared time was outside the available timeline and was moved to its nearest end.':''}`;
+    return true;
+  }catch(e){if(token===shareOpenToken)$('sharedNotice').textContent=e.message;return false}
+}
+addEventListener('hashchange',()=>openSharedView());
+
+let speechToken=0,activeSpeech=null,lastSummary='';
+const speechSupported=typeof speechSynthesis!=='undefined'&&typeof SpeechSynthesisUtterance!=='undefined';
+function stopSummary(message='Reading stopped.'){
+  const active=!!activeSpeech;speechToken++;
+  if(active&&speechSupported)speechSynthesis.cancel();activeSpeech=null;
+  $('stopSummary').disabled=true;
+  if(active)$('speechStatus').textContent=message;
+}
+function speechVoices(){
+  if(!speechSupported)return [];
+  try{return speechSynthesis.getVoices().filter(v=>/^en(?:-|_|$)/i.test(v.lang))}catch(e){return []}
+}
+function populateVoices(){
+  const keep=$('summaryVoice').value,voices=speechVoices();
+  $('summaryVoice').innerHTML='<option value="">Default English voice</option>'+voices.map(v=>`<option value="${esc(v.voiceURI)}">${esc(v.name)} (${esc(v.lang)})</option>`).join('');
+  if(voices.some(v=>v.voiceURI===keep))$('summaryVoice').value=keep;
+}
+function updateSpokenSummary(){
+  if(!cur.f)return;
+  $('readSummary').disabled=!speechSupported||playing||tourOn;
+  const decision=cur.re===0?'The model is below your chosen risk limit for this exposure.':cur.re===Infinity?'The model does not fall below your chosen limit within its four hundred day search.':`The projected start below your limit is ${fmtDT(new Date(cur.nowDate.getTime()+cur.re*864e5))}, assuming the model continues unchanged.`;
+  const delayed=S.live&&(S.refreshError||Date.now()-Date.parse(S.fetchedAt)>POLL_MS*2);
+  const freshness=S.live?`${delayed?'Updates are delayed. Using the last successful data. ':''}Catalogue through ${fmtDT(new Date(S.fetchedAt))}. ${(S.warnings||[]).join(' ')}`:`Recorded case study data, downloaded ${fmtDate(new Date(D.fetchedAt))}.`;
+  const summary=SPOKEN.summary({place:loc.name,earthquake:S.label,time:fmtDT(cur.nowDate),duration:exposureLabel(),
+    probability:chance(cur.exposure.probability),low:chance(cur.exposure.range.low),high:chance(cur.exposure.range.high),decision,freshness});
+  if(summary!==lastSummary){stopSummary('The forecast changed. Press Read summary to hear the updated figures.');lastSummary=summary;$('spokenText').textContent=summary}
+}
+$('readSummary').disabled=!speechSupported;$('stopSummary').disabled=true;
+if(!speechSupported)$('speechStatus').textContent='Speech is unavailable in this browser. The text summary is available below.';
+else{
+  populateVoices();speechSynthesis.addEventListener?.('voiceschanged',populateVoices);
+  $('speechStatus').textContent='English summary using your browser or device voices.';
+}
+$('readSummary').onclick=()=>{
+  if(!speechSupported||!cur.f)return;updateSpokenSummary();stopSummary();
+  const token=++speechToken,utterance=new SpeechSynthesisUtterance(lastSummary);
+  const voice=speechVoices().find(v=>v.voiceURI===$('summaryVoice').value);
+  if(voice)utterance.voice=voice;utterance.lang=voice?.lang||'en-GB';utterance.rate=+$('summarySpeed').value||.9;
+  activeSpeech=utterance;$('stopSummary').disabled=false;$('speechStatus').textContent='Reading the current summary. Changes to the forecast stop playback.';
+  utterance.onend=()=>{if(token===speechToken){activeSpeech=null;$('stopSummary').disabled=true;$('speechStatus').textContent='Summary finished.'}};
+  utterance.onerror=()=>{if(token===speechToken){activeSpeech=null;$('stopSummary').disabled=true;$('speechStatus').textContent='Could not play speech. Read the text summary below.'}};
+  try{speechSynthesis.speak(utterance)}catch(e){utterance.onerror()}
+};
+$('stopSummary').onclick=()=>stopSummary();
+$('summaryVoice').onchange=()=>stopSummary('Voice changed. Press Read summary to start again.');
+$('summarySpeed').onchange=()=>stopSummary('Speed changed. Press Read summary to start again.');
+addEventListener('pagehide',()=>stopSummary());
+
+requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();openSharedView();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen&&!new URLSearchParams(location.hash.slice(1)).has('view')){$('welcome').hidden=false;$('wStory').focus()}});
 </script>
 </body>
 </html>
