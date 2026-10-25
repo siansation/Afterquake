@@ -47,7 +47,7 @@ addEventListener('hashchange',()=>openSharedView());
 let speechToken=0,activeSpeech=null,lastSummary='';
 const speechSupported=typeof speechSynthesis!=='undefined'&&typeof SpeechSynthesisUtterance!=='undefined';
 // Natural voice: when the hosted /api/speak route is configured, Read summary plays ElevenLabs audio,
-// optionally translated into the earthquake's local language. Without it (file://, static hosting), device voices are used as before.
+// optionally translated into the selected language. Without it (file://, static hosting), device voices are used as before.
 const voiceCloud={ok:false,languages:[],cache:new Map(),chosen:null};
 const COUNTRY_LANG={TR:'tr',JP:'ja',ID:'id',IN:'hi',CN:'zh',TW:'zh',KR:'ko',PH:'fil',MY:'ms',VN:'vi',GR:'el',IT:'it',FR:'fr',DE:'de',PT:'pt',BR:'pt',
   RU:'ru',UA:'uk',PL:'pl',RO:'ro',HR:'hr',BG:'bg',SY:'ar',IQ:'ar',DZ:'ar',MA:'ar',EG:'ar',JO:'ar',LB:'ar',
@@ -58,15 +58,16 @@ function localLanguage(){
 }
 function populateLanguages(){
   if(!voiceCloud.ok)return;
-  const local=localLanguage(),name=code=>code==='zh'?'Chinese (中文)':(voiceCloud.languages.find(l=>l.code===code)||{}).name||code;
-  const codes=['en'];
-  if(voiceCloud.languages.some(l=>l.code==='zh'))codes.push('zh');
+  const local=localLanguage(),names={zh:'Chinese (中文)',tr:'Turkish (Türkçe)',es:'Spanish (Español)'};
+  const name=code=>names[code]||(voiceCloud.languages.find(l=>l.code===code)||{}).name||code;
+  const codes=['en','zh','tr','es'].filter(code=>code==='en'||voiceCloud.languages.some(l=>l.code===code));
   if(local&&!codes.includes(local))codes.push(local);
   $('summaryLang').innerHTML=codes.map(code=>`<option value="${code}">${esc(name(code))}</option>`).join('');
-  // English and Chinese remain available across earthquakes. Keep an explicit
-  // choice when the forecast changes; otherwise start in the local language.
+  // Keep the four demonstration languages across earthquakes, plus any other
+  // local language. Preserve the visitor's choice when moving through the story.
   $('summaryLang').value=codes.includes(voiceCloud.chosen)?voiceCloud.chosen:local||'en';
   $('voiceLangBox').hidden=false;$('voiceCredit').hidden=false;
+  if(typeof updateTourLanguage==='function')updateTourLanguage();
 }
 async function probeCloudVoice(){
   if(typeof fetch!=='function'||!/^https?:/i.test(String(location.href||'')))return;
@@ -75,7 +76,7 @@ async function probeCloudVoice(){
     const info=await r.json();if(!info||!info.configured)return;
     voiceCloud.ok=true;voiceCloud.languages=Array.isArray(info.languages)?info.languages:[{code:'en',name:'English'}];
     populateLanguages();updateSpokenSummary();
-    $('speechStatus').textContent=voiceCloud.languages.some(l=>l.code==='zh')?'Choose English, Chinese or the local language.':'Choose a spoken language below.';
+    $('speechStatus').textContent='Choose a spoken language below.';
   }catch(e){/* Static hosting or offline: device voices remain. */}
 }
 function stopSummary(message='Reading stopped.'){
@@ -155,6 +156,6 @@ $('readSummary').onclick=()=>{
 $('stopSummary').onclick=()=>stopSummary();
 $('summaryVoice').onchange=()=>stopSummary('Voice changed. Press Read summary to start again.');
 $('summarySpeed').onchange=()=>stopSummary('Speed changed. Press Read summary to start again.');
-$('summaryLang').onchange=()=>{voiceCloud.chosen=$('summaryLang').value;stopSummary('Language changed. Press Read summary to start again.')};
+$('summaryLang').onchange=()=>{voiceCloud.chosen=$('summaryLang').value;stopSummary('Language changed. Press Read summary to start again.');if(typeof updateTourLanguage==='function')updateTourLanguage()};
 addEventListener('pagehide',()=>stopSummary());
 probeCloudVoice();

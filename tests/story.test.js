@@ -39,6 +39,19 @@ test('Gemini and voice are optional explicit actions within the place-and-time s
   await h.node('tAsk').onclick();await h.node('tSpeak').onclick();
   assert.equal(h.calls.ask,1);assert.equal(h.calls.speech,1);
 });
+
+test('the story language selector shares the forecast choice and retains it between scenes',async()=>{
+  const h=harness(),source=h.node('summaryLang');h.node('voiceLangBox').hidden=false;
+  source.innerHTML='<option value="en">English</option><option value="zh">Chinese</option><option value="tr">Turkish</option><option value="es">Spanish</option>';
+  source.value='tr';let changes=0;source.onchange=()=>{changes++;h.run('updateTourLanguage()')};
+  await h.run('tourOn=true;showStep(1)');
+  assert.equal(h.node('tVoiceLangBox').hidden,false);assert.equal(h.node('tSummaryLang').innerHTML,source.innerHTML);
+  assert.equal(h.node('tSummaryLang').value,'tr');
+  h.node('tSummaryLang').value='es';h.node('tSummaryLang').onchange();
+  assert.equal(source.value,'es');assert.equal(changes,1);
+  await h.run('showStep(0);showStep(1)');assert.equal(h.node('tSummaryLang').value,'es');
+  source.value='zh';h.run('updateTourLanguage()');assert.equal(h.node('tSummaryLang').value,'zh');
+});
 test('exiting during the aftershock scene cancels the replay and prevents a late popup',async()=>{
   const h=harness({motion:true}),pending=h.run('tourOn=true;showStep(2)');
   assert.equal(h.node('tour').hidden,false);assert.equal(typeof h.node('tExit').onclick,'function');

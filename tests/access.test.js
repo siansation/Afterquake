@@ -73,12 +73,13 @@ function cloudGlobals({fail=false,translated=true}={}){
   const posts=[],audios=[];
   class FakeAudio{constructor(src){this.src=src;this.paused=true;audios.push(this)}play(){this.paused=false;return Promise.resolve()}pause(){this.paused=true}}
   const fetch=async(url,init={})=>{
-    if(!init.method)return {ok:true,json:async()=>({configured:true,languages:[{code:'en',name:'English'},{code:'tr',name:'Turkish'},{code:'zh',name:'Chinese'}]})};
+    if(!init.method)return {ok:true,json:async()=>({configured:true,languages:[{code:'en',name:'English'},{code:'tr',name:'Turkish'},{code:'zh',name:'Chinese'},{code:'es',name:'Spanish'}]})};
     posts.push(JSON.parse(init.body));
     if(fail)return {ok:false,json:async()=>({error:'Voice credits have run out on this server.'})};
-    const chinese=posts.at(-1).lang==='zh';
-    return {ok:true,json:async()=>({audio:Buffer.from('ID3').toString('base64'),mime:'audio/mpeg',transcript:translated?(chinese?'中文摘要':'Türkçe özet'):posts.at(-1).text,
-      translated,lang:translated?(chinese?'zh':'tr'):'en',language:translated?(chinese?'Chinese':'Turkish'):'English',note:null})};
+    const lang=translated?posts.at(-1).lang:'en',names={en:'English',zh:'Chinese',tr:'Turkish',es:'Spanish'};
+    const transcripts={zh:'中文摘要',tr:'Türkçe özet',es:'Resumen en español'};
+    return {ok:true,json:async()=>({audio:Buffer.from('ID3').toString('base64'),mime:'audio/mpeg',transcript:transcripts[lang]||posts.at(-1).text,
+      translated:lang!=='en',lang,language:names[lang],note:null})};
   };
   return {posts,audios,globals:{fetch,Audio:FakeAudio,atob:s=>Buffer.from(s,'base64').toString('binary'),Blob:class{constructor(p,o){this.p=p;this.o=o}},
     URL:{createObjectURL:()=>'blob:x',revokeObjectURL(){}},pinCountry:()=>'TR',exposureLabel:()=>'24 hours',chance:p=>`${(p*100).toFixed(1)}%`}};
@@ -114,6 +115,23 @@ test('only languages advertised by the server can be selected',async()=>{
   const c=cloudGlobals(),h=harness({access:true,globals:c.globals});await tick();await tick();
   h.run('voiceCloud.languages=[{code:"en",name:"English"}]; voiceCloud.chosen="zh"; populateLanguages()');
   assert.equal(h.node('summaryLang').value,'en');assert.ok(!h.node('summaryLang').innerHTML.includes('value="zh"'));
+});
+
+test('all four story languages stay available outside their countries and use the selected voice language',async()=>{
+  const c=cloudGlobals(),h=harness({access:true,globals:c.globals});await tick();await tick();
+  h.ctx.pinCountry=()=>'US';h.run('populateLanguages()');
+  const codes=[...h.node('summaryLang').innerHTML.matchAll(/value="([^"]+)"/g)].map(m=>m[1]);
+  assert.deepEqual(codes,['en','zh','tr','es']);
+  for(const lang of codes){
+    h.node('summaryLang').value=lang;h.node('summaryLang').onchange();
+    await h.node('readSummary').onclick();assert.equal(c.posts.at(-1).lang,lang);
+    h.ctx.loc.name='Next scene '+lang;h.run('updateSpokenSummary()');
+    assert.equal(h.node('summaryLang').value,lang,'A new story estimate must preserve the language');
+    assert.equal(c.audios.at(-1).paused,true,'Changing the forecast must stop the old language clip');
+  }
+  h.ctx.pinCountry=()=>'ES';h.run('populateLanguages()');
+  assert.equal((h.node('summaryLang').innerHTML.match(/value="es"/g)||[]).length,1);
+  assert.equal(h.synth.calls.length,0);
 });
 
 test('a voice-service error falls back to the device voice with an explanation',async()=>{
