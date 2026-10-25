@@ -2,8 +2,8 @@
 // The API key stays here (environment variable GEMINI_API_KEY); the page never sees it.
 // Gemini answers by calling tools, and the TOOLS run in the visitor's browser against the page's own model and data
 // (src/assistant.js), so every number it quotes comes from the forecast, not from the language model.
-// Flash-Lite with minimal thinking: these are lookups plus a short explanation, and 3.8 Flash took 30-50 s per step.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+// Flash-Lite with minimal thinking handles the forecast tool calls and short answers.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const THINKING = process.env.GEMINI_THINKING || (/flash-lite/.test(MODEL) ? 'minimal' : 'low');
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
 

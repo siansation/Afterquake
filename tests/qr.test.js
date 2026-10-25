@@ -17,14 +17,14 @@ function decode(svg){
   return jsQR(pixels,w,h,{inversionAttempts:'dontInvert'})?.data;
 }
 test('the rendered Türkiye group QR decodes to the correct hosted invite',()=>{
-  const group='a'.repeat(32),ctx=vm.createContext({qrcode,S:{key:'turkey'},ci:{ready:true,group},location:new URL('https://afterquake.vercel.app/'),HOSTED_ORIGIN:'https://afterquake.vercel.app/'});
+  const group='a'.repeat(32),ctx=vm.createContext({qrcode,S:{key:'turkey'},ci:{ready:true,group},location:new URL('https://afterquake-one.vercel.app/'),HOSTED_ORIGIN:'https://afterquake-one.vercel.app/'});
   vm.runInContext(functions,ctx);const link=vm.runInContext('joinLink()',ctx),svg=vm.runInContext('drawQR(joinLink())',ctx);
   assert.equal(decode(svg),link);assert.equal(new URL(link).hash,'#j=turkey.'+group);
 });
 test('live-quake and offline forecast QR links retain their event without an editing token',()=>{
-  for(const href of ['https://afterquake.vercel.app/','file:///local/index.html']){
-    const ctx=vm.createContext({qrcode,S:{key:'live:us6000u43g'},ci:{ready:false,group:null,owner:'private-owner'},location:new URL(href),HOSTED_ORIGIN:'https://afterquake.vercel.app/'});
+  for(const href of ['https://afterquake-one.vercel.app/','file:///local/index.html']){
+    const ctx=vm.createContext({qrcode,S:{key:'live:us6000u43g'},ci:{ready:false,group:null,owner:'private-owner'},location:new URL(href),HOSTED_ORIGIN:'https://afterquake-one.vercel.app/'});
     vm.runInContext(functions,ctx);const svg=vm.runInContext('drawQR(joinLink())',ctx),link=decode(svg);
-    assert.equal(link,'https://afterquake.vercel.app/#j=live%3Aus6000u43g');assert.ok(!link.includes('private-owner'));
+    assert.equal(link,'https://afterquake-one.vercel.app/#j=live%3Aus6000u43g');assert.ok(!link.includes('private-owner'));
   }
 });

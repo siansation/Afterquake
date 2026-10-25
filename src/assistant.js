@@ -129,7 +129,7 @@ async function ask(q) {
       trimHistory();
       const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: ASK.history, context: askContext() }) });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || (r.status === 404 || r.status === 501 ? 'The assistant only works on the hosted site (afterquake.vercel.app).' : 'The assistant could not answer.'));
+      if (!r.ok) throw new Error(data.error || (r.status === 404 || r.status === 501 ? 'The assistant only works on the hosted site (afterquake-one.vercel.app).' : 'The assistant could not answer.'));
       ASK.history.push({ role: 'model', parts: data.parts });   // unchanged, so Gemini's thought signatures survive
       const calls = data.parts.filter(p => p.functionCall);
       if (!calls.length) { entry.answer(data.parts.filter(p => p.text && !p.thought).map(p => p.text).join('\n').trim() || 'No answer came back.', checked); break }

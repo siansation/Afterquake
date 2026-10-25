@@ -3,7 +3,7 @@
 // Relies on page globals: feed, feedAt, pollFeed, enterWorld, focusItem, openItem, SEQ,
 // pickSeq, selectTab, tourOn, endTour, ci, ciSetGroup, ciRandom, refreshCheckins,
 // VIEW_STATE, currentView, mode, esc, fmtDT, ago, $.
-const HOSTED_ORIGIN='https://afterquake.vercel.app/';
+const HOSTED_ORIGIN='https://afterquake-one.vercel.app/';
 const LM={timer:null,fastUntil:0,lastCount:-1};
 
 // Rank recent quakes that have a USGS ShakeMap. An active aftershock sequence beats a single

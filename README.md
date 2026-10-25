@@ -18,7 +18,7 @@ Open `index.html` in a browser. It's one self-contained file (about 10 MB, with 
 - The page opens on the **live globe**: drag to spin, scroll to zoom, click a quake, then **Open the forecast**. **World map** in the header comes back to it.
 - **Help** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
 
-**Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` and installs the runtime dependencies for the assistant and check-in API routes. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header); the URL is still public. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine. Shared check-ins also need the [Tiger Data setup](docs/checkins.md).
+**Live at https://afterquake-one.vercel.app** (Vercel, Aftershocks account). `vercel.json` serves the prebuilt `index.html` and installs the runtime dependencies for the assistant and check-in API routes. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header); the URL is still public. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine. Shared check-ins also need the [Tiger Data setup](docs/checkins.md).
 
 It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **Deploy from a branch**, then `main` and `/ (root)`.
 
@@ -136,7 +136,7 @@ docs/globe.jpg             live world view
 
 ## The assistant
 
-`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling). The default model is `gemini-3.5-flash-lite` with minimal thinking, which answers in about a second per step; `gemini-3.8-flash` took 30 to 50 s. Set `GEMINI_MODEL` or `GEMINI_THINKING` to change them. Every new question must start with a tool call, so figures can't be reused or invented. Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
+`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling). The default model is `gemini-3.1-flash-lite` with minimal thinking. Set `GEMINI_MODEL` or `GEMINI_THINKING` to change them. Every new question must start with a tool call, so figures can't be reused or invented. Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
 
 It needs a Gemini API key (free from [Google AI Studio](https://aistudio.google.com/apikey)) stored as a Vercel environment variable, never in the code:
 

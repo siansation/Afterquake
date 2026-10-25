@@ -6,7 +6,7 @@ const EL_MODEL = process.env.ELEVENLABS_MODEL || 'eleven_flash_v2_5';
 // "George", one of ElevenLabs' default voices. Override with ELEVENLABS_VOICE_ID (any voice in your ElevenLabs library).
 const EL_VOICE = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
 const EL_ENDPOINT = v => `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(v)}?output_format=mp3_44100_64`;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const GEMINI_ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
 
 // Languages Flash v2.5 / Turbo v2.5 speak (ISO 639-1), with names for the page's menu.
@@ -21,7 +21,7 @@ const MAX_TEXT = 1500;
 const TRANSLATE_RULES = `Translate the user's text into LANGUAGE for a spoken earthquake safety summary that will be read aloud to the public.
 - Translate faithfully and completely. Do not add, remove, soften or strengthen anything, and add no advice.
 - Keep every number, percentage, date and time exactly as given (you may use the language's usual decimal separator and date order).
-- Keep place names recognisable. Write "M" magnitudes and percentages in words the listener will understand when spoken.
+- Keep place names recognisable. Keep numeric values in digits, including magnitudes and percentages; translate their surrounding words and units, but do not spell out the digits.
 - Reply with the translation only: no notes, quotes or headings.`;
 
 // Best-effort per-visitor rate limit (speech uses paid credits).
