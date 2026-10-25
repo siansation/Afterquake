@@ -28,6 +28,7 @@ spoken = read('src', 'spoken.js').replace("if(typeof module!=='undefined')module
 forecast_cache = read('src', 'forecast-cache.js').replace("if (typeof module !== 'undefined') module.exports = FORECAST_CACHE;", '')
 heatmap = read('src', 'heatmap.js').replace("if (typeof module !== 'undefined') module.exports = HEATMAP;", '')
 map_render = read('src', 'map-render.js').replace("if (typeof module !== 'undefined') module.exports = MAP_RENDER;", '')
+basemap = read('src', 'basemap.js').replace("if (typeof module !== 'undefined') module.exports = BASEMAP;", '')
 extra = json.loads(read('data', 'ground-failure-and-pager.json'))
 for v in extra.values():
     if v.get('pager'):
@@ -60,6 +61,7 @@ out = (template
        .replace('__FORECAST_CACHE__', forecast_cache)
        .replace('__HEATMAP__', heatmap)
        .replace('__MAP_RENDER__', map_render)
+       .replace('__BASEMAP__', basemap)
        .replace('__PLACES__', read('src', 'places.js'))
        .replace('__STORY__', read('src', 'story.js'))
        .replace('__ASSISTANT__', read('src', 'assistant.js'))

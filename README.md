@@ -165,7 +165,7 @@ The main navigation is Your area, Check in and About. Spoken summaries include t
 ## Limitations
 
 - **Prototype, not safety advice.** Whether a building is safe to enter is decided by a structural inspection and local authorities. This tool only covers the chance of more shaking.
-- **Live quakes have less data.** Ground-failure maps (liquefaction, landslides) are not loaded for live earthquakes, the coastline is 1:50m Natural Earth, and towns are limited to 5,000+ people. A ShakeMap only exists for some quakes, usually M5.5+, and is often an automatic first version. A live forecast is not an official USGS aftershock forecast.
+- **Live quakes have less data.** Ground-failure maps (liquefaction, landslides) are not loaded for live earthquakes. Forecast coastlines use 1:50m Natural Earth, and population calculations cover towns of 5,000+ people. OpenStreetMap adds roads, rivers and smaller place names when online; it does not change the forecast's resolution. A ShakeMap only exists for some quakes, usually M5.5+, and is often an automatic first version. A live forecast is not an official USGS aftershock forecast.
 - **Case studies are snapshots.** Catalogue entries include later revisions, and mainshock ShakeMaps may have been processed years after the replay time. Filtering by origin time does not reconstruct the data available then.
 - **Model scope.** A single prior is used globally. Shaking uses a fixed 10 km depth, an active-crust equation, an experimental soil term, M5 to below M8.5, and a 400 km source-distance cutoff. Smaller aftershocks can still cause damage.
 - **Resolution** follows each ShakeMap grid: about 1 km for Türkiye and 1.8–3.7 km elsewhere. It's neighbourhood-scale, not street-by-street.
@@ -179,6 +179,7 @@ The main navigation is Your area, Check in and About. Spoken summaries include t
 - PAGER fatality model: [usgs/pager](https://github.com/usgs/pager), after Jaiswal & Wald.
 - Intensity equation: Allen, Wald & Worden (2012), via [OpenQuake](https://github.com/gem/oq-engine).
 - Coastlines and borders: [Natural Earth](https://www.naturalearthdata.com) via `world-atlas` (public domain).
+- Street map: [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Visible tiles load separately from the forecast, using normal browser caching; no tiles are prefetched or bundled. An extended Natural Earth map remains available without them, and tile requests stop in the world view.
 - Places and populations: [GeoNames](https://www.geonames.org) via `cities.json` and `all-the-cities` (CC BY 4.0).
 - Font: [Public Sans](https://public-sans.digital.gov) (SIL Open Font License), from Google Fonts.
 - Map library: [Leaflet](https://leafletjs.com) (BSD-2-Clause); globe: [d3-geo](https://d3js.org/d3-geo) (ISC) and [topojson-client](https://github.com/topojson/topojson-client) (ISC). All bundled into `index.html` by the build.

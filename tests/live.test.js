@@ -54,6 +54,15 @@ test('PAGER parsing reads alerts, building notes and exposure',()=>{
   assert.equal(p.struct,'Mostly brick.');assert.deepEqual(p.exposure,[[6.5,7.5,12000]]);assert.equal(p.version,'4');
 });
 
+test('display context extends inland land beyond the forecast without changing its mask',()=>{
+  const geo={land:{type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'Polygon',coordinates:[[[0,0],[20,0],[20,20],[0,20],[0,0]]]}}]},borders:{type:'MultiLineString',coordinates:[]}};
+  const grid={lon0:9.5,lat0:10.5,dlon:.1,dlat:.1,nc:11,nr:11},seq={lat:10,lon:10};
+  const local=LIVE.basemap(geo,grid,seq,[]),context=LIVE.basemap(geo,grid,seq,[],2);
+  const extent=m=>[Math.min(...m.base.land.flat().map(p=>p[0])),Math.max(...m.base.land.flat().map(p=>p[0]))];
+  assert.deepEqual(extent(local),[9.2,10.8]);assert.deepEqual(extent(context),[7.5,12.5]);
+  assert.deepEqual(extent(LIVE.basemap(geo,grid,seq,[])),[9.2,10.8],'Display padding must not change the calculation coastline');
+});
+
 test('PAGER text is decoded from XML entities to plain text',()=>{
   const p=LIVE.parsePager('<structcomment>Brick &amp; adobe, &lt;b&gt;weak&lt;/b&gt;</structcomment>');
   assert.equal(p.struct,'Brick & adobe, <b>weak</b>');   // plain text: the page escapes it before display

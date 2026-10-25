@@ -154,8 +154,8 @@ const LIVE = (() => {
     return out;
   }
   // geo: {land: GeoJSON FeatureCollection, borders: MultiLineString}; towns: [name, lat, lon, population, country]
-  function basemap(geo, G, s, towns) {
-    const w = G.lon0, e = G.lon0 + (G.nc - 1) * G.dlon, n = G.lat0, so = G.lat0 - (G.nr - 1) * G.dlat, pad = 0.3;
+  function basemap(geo, G, s, towns, pad = 0.3) {
+    const w = G.lon0, e = G.lon0 + (G.nc - 1) * G.dlon, n = G.lat0, so = G.lat0 - (G.nr - 1) * G.dlat;
     const land = [], borders = [];
     for (const shift of [-360, 0, 360]) {                               // a grid past 180° needs land from the other side
       const b = { w: w - pad + shift, e: e + pad + shift, s: so - pad, n: n + pad };

@@ -12,6 +12,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://tile.openstreetmap.org">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap">
 <style>__LEAFLET_CSS__</style>
 <style>
@@ -59,6 +60,7 @@ a{color:var(--link)}
 .ci-board span:first-child b{color:var(--good)}
 .ci-board span:nth-child(2) b{color:var(--help)}
 .ci-board small{flex-basis:100%;font-size:13px;color:var(--mute)}
+.ci-board[hidden]{display:none}
 @media (max-width:640px){.lm-box{grid-template-columns:1fr}.lm-qr{max-width:260px}#joinBtn{display:none}}
 @media (max-width:640px){.top{gap:6px 8px}.top .brand,.top .evsum{flex:0 0 100%}.top .hbtn{padding:5px 8px}.lm-banner{position:static;transform:none;max-width:none;border-radius:0;border-width:0 0 1px}}
 
@@ -139,6 +141,7 @@ td.num,th.num{text-align:right}
 .mapwrap{position:relative;min-height:0}
 #map{position:absolute;inset:0;background:var(--sea)}
 .leaflet-container{font-family:var(--sans);background:var(--sea)}
+.map-status{position:absolute;left:56px;top:52px;z-index:500;padding:6px 9px;max-width:min(280px,calc(100% - 76px));pointer-events:none}
 /* overlays match Leaflet's own controls: white, 4px radius, the same shadow */
 .ctl{background:#fff;border-radius:4px;box-shadow:0 1px 5px rgba(0,0,0,.4);font-size:13.5px}
 .layers{position:absolute;top:10px;right:max(10px,env(safe-area-inset-right,0px));z-index:500;display:flex;flex-direction:column;max-width:300px}
@@ -491,6 +494,7 @@ body:not(.world) .wpane{display:none}
 
   <div class="mapwrap">
     <div id="map" role="application" aria-label="Map. Click to choose your location."></div>
+    <div class="ctl map-status" id="mapStatus" role="status" hidden></div>
     <!-- live:start --><div class="ci-board" id="ciBoard" hidden role="status" aria-live="polite"></div><!-- live:end -->
     <div class="ctl layers" id="layers">
       <button class="tgl" id="layTgl" aria-expanded="false" aria-controls="layBody" title="Show or hide the map layers">Map layers</button>
@@ -550,6 +554,7 @@ body:not(.world) .wpane{display:none}
 __GEOLIBS__
 <script>__LIVE__</script>
 <script>__MAP_RENDER__</script>
+<script>__BASEMAP__</script>
 <script>__GLOBE__</script>
 <script>__MODEL__</script>
 <script>__SHAKE__</script>
@@ -608,9 +613,12 @@ function gridAt(lat,lon){const c=Math.round((lon-G.lon0)/G.dlon),r=Math.round((G
 // ---------- map ----------
 const map=L.map('map',{zoomControl:true,preferCanvas:true,attributionControl:true,worldCopyJump:false,minZoom:4,maxZoom:13});
 map.attributionControl.setPrefix('');map.attributionControl.addAttribution('Data: USGS, Natural Earth, GeoNames');
-// Drawing order: land (300) < shading (380) < towns (420) < quakes (440) < check-ins (460) < pin (600) < labels (640)
-[['land',300],['shade',380],['towns',420],['quakes',440],['checks',460],['labels',640]].forEach(([n,z])=>{map.createPane(n);map.getPane(n).style.zIndex=z});
+// Street images sit above the offline land map and below the forecast and pins.
+[['land',300],['streets',320],['shade',380],['towns',420],['quakes',440],['checks',460],['labels',640]].forEach(([n,z])=>{map.createPane(n);map.getPane(n).style.zIndex=z});
 map.getPane('land').style.pointerEvents='none';map.getPane('shade').style.pointerEvents='none';map.getPane('labels').style.pointerEvents='none';
+map.getPane('streets').style.pointerEvents='none';
+const streetMap=BASEMAP.create(L,map,$('mapStatus'));
+window.addEventListener('online',()=>streetMap.retry());
 const RND={land:L.canvas({pane:'land'}),quakes:L.canvas({pane:'quakes'}),checks:L.canvas({pane:'checks'})};
 const landLayer=L.layerGroup().addTo(map),overlayLayer=L.layerGroup().addTo(map),townLayer=L.layerGroup().addTo(map),quakeLayer=L.layerGroup().addTo(map),ciLayer=L.layerGroup().addTo(map),pinLayer=L.layerGroup().addTo(map);
 const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupAnchor:[0,-30],html:'<svg class="pin" viewBox="0 0 26 36" aria-hidden="true"><path d="M13 35C13 35 2 21 2 13a11 11 0 1 1 22 0c0 8-11 22-11 22z" fill="'+PAL.red+'" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.2" fill="#fff"/></svg>'});
@@ -629,10 +637,14 @@ function installSequenceGrid(fit=true){
   G.coast=[];for(const r of B.land)for(let k=0;k<r.length;k++){const a=r[k],b=r[(k+1)%r.length];if(!on(a,b))G.coast.push([...km(a[1],a[0]),...km(b[1],b[0])])}
   // land
   landLayer.clearLayers();
-  for(const r of B.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:true,color:'#8a959e',weight:1,fillColor:'#f4f4f1',fillOpacity:1,interactive:false}).addTo(landLayer);
-  for(const l of B.borders)L.polyline(l.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',color:'#7d8893',weight:1.2,dashArray:'4 4',interactive:false}).addTo(landLayer);
+  // Extend the fallback beyond the forecast box. Its clipped edge used to look
+  // like a rectangular island, particularly for small inland earthquakes.
+  const context=B.context||(B.context=LIVE.basemap({land:WGEO.land50,borders:WGEO.borders50},G,S,[],Math.max(2,(G.lon1-G.lon0)*2,(G.lat0-G.lat1)*2)).base);
+  for(const r of context.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:false,fillColor:'#f4f4f1',fillOpacity:1,interactive:false}).addTo(landLayer);
+  for(const l of context.borders)L.polyline(l.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',color:'#7d8893',weight:1.2,dashArray:'4 4',interactive:false}).addTo(landLayer);
   G.masks=new Map();G.overlayImages=new Map();
   map.invalidateSize();map.setMaxBounds(G.bounds.pad(0.4));if(fit)map.fitBounds(G.bounds.pad(-0.08));
+  streetMap.show();
   $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${esc(n)}"></option>`).join('');
 }
 function defaultSpot(){
@@ -980,9 +992,9 @@ const CASES=SEQ.map(s=>({id:'case:'+s.key,kind:'case',seq:s,lon:s.lon,lat:s.lat,
 let mode='detail',feed=null,feedAt=0,feedErr=null,gSel=null,gItems=[],loadingLive=false;const liveSeqs={};
 const globe=GLOBE.create($('globe'),WGEO,{accent:PAL.red,onPick:it=>{gSel=it;renderGCard();markWorldList();const row=document.querySelector('#wList li[aria-current]');if(row)row.scrollIntoView({block:'nearest'});if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
 function enterWorld(){liveOpenToken++;stopSummary();if(tourOn)endTour();mode='world';document.body.classList.add('world');
-  pausePlayback();cancelHeat();$('hMag').textContent='Live';$('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS</small>';globe.resize();globe.start();renderWorld()}
+  streetMap.hide();pausePlayback();cancelHeat();$('hMag').textContent='Live';$('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS</small>';globe.resize();globe.start();renderWorld()}
 function enterDetail(refresh=true){if(mode==='detail')return;mode='detail';document.body.classList.remove('world');globe.stop();$('gTip').hidden=true;
-  if(refresh&&S){renderHeader();map.invalidateSize();update()}}
+  if(refresh&&S){renderHeader();map.invalidateSize();streetMap.show();update()}}
 function worldItems(){const min=+$('wMin').value,only=$('wOnlyF').checked;
   return [...(feed?feed.quakes:[]).filter(q=>q.M>=min&&(!only||q.shakemap)).map(q=>({...q,kind:'live'})),...CASES]}
 function itemLine(it){return it.kind==='case'?fmtDate(new Date(it.t)):`${ago(Date.now()-it.t)}${it.alert?`, PAGER ${it.alert}`:''}${it.tsunami?', tsunami flag':''}`}
