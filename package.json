@@ -1,6 +1,6 @@
 {
   "name": "aftershock-reentry",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "description": "Aftershock shaking estimates for live USGS earthquakes and recorded case studies, with explicit uncertainty, source provenance and model validation limits.",
   "scripts": {
@@ -11,9 +11,12 @@
     "backtest": "node scripts/backtest.js",
     "test": "node --test",
     "check": "node scripts/check-build.js",
-    "audit:data": "node scripts/audit-data.mjs"
+    "audit:data": "node scripts/audit-data.mjs",
+    "db:setup": "node scripts/setup-checkins.js",
+    "dev": "node scripts/dev.js"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
     "all-the-cities": "3.1.0",
     "cities.json": "1.1.50",
     "d3-array": "3.2.4",
@@ -22,5 +25,8 @@
     "leaflet": "1.9.4",
     "topojson-client": "3.1.0",
     "world-atlas": "2.0.2"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
   }
 }

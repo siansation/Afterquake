@@ -56,6 +56,7 @@ out = (template
        .replace('__SPOKEN__', spoken)
        .replace('__PLANNER__', read('src', 'planner.js'))
        .replace('__ASSISTANT__', read('src', 'assistant.js'))
+       .replace('__CHECKINS__', read('src', 'checkins.js'))
        .replace('__ACCESS__', read('src', 'access.js'))
        .replace('__LIVE_CONTROLS__', read('src', 'live-controls.js'))
        .replace('__SITEFIT__', read('data', 'site-term-fit.json')))

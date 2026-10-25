@@ -1,5 +1,8 @@
-# The site is the single prebuilt index.html (npm run build), plus the assistant's serverless function.
+# Prebuilt page, serverless APIs, server-only database code and runtime dependencies.
 /*
 !index.html
 !vercel.json
 !api
+!server
+!package.json
+!package-lock.json

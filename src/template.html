@@ -415,11 +415,19 @@ body:not(.world) .wpane{display:none}
       </div>
       <div class="card">
         <h2>Safety check-in</h2>
-        <p class="muted">If you want to check in, you can mark yourself safe or ask for help at your pin. Only people who can edit this page see check-ins, and you can remove yours at any time.</p>
+        <p class="muted">Share your status and selected map location with a group. Anyone with its invite link can see and join it; keep the link within the people you trust. You can update or remove your own entry from this browser, and posts stop appearing after 24 hours.</p>
+        <div class="row"><button class="btn" id="ciCreate" disabled>Create group</button><button class="btn" id="ciCopy" disabled>Copy group invite</button><button class="btn" id="ciLeave" disabled>Leave group</button></div>
+        <div class="f"><label for="ciGroupInput">Join an existing group</label><input type="text" id="ciGroupInput" placeholder="Invite link or group code" autocomplete="off" spellcheck="false"><button class="btn" id="ciJoin" disabled>Join group</button></div>
+        <div id="ciInviteBox" hidden><label for="ciInviteURL">Group invite</label><input id="ciInviteURL" type="text" readonly></div>
+        <p class="muted">These posts are not monitored by emergency services. "I need help" shares a status with your group; it does not send an emergency request.</p>
         <div class="row"><input type="text" id="ciNote" maxlength="80" placeholder="Short note (optional)" aria-label="Check-in note"></div>
-        <div class="row"><button class="btn safe" id="ciSafe">I'm safe here</button><button class="btn help" id="ciHelp">I need help here</button><button class="btn" id="ciDel">Remove mine</button></div>
-        <p class="muted" id="ciStatus">Connecting…</p>
+        <div class="row"><button class="btn safe" id="ciSafe" disabled>I'm safe here</button><button class="btn help" id="ciHelp" disabled>I need help here</button><button class="btn" id="ciDel" disabled>Remove mine</button></div>
+        <p class="muted" id="ciStatus" role="status">Connecting…</p>
+        <div class="row"><button class="btn" id="ciRefresh" disabled>Refresh check-ins</button><button class="btn" id="ciReconnect">Connect again</button></div>
+        <p class="p" id="ciSummary"></p>
+        <div><button class="src" data-src="checkins">How check-ins are shared</button></div>
         <div id="ciList"></div>
+        <details><summary>Group status updates</summary><div id="ciActivity"></div></details>
       </div>
     </section>
 
@@ -820,10 +828,11 @@ function renderLedger(){const sm=D.shakemaps[S.key],ex=EX[S.key]||{},gi=ex.gfInf
    ['pager','Country vulnerability proxy',`USGS PAGER empirical fatality model (Jaiswal & Wald), country curves from the <a href="https://github.com/usgs/pager" target="_blank" rel="noopener">PAGER code</a>${pg?'; building notes from the PAGER report':''}`,'Prototype threshold: intensity at a modelled fatality rate of 1 in 10,000, clamped to VI–9.5. This is not a building fragility model. Country is approximated from the nearest town within 40 km, with a sequence-country fallback.'],
    ['mmi','When buildings get damaged','Modified Mercalli Intensity scale descriptions (USGS)','Fixed thresholds for the other building types.'],
    ['people','Population','GeoNames populated places (all-the-cities) and USGS PAGER exposure','Town populations are point counts; PAGER is the official gridded estimate.'],
+   ['checkins','Shared check-ins','Tiger Data PostgreSQL, with TimescaleDB for status history when enabled','Self-reported pins and notes shared within an invite group. Current posts expire after 24 hours; hourly counts describe status updates, including repeats. These are not verified identities or emergency requests.'],
    ['validation','Validation scope','Regional M5+/M6+ occurrence checks on revised catalogue data','No independent validation of point shaking, building damage or re-entry. Overlapping forecast windows are correlated; later ShakeMaps and fitted soil terms are retrospective.'],
    ['map','Map','Natural Earth coastlines and borders (world-atlas)',S.live?'1:50m scale for live earthquakes, clipped to the area. Towns of 5,000+ people from GeoNames.':'Clipped to the area.']];
   $('ledger').innerHTML='<tr><th>Number</th><th>Source</th><th>What we did</th></tr>'+rows.map(r=>`<tr id="src-${r[0]}"><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
-function bindSrc(){document.querySelectorAll('.src').forEach(b=>b.onclick=()=>{selectTab('sources');const row=$('src-'+b.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})})}
+function bindSrc(){document.querySelectorAll('.src[data-src]').forEach(b=>b.onclick=()=>{selectTab('sources');const row=$('src-'+b.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})})}
 
 // ---------- accuracy ----------
 let validationRows=null;
@@ -837,29 +846,9 @@ function accuracy(){const rows=validationRows||(validationRows=VALIDATION.backte
   $('aft').innerHTML='<tr><th>Aftershock</th><th class="num">Under 15 km</th><th class="num">15–100 km*</th><th class="num">Reports</th></tr>'+[...AFT].sort((a,b)=>b.M-a.M).slice(0,10).map(a=>{const farBins=[a.bins['15-40'],a.bins['40-100']].filter(Number.isFinite),far=farBins.length?farBins.reduce((a,b)=>a+b,0)/farBins.length:null,nr=a.bins['<15'];return `<tr><td>M${a.M} ${name[a.seq]}</td><td class="num">${nr!=null?(nr>0?'+':'')+nr.toFixed(1):'–'}</td><td class="num">${far!=null?(far>0?'+':'')+far.toFixed(1):'–'}</td><td class="num">${a.obs}</td></tr>`}).join('');
   $('aftNote').innerHTML=`Mean of event-average gaps across all ${AFT.length} (not a held-out calibration): <b>${mean.toFixed(2)}</b> intensity. The best-reported aftershock (Türkiye M6.3, 449 reports) shook harder than the equation within 15 km, so the standard equation is the default. The soil coefficient and optional offset were fitted or chosen using these events; these comparisons are not independent validation. *Far-distance column is an unweighted mean of available distance-bin means.`}
 
-// ---------- check-ins (opt-in, shared via the artifact database) ----------
-let ciDB=null,ciUser=null,ciUid=null,ciDocs=[],ciNames={};
-async function initCheckins(){
-  try{ciDB=await claude.use('db');ciUser=await claude.use('user')}catch(e){}
-  if(!ciDB||!ciUser){$('ciStatus').textContent='Check-ins need a shared database. They work in the Claude-hosted version of this page; a standalone copy would need its own backend.';['ciSafe','ciHelp','ciDel'].forEach(id=>$(id).disabled=true);return}
-  try{ciUid=await ciUser.id()}catch(e){}
-  const can=await ciUser.can('data.write').catch(()=>null);
-  if(!ciUid||can===false){['ciSafe','ciHelp','ciDel'].forEach(id=>$(id).disabled=true);$('ciStatus').textContent=can===false?'You can see check-ins, but checking in needs contributor access to this page.':'Sign in to check in.'}
-  else $('ciStatus').textContent='Your check-in uses your pin\'s location.';
-  ciDB.collection('checkins').onSnapshot(async snap=>{ciDocs=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));
-    const ids=ciDocs.map(d=>d.id);if(ids.length&&ciUser.profiles){try{const ps=await ciUser.profiles(ids);ids.forEach(id=>ciNames[id]=(ps[id]&&ps[id].name)||'Someone')}catch(e){}}renderCheckins()},
-    ()=>{$('ciStatus').textContent='Check-ins are unavailable right now.'})}
-function refreshCheckins(){renderCheckins()}
-function renderCheckins(){ciLayer.clearLayers();if(!S)return;const mine=ciDocs.filter(d=>d.seq===S.key).sort((a,b)=>b.ts-a.ts);
-  if($('showC').checked)for(const d of mine){L.circleMarker([d.lat,d.lon],{renderer:RND.checks,pane:'checks',radius:8,color:'#fff',weight:2,fillColor:d.status==='help'?PAL.help:PAL.good,fillOpacity:1}).bindPopup(`<div class="pp-h">${esc(d.id===ciUid?'You':(ciNames[d.id]||'Someone'))}: ${d.status==='help'?'needs help':'safe'}</div>${d.note?esc(d.note)+'<br>':''}<span class="pp-k">${new Date(d.ts).toLocaleString('en-GB')}</span>`).addTo(ciLayer)}
-  $('ciList').innerHTML=mine.length?mine.map(d=>`<div class="ci"><span class="dot" style="background:${d.status==='help'?PAL.help:PAL.good}"></span><span><b>${esc(d.id===ciUid?'You':(ciNames[d.id]||'Someone'))}</b>: ${d.status==='help'?'needs help':'safe'}${d.note?'. '+esc(d.note):''}</span><button class="src" data-la="${d.lat}" data-lo="${d.lon}">show</button></div>`).join(''):'<p class="muted">No check-ins for this earthquake yet.</p>';
-  document.querySelectorAll('#ciList button[data-la]').forEach(b=>b.onclick=()=>map.setView([+b.dataset.la,+b.dataset.lo],11))}
+// ---------- check-ins ----------
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function checkIn(status){if(!ciDB||!ciUid)return;$('ciStatus').textContent='Saving…';
-  try{await ciDB.doc('checkins/'+ciUid).set({seq:S.key,lat:+loc.lat.toFixed(4),lon:+loc.lon.toFixed(4),status,note:$('ciNote').value.slice(0,80),ts:Date.now()});$('ciStatus').textContent=status==='help'?'Marked as needing help at your pin.':'Marked safe at your pin.'}
-  catch(e){$('ciStatus').textContent=e&&e.code==='invalid_argument'?'Checking in needs contributor access to this page.':'Couldn\'t save. Try again.'}}
-$('ciSafe').onclick=()=>checkIn('safe');$('ciHelp').onclick=()=>checkIn('help');
-$('ciDel').onclick=async()=>{if(!ciDB||!ciUid)return;try{await ciDB.doc('checkins/'+ciUid).delete();$('ciStatus').textContent='Your check-in was removed.'}catch(e){$('ciStatus').textContent='Couldn\'t remove it. Try again.'}};
+__CHECKINS__
 
 // ---------- tabs, controls, time ----------
 function selectTab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);if(t==='spot'){drawCurve();drawSims()}}

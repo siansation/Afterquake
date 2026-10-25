@@ -1,10 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "echo 'nothing to install: index.html is prebuilt (npm run build)'",
+  "installCommand": "npm ci --omit=dev --ignore-scripts",
   "buildCommand": "echo 'nothing to build: index.html is prebuilt (npm run build)'",
   "outputDirectory": ".",
-  "functions": { "api/chat.js": { "maxDuration": 60 } },
+  "functions": { "api/chat.js": { "maxDuration": 60 }, "api/checkins.js": { "maxDuration": 30 } },
   "headers": [
     { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] }
   ]

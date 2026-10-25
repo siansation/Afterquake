@@ -18,7 +18,7 @@ Open `index.html` in a browser. It's one self-contained file (about 10 MB, with 
 - The page opens on the **live globe**: drag to spin, scroll to zoom, click a quake, then **Open the forecast**. **World map** in the header comes back to it.
 - **Help** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
 
-**Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` as it is, with no install or build step, and `.vercelignore` also includes the assistant's API function. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header); the URL is still public. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine.
+**Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` and installs the runtime dependencies for the assistant and check-in API routes. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header); the URL is still public. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine. Shared check-ins also need the [Tiger Data setup](docs/checkins.md).
 
 It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **Deploy from a branch**, then `main` and `/ (root)`.
 
@@ -36,8 +36,8 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 - **200 simulated futures.** Monte Carlo runs from the same posterior and marked Poisson process as the displayed formula. This model does not simulate secondary triggering (ETAS).
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
 - **People.** Population near you, people at risk this week, and the official count of people who felt each shaking level.
-- **Ask about this forecast.** A chat bubble in the bottom-left corner of the forecast map, answered by Google Gemini. Gemini doesn't guess: it calls the page's own forecast as tools (forecast at a place or for a different stay, how the risk changes over time, danger factors, aftershocks so far, people at risk, method and limits), and each answer lists what it checked. It never clears a building for entry. Runs on the hosted site only (see [the assistant](#the-assistant)).
-- **Opt-in safety check-ins.** Mark yourself safe or in need of help. This needs a shared database (see [Limitations](#limitations)).
+- **Ask about this forecast.** A chat bubble in the bottom-left corner of the forecast map, answered by Google Gemini. Gemini calls the page's own forecast as tools (forecast at a place or for a different stay, how the risk changes over time, danger factors, aftershocks so far, people at risk, method and limits), and each answer lists what it checked. Its instructions prohibit clearing a building for entry. It needs the configured assistant API (see [the assistant](#the-assistant)).
+- **Shared safety check-ins with Tiger Data.** Create an invite-only group, share a selected map pin and short note, then update or remove your own status from this browser. The People tab shows current safe/help counts and hourly status updates; entries stop appearing after 24 hours. This needs the hosted API and a configured Tiger Data PostgreSQL service. See [database setup](docs/checkins.md).
 - **Sources and accuracy tabs.** Source links, processing dates and model assumptions, with regional occurrence checks where complete outcome windows exist.
 
 ## How the forecast works
@@ -93,6 +93,10 @@ src/access.js              sharing, restore and device speech controls
 src/live-controls.js       version-aware live refresh and visible update status
 src/assistant.js           "Ask about this forecast": the tools Gemini calls, run on the page's own model
 api/chat.js                Vercel serverless function: holds the Gemini key, safety rules and tool list, rate-limits
+api/checkins.js            invite-group API backed by Tiger Data PostgreSQL
+server/checkins-store.js   parameterised SQL, transactions and verified TLS connections
+src/checkins.js            group invites, shared pins, status updates and expiry
+db/checkins.sql            current entries and a TimescaleDB status-history hypertable
 src/globe.js               world view: canvas globe drawn with d3-geo
 src/live.js                live USGS feed and per-quake loader for the browser (mirrors fetch_usgs.mjs)
 tests/forecast.test.js      numerical, simulation and data-integrity regression tests
@@ -136,7 +140,7 @@ npx vercel@65.2.0 env add GEMINI_API_KEY production   # paste the key when asked
 npx vercel@65.2.0 deploy --prod                       # redeploy so the function sees it
 ```
 
-Opened from a file or the local Python server, the box says the assistant only works on the hosted site; everything else still works.
+Opened from a file or a static Python server, the assistant and shared check-ins are unavailable because their API routes are absent. Use `npm run dev` to run those routes locally with the corresponding environment settings; the recorded forecasts still work offline without them.
 
 ## Rebuild from scratch
 
@@ -163,7 +167,7 @@ To rebuild only the page after editing `src/`, run `npm install` and then `npm r
 - **Model scope.** A single prior is used globally. Shaking uses a fixed 10 km depth, an active-crust equation, an experimental soil term, M5 to below M8.5, and a 400 km source-distance cutoff. Smaller aftershocks can still cause damage.
 - **Resolution** follows each ShakeMap grid: about 1 km for Türkiye and 1.8–3.7 km elsewhere. It's neighbourhood-scale, not street-by-street.
 - **No global data** for nearby trees, walls, power lines or dams. The app asks the user instead, and that only changes the advice on where to wait.
-- **Check-ins** use the shared database of the Claude-hosted version. A standalone copy (e.g. GitHub Pages) shows them as unavailable until it's given its own backend.
+- **Check-ins** require a configured Tiger Data database and the API routes. A standalone file or static GitHub Pages copy cannot save shared posts. Anyone with a group invite can see its entries; these are anonymous self-reports and do not contact emergency services. See [setup and visibility](docs/checkins.md).
 - Town populations are point counts from GeoNames, so rural homes aren't included.
 
 ## Data and credits
