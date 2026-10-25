@@ -88,6 +88,8 @@ index.html                 built app, ready to open or host (works offline)
 src/template.html          app UI and logic (placeholders filled by the build)
 src/model.js               aftershock rate model (Reasenberg–Jones + Bayesian update)
 src/shake.js               shaking, uncertainty ranges and consistent Monte Carlo futures
+src/forecast-cache.js      current-fit reuse with explicit live-data invalidation
+src/heatmap.js             cancellable map shading in short batches
 src/validation.js          regional occurrence checks shared by the UI and CLI
 src/scenario.js            duration estimates and saved-check change explanations
 src/planner.js             browser controls for comparison pins and local saved checks
@@ -157,7 +159,7 @@ npx vercel@65.2.0 env add ELEVENLABS_VOICE_ID production   # optional: another v
 npx vercel@65.2.0 deploy --prod                            # redeploy so the function sees it
 ```
 
-Local languages need `GEMINI_API_KEY` too (already set for the assistant). For `npm run dev`, put the same variables in `.env.local`.
+English and **Chinese (中文)** are available for every earthquake when translation is configured, alongside its local language. Your selected language stays selected as you move between forecasts. Chinese and other translated languages need `GEMINI_API_KEY` too (already set for the assistant). For `npm run dev`, put the same variables in `.env.local`.
 
 ## Rebuild from scratch
 
@@ -173,6 +175,8 @@ npm run build      # writes index.html
 ```
 
 To rebuild only the page after editing `src/`, run `npm install` and then `npm run build`.
+
+The globe opens without fitting a case study or running the accuracy backtest. Charts are drawn as they come into view, and comparison, saved checks and simulated months sit in expandable sections. Map shading runs in short, cancellable batches; the displayed figures still use the complete posterior. Display changes reuse the current fit, while live-data revisions clear it and the map caches. Background tabs pause polling and playback.
 
 `scripts/fetch_usgs.mjs` is a Node port of the browser code that produced the shipped data. Every other script was checked to reproduce the files in `data/` exactly. To add an earthquake, append its USGS event ID to `MAINS` in `fetch_usgs.mjs` and its country to `SEQC` in `prep_population.js`.
 

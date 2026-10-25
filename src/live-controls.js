@@ -68,7 +68,7 @@ async function refreshLive(){
     if(following){replayTimeOverride=null;$('now').value=1000}else setAbsoluteReplayTime(absoluteTime);
     // Invalidate on every successful refresh, including magnitude/location revisions
     // that leave the event count unchanged. The old count-only check missed these.
-    heatKey='';renderHeader();renderLedger();renderPager();renderEvents();update();return seq;
+    invalidateForecast();renderHeader();renderLedger();renderPager();renderEvents();update();return seq;
   }catch(e){
     if(S===seq){seq.refreshError=e.message||'Could not reach USGS.';renderDataStatus();renderPager();updateSpokenSummary()}
     return null;

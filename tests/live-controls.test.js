@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const LIVE=require('../src/live.js');
 function harness(load){
-  const nodes=new Map(),calls={update:0,install:[],times:[],picks:[],speech:0};
+  const nodes=new Map(),calls={update:0,install:[],times:[],picks:[],speech:0,invalidate:0};
   const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='now'?'500':'',textContent:'',innerHTML:'',hidden:false,disabled:false,
     classList:{toggle(){}},focus(){}});return nodes.get(id)};
   const grid={dlat:.1,version:'1'},seq={key:'live:usTest',id:'usTest',live:true,M:7,t0:'2026-10-01T00:00:00Z',lat:0,lon:0,
@@ -17,7 +17,7 @@ function harness(load){
     selectedDays:()=>ctx.currentDays,timelineBounds(){},setAbsoluteReplayTime(t){calls.times.push(t)},
     installSequenceGrid(fit){calls.install.push(fit);ctx.G=ctx.D.shakemaps[ctx.S.key]},gridAt:()=>({vs:760}),
     setLoc(lat,lon,name){ctx.loc={lat,lon,name}},defaultSpot(){throw new Error('Should not reset A')},resetComparison(){ctx.comparisonLocation=null},buildBuildingOptions(){},
-    renderHeader(){},renderLedger(){},renderPager(){},renderEvents(){},update(){calls.update++},updateSpokenSummary(){calls.speech++},
+    invalidateForecast(){calls.invalidate++;ctx.heatKey=''},renderHeader(){},renderLedger(){},renderPager(){},renderEvents(){},update(){calls.update++},updateSpokenSummary(){calls.speech++},
     fmtDT:d=>d.toISOString(),fmtDate:d=>d.toISOString(),fmtClock:d=>d.toISOString(),esc:s=>s,selectTab(){},
     pickSeq(s){ctx.S=s;calls.picks.push(s.id);vm.runInContext('liveOpenToken++',ctx)}});
   new vm.Script(fs.readFileSync(require.resolve('../src/live-controls.js'),'utf8')).runInContext(ctx);
@@ -30,6 +30,7 @@ test('same-count revisions invalidate shading and retain the selected absolute t
   result=packet(h,{t0:'2026-10-01T01:00:00Z'});
   const expected=Date.parse(h.seq.t0)+3*864e5;await h.run('refreshLive()');
   assert.equal(h.ctx.heatKey,'');assert.equal(h.calls.update,1);assert.equal(h.calls.times[0],expected);
+  assert.equal(h.calls.invalidate,1,'Revised data must clear the fitted posterior as well as shading');
   assert.equal(h.ctx.loc.name,'A');assert.equal(h.ctx.comparisonLocation.name,'B');assert.equal(h.seq.events[1][1],5.8);
 });
 test('updated shaking grids are installed without resetting the camera or A/B',async()=>{

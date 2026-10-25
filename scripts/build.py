@@ -25,6 +25,8 @@ validation = read('src', 'validation.js').replace("if (typeof module !== 'undefi
 scenario = read('src', 'scenario.js').replace("if (typeof module !== 'undefined') module.exports = SCENARIO;", '')
 view_state = read('src', 'view-state.js').replace("if(typeof module!=='undefined')module.exports=VIEW_STATE;", '')
 spoken = read('src', 'spoken.js').replace("if(typeof module!=='undefined')module.exports=SPOKEN;", '')
+forecast_cache = read('src', 'forecast-cache.js').replace("if (typeof module !== 'undefined') module.exports = FORECAST_CACHE;", '')
+heatmap = read('src', 'heatmap.js').replace("if (typeof module !== 'undefined') module.exports = HEATMAP;", '')
 extra = json.loads(read('data', 'ground-failure-and-pager.json'))
 for v in extra.values():
     if v.get('pager'):
@@ -54,6 +56,8 @@ out = (template
        .replace('__SCENARIO__', scenario)
        .replace('__VIEW_STATE__', view_state)
        .replace('__SPOKEN__', spoken)
+       .replace('__FORECAST_CACHE__', forecast_cache)
+       .replace('__HEATMAP__', heatmap)
        .replace('__PLANNER__', read('src', 'planner.js'))
        .replace('__ASSISTANT__', read('src', 'assistant.js'))
        .replace('__CHECKINS__', read('src', 'checkins.js'))

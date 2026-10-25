@@ -716,6 +716,7 @@ a{color:var(--link)}
 .ci-board span:nth-child(2) b{color:var(--help)}
 .ci-board small{flex-basis:100%;font-size:13px;color:var(--mute)}
 @media (max-width:640px){.lm-box{grid-template-columns:1fr}.lm-qr{max-width:260px}#joinBtn{display:none}}
+@media (max-width:640px){.top{gap:6px 8px}.top .brand,.top .evsum{flex:0 0 100%}.top .hbtn{padding:5px 8px}.lm-banner{position:static;transform:none;max-width:none;border-radius:0;border-width:0 0 1px}}
 
 .app{flex:1;display:grid;grid-template-columns:390px 1fr;min-height:0}
 @media (max-width:860px){body{overflow:auto;height:auto}.app{grid-template-columns:minmax(0,1fr);grid-template-rows:62vh auto}.evtxt small{display:none}.top .note{display:none}.side{order:2;border-right:0;border-top:1px solid var(--line)}.mapwrap{order:1}}
@@ -826,6 +827,12 @@ td.num,th.num{text-align:right}
 .townlbl{background:transparent;border:0;box-shadow:none;font-weight:600;font-size:12.5px;color:var(--ink);text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;padding:0}
 .townlbl::before{display:none}
 details summary{cursor:pointer;font-weight:600}
+.tool-options{display:block}
+.tool-options[open]>summary{margin-bottom:10px}
+.tool-options>summary{color:var(--link)}
+#curve:empty{min-height:170px}
+#sims:empty{min-height:276px}
+#tigerChart:empty{min-height:150px}
 .seg{display:grid;grid-template-columns:repeat(4,1fr)}
 .seg button{border:1px solid #8d98a3;margin-left:-1px;background:#fff;padding:5px 2px;cursor:pointer;font-size:13.5px;line-height:1.2;color:var(--ink)}
 .seg button:first-child{margin-left:0;border-radius:3px 0 0 3px}
@@ -854,7 +861,7 @@ details summary{cursor:pointer;font-weight:600}
 .wbox .fine{font-size:13px;color:var(--mute);margin:14px 0 0}
 .kbd{font-size:12px;border:1px solid #8d98a3;border-radius:2px;padding:0 4px;background:#f5f6f7}
 @media (max-width:860px){.askwrap{bottom:96px}.askpanel{width:100%}.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
-@media (max-width:860px){.legend .keys{display:none}.legend{bottom:auto;top:10px;right:auto;left:56px;max-width:190px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
+@media (max-width:860px){.legend .keys{display:none}.legend{bottom:96px;top:auto;right:10px;left:auto;max-width:190px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
 .method p{font-size:14px;color:var(--ink2);margin:6px 0}
 .ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line2)}
 .ci:first-child{border-top:0}
@@ -1043,19 +1050,19 @@ body:not(.world) .wpane{display:none}
           <span class="muted" id="tolHint"></span></div>
         <div class="f wide"><label for="shk">Shaking model</label><select id="shk"><option value="0" selected>Standard equation</option><option value="1">Adjusted to past ShakeMaps (in-sample)</option></select></div>
       </div>
-      <div class="card" id="comparisonCard">
-        <h2>Compare two places</h2>
+      <details class="card tool-options" id="comparisonCard">
+        <summary>Compare two places</summary>
         <div class="row"><button class="btn" id="pickComparison" aria-pressed="false">Choose B on map</button><button class="btn" id="clearComparison" disabled>Clear B</button></div>
         <p class="muted" id="comparisonStatus" role="status"></p>
         <input type="search" id="comparisonTown" list="towns" placeholder="Search a town for comparison B" autocomplete="off" aria-label="Search a town for comparison B">
         <div id="comparisonResult"></div>
-      </div>
-      <div class="card">
-        <h2>Since your saved check</h2>
+      </details>
+      <details class="card tool-options" id="savedCheckCard">
+        <summary>Since your saved check</summary>
         <div id="changesResult"></div>
         <div class="row"><button class="btn" id="saveCheck">Save this check</button><button class="btn" id="restoreCheck" disabled>Restore saved setup</button><button class="btn" id="forgetCheck" disabled>Forget check</button></div>
         <p class="muted" id="changesFeedback" role="status"></p>
-      </div>
+      </details>
       <div class="card">
         <h2 id="oddsTitle">Chance of damaging shaking here</h2>
         <div class="odds" id="odds"></div>
@@ -1075,12 +1082,12 @@ body:not(.world) .wpane{display:none}
         <p class="muted" id="tigerStatus" role="status"></p>
       </div>
       <!-- tiger:end -->
-      <div class="card">
-        <h2>200 possible next months</h2>
-        <p class="muted">To see how different the next month could look, each row shows 30 days simulated from the same model. Red marks damaging shaking here that day, while grey marks an M6+ somewhere nearby.</p>
+      <details class="card tool-options" id="simsOptions">
+        <summary>Explore 200 possible next months</summary>
+        <p class="muted">The chart shows 50 of the 200 simulated months, with 30 days in each row. Red marks damaging shaking here that day, while grey marks an M6+ somewhere nearby.</p>
         <div class="chart" id="sims"></div>
         <p class="muted" id="simNote"></p>
-      </div>
+      </details>
       <div class="card">
         <h2>What drives the risk here</h2>
         <ul class="factors" id="factors"></ul>
@@ -1456,7 +1463,9 @@ const GLOBE = (() => {
     const sizeOf = it => radius(it.M) * Math.min(2, Math.pow(k, 0.35));
 
     function drawBase() {
-      const fine = k >= 1.6, key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
+      // Use lighter outlines during movement; restore detailed coastlines at rest.
+      const fine = k >= 1.6 && !drag && !pinch && !fly && !vel;
+      const key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
       if (key === baseKey) return; baseKey = key;
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
@@ -1531,7 +1540,7 @@ const GLOBE = (() => {
     });
     const up = ev => {
       if (!pointers.has(ev.pointerId)) return; pointers.delete(ev.pointerId);
-      if (pinch) { if (pointers.size < 2) pinch = null; return }
+      if (pinch) { if (pointers.size < 2) pinch = null; kick(); return }
       if (drag) { const click = drag.moved <= 4, p = local(ev), recent = performance.now() - drag.lastT < 60; drag = null; canvas.style.cursor = 'grab';
         if (!recent) vel = null;
         if (click) { vel = null; const it = hit(p[0], p[1]); selected = it; opts.onPick(it) } }
@@ -1698,7 +1707,10 @@ const SHAKE=(()=>{
   // tab6 is the JOINT probability of damage and M6+, not damage conditional on M6+.
   // Keeping that intersection lets the simulation colour M6+ events without double counting damage.
   const tab=new Float32Array(NT*NR),tab6=new Float32Array(NT*NR);
-  for(let i=0;i<NT;i++){const thr=T0+i*TS;for(let j=0;j<NR;j++){const d=j*RS,R=Math.sqrt(d*d+H*H+KERNEL*KERNEL);let s=0,s6=0;for(let k=0;k<mags.length;k++){const v=wts[k]*(1-Phi((thr-mu(mags[k],R))/sig(R)));s+=v;if(mags[k]>=6)s6+=v}tab[i*NR+j]=s;tab6[i*NR+j]=s6}}
+  // The distance response is independent of the threshold. Compute it once per
+  // distance/magnitude pair instead of repeating its logarithms 201 times.
+  for(let j=0;j<NR;j++){const d=j*RS,R=Math.sqrt(d*d+H*H+KERNEL*KERNEL),sigma=sig(R),means=mags.map(m=>mu(m,R));
+    for(let i=0;i<NT;i++){const thr=T0+i*TS;let s=0,s6=0;for(let k=0;k<mags.length;k++){const v=wts[k]*(1-Phi((thr-means[k])/sigma));s+=v;if(mags[k]>=6)s6+=v}tab[i*NR+j]=s;tab6[i*NR+j]=s6}}
   function g(thrEff,d,table=tab){let i=Math.round((thrEff-T0)/TS);if(i<0)i=0;if(i>=NT)return 0;let j=Math.round(d/RS);if(j>=NR)return 0;return table[i*NR+j]}
   // q = chance that a random future M>=5 aftershock produces shaking >= thr at (x,y), averaged over where aftershocks are expected
   function marks(src,x,y,vs,thr,calib){if(!src.length||src.length%2)throw new RangeError('At least one source coordinate pair is required.');const te=thr-site(vs)-(calib?BIAS:0);let damage=0,damageM6=0;for(let k=0;k<src.length;k+=2){const d=Math.hypot(src[k]-x,src[k+1]-y);damage+=g(te,d);damageM6+=g(te,d,tab6)}return{damage:damage/(src.length/2),damageM6:damageM6/(src.length/2),m6:m6Rate}}
@@ -1973,6 +1985,69 @@ const SPOKEN=(()=>{
     ].filter(Boolean).join(' ');
   }
   return {summary};
+})();
+
+</script>
+<script>// Keep only the current fit. Display choices do not change the posterior, but a
+// revised catalogue or replay time does. Controllers clear it after live updates.
+const FORECAST_CACHE = (() => {
+  function create(model, shake) {
+    let current = null;
+    return {
+      at(events, now) {
+        if (!current || current.events !== events || current.now !== now) {
+          const f = model.fit(events, now);
+          current = { events, now, f, cp: shake.compact(f) };
+        }
+        return current;
+      },
+      clear() { current = null; },
+    };
+  }
+  return { create };
+})();
+
+</script>
+<script>// Map shading uses the same 200-point probability interpolation as before.
+// Yield between short batches so dragging, typing and navigation can continue.
+// An obsolete request stops before sampling any more cells or publishing a map.
+const HEATMAP = (() => {
+  async function build({ cols, rows, sample, probability, isCurrent = () => true,
+    yieldControl = () => new Promise(resolve => requestAnimationFrame(resolve)),
+    now = () => performance.now(), budget = 8 }) {
+    if (!isCurrent()) return null;
+    const Q = new Float64Array(cols * rows), P = new Float32Array(Q.length);
+    let qMin = Infinity, qMax = 0, deadline = now() + budget;
+    for (let i = 0; i < Q.length; i++) {
+      const q = sample(i); Q[i] = q;
+      if (q > 0) { qMin = Math.min(qMin, q); qMax = Math.max(qMax, q); }
+      if (now() >= deadline) {
+        await yieldControl();
+        if (!isCurrent()) return null;
+        deadline = now() + budget;
+      }
+    }
+    if (qMax > 0) {
+      const n = 200, l0 = Math.log(qMin), dl = (Math.log(qMax) - l0) / (n - 1) || 1;
+      const table = new Float64Array(n);
+      for (let i = 0; i < n; i++) {
+        table[i] = probability(Math.exp(l0 + i * dl));
+        if (now() >= deadline) {
+          await yieldControl();
+          if (!isCurrent()) return null;
+          deadline = now() + budget;
+        }
+      }
+      for (let i = 0; i < Q.length; i++) {
+        if (!(Q[i] > 0)) continue;
+        const x = Math.min(n - 1, (Math.log(Q[i]) - l0) / dl);
+        const j = Math.min(n - 2, Math.floor(x)), t = x - j;
+        P[i] = table[j] + (table[j + 1] - table[j]) * t;
+      }
+    }
+    return isCurrent() ? { cols, rows, P } : null;
+  }
+  return { build };
 })();
 
 </script>
@@ -4308,6 +4383,14 @@ function fatRate(cc,mmi){const f=POP.fatality[cc];return f?PhiN(Math.log(mmi/f[0
 
 // ---------- state ----------
 let S,G,B,TOWNS,tMin=1/24,tMax=1,layer='risk',loc=null,heat=null,heatKey='',playing=false,cur={},replayTimeOverride=null;
+const forecastCache=FORECAST_CACHE.create(MODEL,SHAKE);
+let activeTab='spot',heatRequest=0,heatPendingKey='',heatError='',townRiskCache=null;
+function cancelHeat(){heatRequest++;heatPendingKey=''}
+function invalidateForecast(){
+  forecastCache.clear();cancelHeat();heat=null;heatKey='';townRiskCache=null;quakeCatalogue=null;overlayKey='';quakeKey='';townKey='';
+  // A revised epicentre changes projected coordinates even if the grid is unchanged.
+  if(G)G.heatSites=null;
+}
 const sliderToT=v=>tMin*Math.pow(tMax/tMin,v/1000),tToSlider=t=>Math.round(1000*Math.log(t/tMin)/Math.log(tMax/tMin));
 const km=(lat,lon)=>[(lon-S.lon)*111.32*G.c,(lat-S.lat)*110.57];
 function gridAt(lat,lon){const c=Math.round((lon-G.lon0)/G.dlon),r=Math.round((G.lat0-lat)/G.dlat);if(c<0||r<0||c>=G.nc||r>=G.nr)return null;const i=r*G.nc+c;return{mmi:G.mmi[i]/20,vs:G.vs[i]*8,liq:G.liq?G.liq[i]/500:null,ls:G.ls?G.ls[i]/1000:null}}
@@ -4325,6 +4408,7 @@ const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:
 
 // Reinstall a revised grid without resetting the user's pins, camera or selected time.
 function installSequenceGrid(fit=true){
+  invalidateForecast();
   B=BASE[S.key];TOWNS=POP.towns[S.key];const sm=D.shakemaps[S.key],ex=EX[S.key]||{};
   const bytes=v=>typeof v==='string'?b64(v):v;   // bundled grids are base64; live ones arrive as byte arrays
   G={...sm,mmi:bytes(sm.mmi),vs:bytes(sm.vs30),liq:ex.liq?b64(ex.liq.b):null,ls:ex.ls?b64(ex.ls.b):null,c:Math.cos(S.lat*Math.PI/180)};
@@ -4358,6 +4442,7 @@ function setAbsoluteReplayTime(timestamp){
 }
 // i: index into SEQ, or a registered live sequence.
 function pickSeq(i){
+  pausePlayback();
   liveOpenToken++;enterDetail(false);stopSummary();resetComparison();checkFeedback='';replayTimeOverride=null;
   S=typeof i==='number'?SEQ[i]:i;$('gLoad').hidden=true;resetAsk();installSequenceGrid();renderHeader();timelineBounds();
   $('now').value=tToSlider(Math.min(tMax,S.live||S.key.endsWith('26')?tMax:1));
@@ -4374,12 +4459,12 @@ map.on('click',ev=>{const {lat,lng}=ev.latlng;if(!gridAt(lat,lng)){if(comparison
 // ---------- forecast ----------
 function sources(now){const out=[];const ev=S.events.filter(e=>e[0]>=-0.001&&e[0]<=now);const step=Math.max(1,Math.ceil(ev.length/700));for(let i=0;i<ev.length;i+=step){const [x,y]=km(ev[i][2],ev[i][3]);out.push(x,y)}return out}
 function baseThr(){const v=$('bld').value;return v==='local'?(countryThr(pinCountry())||8):+v}
-function spot(lat,lon,thrBase,calib,src){
-  const gv=gridAt(lat,lon)||{mmi:0,vs:600,liq:null,ls:null};let thr=thrBase,why=[];
+function spot(lat,lon,thrBase,calib,src,site=null){
+  const gv=(site?site.gv:gridAt(lat,lon))||{mmi:0,vs:600,liq:null,ls:null};let thr=thrBase,why=[];
   if(gv.mmi>=thrBase-0.5&&thrBase>6){why.push('mainshock')}
   if(gv.liq!=null&&gv.liq>=0.1){why.push('liquefaction')}
   if(why.length)thr=Math.max(6,thrBase-1);
-  const [x,y]=km(lat,lon);return{gv,thr,why,x,y,qv:SHAKE.q(src,x,y,gv.vs,thr,calib)}}
+  const [x,y]=site?site.xy:km(lat,lon);return{gv,thr,why,x,y,qv:SHAKE.q(src,x,y,gv.vs,thr,calib)}}
 function update(){
   const now=selectedDays(),thrB=baseThr(),tol=+$('tol').value,calib=$('shk').value==='1',reveal=$('reveal').checked;
   const t0=Date.parse(S.t0),nowDate=new Date(t0+now*864e5);
@@ -4389,7 +4474,7 @@ function update(){
   renderDataStatus();
   // Keep the complete posterior here: a fixed-length slice silently understates every
   // point probability and can move the projected threshold-crossing time too early.
-  const f=MODEL.fit(S.events,now),cp=SHAKE.compact(f),src=sources(now);
+  const {f,cp}=forecastCache.at(S.events,now),src=cur.f===f?cur.src:sources(now);
   const sp=spot(loc.lat,loc.lon,thrB,calib,src);
   const exposure=SCENARIO.exposure(SHAKE,f,cp,sp.qv,+$('exposure').value);
   const p24=SHAKE.probQ(f,cp,sp.qv,0,1),p7=SHAKE.probQ(f,cp,sp.qv,0,7),p30=SHAKE.probQ(f,cp,sp.qv,0,30),re=SHAKE.reentryQ(f,cp,sp.qv,tol,exposure.days);
@@ -4414,21 +4499,29 @@ function update(){
   $('uncertainty').textContent=`For the next 24 hours, uncertainty in aftershock rates alone gives a range of ${pct(range.low)} to ${pct(range.high)}. Ground, building and model errors would add to that uncertainty.`;
   const qAlt=SHAKE.q(src,sp.x,sp.y,sp.gv.vs,sp.thr,!calib),p7alt=SHAKE.probQ(f,cp,qAlt,0,7);
   $('alt').innerHTML=`Using the ${calib?'standard':'adjusted'} shaking equation gives ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
-  renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
-  if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
-  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();drawCurve();if(!playing)drawSims();renderPeople();renderAftList(now);renderComparison();renderChanges();updateSpokenSummary();bindSrc();
+  if(playing){cancelHeat();heat=null;heatKey=''}
+  else if(layer==='risk'&&key!==heatKey&&key!==heatPendingKey)requestHeat(f,cp,src,calib,key);
+  drawOverlay();drawQuakes(now,reveal);drawTowns();drawPin();drawLegend();renderComparison();renderChanges();renderActiveTab();updateSpokenSummary();
 }
-function computeHeat(f,cp,src,calib){
-  const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c))),P=new Float32Array(cols*rows),local=$('bld').value==='local';
-  const Q=new Float64Array(cols*rows);let qMin=Infinity,qMax=0;
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lat=G.lat0-(r+0.5)/rows*(G.lat0-G.lat1),lon=G.lon0+(c+0.5)/cols*(G.lon1-G.lon0);
-    const tb=local?(countryThr(countryAt(lat,lon))||8):+$('bld').value,qv=spot(lat,lon,tb,calib,src).qv;Q[r*cols+c]=qv;if(qv>0){qMin=Math.min(qMin,qv);qMax=Math.max(qMax,qv)}}
-  // probQ sums the full posterior (thousands of terms), too slow for every cell. The 7-day chance depends on the cell
-  // only through qv, so shade from exact values at 200 log-spaced qv and interpolate. Displayed numbers use probQ directly.
-  if(qMax>0){const n=200,l0=Math.log(qMin),dl=(Math.log(qMax)-l0)/(n-1)||1,tab=new Float64Array(n);for(let i=0;i<n;i++)tab[i]=SHAKE.probQ(f,cp,Math.exp(l0+i*dl),0,7);
-    for(let i=0;i<Q.length;i++){if(!(Q[i]>0))continue;const x=Math.min(n-1,(Math.log(Q[i])-l0)/dl),j=Math.min(n-2,Math.floor(x)),t=x-j;P[i]=n<2?tab[0]:tab[j]+(tab[j+1]-tab[j])*t}}
-  return{cols,rows,P}}
+function requestHeat(f,cp,src,calib,key){
+  const seq=S,grid=G,request=++heatRequest;heatPendingKey=key;heat=null;heatKey='';heatError='';
+  const isCurrent=()=>request===heatRequest&&S===seq&&G===grid&&mode==='detail'&&!playing;
+  computeHeat(f,cp,src,calib,isCurrent).then(result=>{
+    if(!result||!isCurrent())return;
+    heat=result;heatKey=key;heatPendingKey='';overlayKey='';drawOverlay();drawLegend();
+  }).catch(()=>{if(isCurrent()){heatPendingKey='';heatError='Map shading is unavailable. Choose another layer or change the time to retry.';drawLegend()}});
+}
+function computeHeat(f,cp,src,calib,isCurrent){
+  const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c)));
+  const local=$('bld').value==='local',building=+$('bld').value,sites=G.heatSites||(G.heatSites=new Array(cols*rows));
+  return HEATMAP.build({cols,rows,isCurrent,probability:q=>SHAKE.probQ(f,cp,q,0,7),sample:i=>{
+    let site=sites[i];
+    if(!site){const r=Math.floor(i/cols),c=i%cols,lat=G.lat0-(r+.5)/rows*(G.lat0-G.lat1),lon=G.lon0+(c+.5)/cols*(G.lon1-G.lon0);
+      site=sites[i]={lat,lon,gv:gridAt(lat,lon),xy:km(lat,lon),threshold:countryThr(countryAt(lat,lon))||8}}
+    return spot(site.lat,site.lon,local?site.threshold:building,calib,src,site).qv;
+  }});
+}
 function factorsList(){const sp=cur.sp,gv=sp.gv,cc=pinCountry(),ct=countryThr(cc),amp=SHAKE.site(gv.vs),[cls,clsN]=vsClass(gv.vs);
   let nearest=Infinity;for(let k=0;k<cur.src.length;k+=2)nearest=Math.min(nearest,Math.hypot(cur.src[k]-sp.x,cur.src[k+1]-sp.y));
   let coast=Infinity;for(const s of G.coast){const [ax,ay,bx,by]=s,dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((sp.x-ax)*dx+(sp.y-ay)*dy)/l));coast=Math.min(coast,Math.hypot(ax+t*dx-sp.x,ay+t*dy-sp.y))}
@@ -4463,7 +4556,7 @@ function rampAt(n,v){const Rr=RAMPS[n],X=x=>LOGR[n]?Math.log10(Math.max(x,1e-5))
 // Map layers are redrawn only when their inputs change, so a click that just moves the pin doesn't rebuild them.
 let overlayKey='',quakeKey='',townKey='';
 function drawOverlay(){const key=[S.key,layer,layer==='risk'?heatKey:''].join('|');if(key===overlayKey)return;overlayKey=key;
-  if(layer==='none'){overlayLayer.clearLayers();return}
+  if(layer==='none'||(layer==='risk'&&!heat)){overlayLayer.clearLayers();return}
   let w,h,get;
   if(layer==='risk'){w=heat.cols;h=heat.rows;get=i=>heat.P[i]}
   else{w=G.nc;h=G.nr;const a=layer==='mmi'?G.mmi:layer==='vs'?G.vs:layer==='liq'?G.liq:G.ls;if(!a){overlayLayer.clearLayers();return}const sc=layer==='mmi'?1/20:layer==='vs'?8:layer==='liq'?1/500:1/1000;get=i=>a[i]*sc}
@@ -4478,17 +4571,40 @@ function drawOverlay(){const key=[S.key,layer,layer==='risk'?heatKey:''].join('|
   const old=overlayLayer.getLayers(),ov=L.imageOverlay(c.toDataURL(),G.bounds,{opacity:1,interactive:false,pane:'shade'});
   ov.once('load',()=>old.forEach(l=>overlayLayer.removeLayer(l)));ov.addTo(overlayLayer)}
 function ageColor(age){return age<1/24?'#d7191c':age<1?'#fd8d3c':age<7?'#fed24c':'#ffffff'}
+let quakeCatalogue=null,quakeEntries=[];
 function drawQuakes(now,reveal){const key=[S.key,now,reveal,$('showQ').checked].join('|');if(key===quakeKey)return;quakeKey=key;
-  quakeLayer.clearLayers();if(!$('showQ').checked)return;const t0=Date.parse(S.t0);
-  const ev=S.events.filter(e=>e[0]>=-0.001&&(e[0]<=now||reveal)).sort((a,b)=>a[1]-b[1]);
-  for(const e of ev){const past=e[0]<=now,r=2+Math.pow(Math.max(e[1]-3.7,0),1.6)*2.2;
-    const m=L.circleMarker([e[2],e[3]],past?{renderer:RND.quakes,pane:'quakes',radius:r,color:'#222',weight:.8,fillColor:ageColor(now-e[0]),fillOpacity:.9}:{renderer:RND.quakes,pane:'quakes',radius:r,color:'#6b7480',weight:1.2,dashArray:'2 2',fill:false});
-    m.bindPopup(`<div class="pp-h">M${e[1]}${Math.abs(e[0])<1e-4?' mainshock':''}</div>${fmtDT(new Date(t0+e[0]*864e5))}<br><span class="pp-k">${Math.abs(e[0])<1e-4?'':dur(Math.max(0,e[0]))+' after the mainshock. '}${past?'known at "now"':'after "now" (hidden from the model)'}</span>`);m.addTo(quakeLayer)}
-  L.marker([S.lat,S.lon],{icon:starIcon,keyboard:false,pane:'checks'}).bindPopup(`<div class="pp-h">M${S.M} mainshock</div>${S.place}<br>${fmtDT(new Date(t0))}<br><a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">USGS event page</a>`).addTo(quakeLayer)}
+  if(quakeCatalogue!==S.events){quakeLayer.clearLayers();quakeCatalogue=S.events;
+    quakeEntries=S.events.filter(e=>e[0]>=-0.001).sort((a,b)=>a[1]-b[1]).map(e=>({e,marker:null,style:null}));
+    quakeEntries.push({main:true,marker:L.marker([S.lat,S.lon],{icon:starIcon,keyboard:false,pane:'checks'}).bindPopup(`<div class="pp-h">M${S.M} mainshock</div>${esc(S.place)}<br>${fmtDT(new Date(S.t0))}<br><a href="https://earthquake.usgs.gov/earthquakes/eventpage/${S.id}" target="_blank" rel="noopener">USGS event page</a>`)})}
+  if(!$('showQ').checked){quakeLayer.clearLayers();return}
+  const t0=Date.parse(S.t0);
+  // Keep Leaflet markers and their popups while scrubbing. Only visibility and
+  // the four age colours change, so rebuilding every marker adds no information.
+  for(const entry of quakeEntries){
+    if(entry.main){if(!quakeLayer.hasLayer(entry.marker))entry.marker.addTo(quakeLayer);continue}
+    const {e}=entry,past=e[0]<=now;
+    if(!past&&!reveal){if(entry.marker)quakeLayer.removeLayer(entry.marker);continue}
+    const color=past?ageColor(now-e[0]):'later';
+    if(!entry.marker)entry.marker=L.circleMarker([e[2],e[3]],{renderer:RND.quakes,pane:'quakes',radius:2+Math.pow(Math.max(e[1]-3.7,0),1.6)*2.2});
+    if(color!==entry.style){entry.style=color;entry.marker.setStyle(past?{color:'#222',weight:.8,fill:true,fillColor:color,fillOpacity:.9,dashArray:null}:{color:'#6b7480',weight:1.2,dashArray:'2 2',fill:false});
+      entry.marker.bindPopup(`<div class="pp-h">M${e[1]}${Math.abs(e[0])<1e-4?' mainshock':''}</div>${fmtDT(new Date(t0+e[0]*864e5))}<br><span class="pp-k">${Math.abs(e[0])<1e-4?'':dur(Math.max(0,e[0]))+' after the mainshock. '}${past?'known at "now"':'after "now" (hidden from the model)'}</span>`)}
+    if(!quakeLayer.hasLayer(entry.marker))entry.marker.addTo(quakeLayer);
+  }}
+function townRisks(){
+  const building=$('bld').value;
+  if(townRiskCache?.f===cur.f&&townRiskCache.grid===G&&townRiskCache.building===building&&townRiskCache.calib===cur.calib)return townRiskCache.items;
+  const local=building==='local';
+  const items=TOWNS.towns.filter(t=>gridAt(t[1],t[2])).slice(0,60).map(t=>{
+    const threshold=local?(countryThr(t[4])||countryThr(POP.seqCountry[S.key])||8):+building;
+    const s=spot(t[1],t[2],threshold,cur.calib,cur.src);
+    return{town:t,p7:SHAKE.probQ(cur.f,cur.cp,s.qv,0,7)};
+  });
+  townRiskCache={f:cur.f,grid:G,building,calib:cur.calib,items};return items;
+}
 function drawTowns(){const key=[S.key,cur.key,cur.now,$('bld').value,cur.calib,map.getZoom(),$('showT').checked].join('|');if(key===townKey)return;townKey=key;
   townLayer.clearLayers();if(!$('showT').checked||!cur.f||cur.key!==S.key)return;
-  const top=TOWNS.towns.filter(t=>gridAt(t[1],t[2])).slice(0,60),local=$('bld').value==='local';
-  for(const t of top){const tb=local?(countryThr(t[4])||countryThr(POP.seqCountry[S.key])||8):+$('bld').value,s=spot(t[1],t[2],tb,cur.calib,cur.src),p=SHAKE.probQ(cur.f,cur.cp,s.qv,0,7);t.p7=p;
+  const risks=townRisks(),top=risks.map(item=>item.town);
+  for(const {town:t,p7:p} of risks){
     const sz=Math.round(Math.min(26,6+Math.sqrt(t[3])/70));
     L.marker([t[1],t[2]],{pane:'towns',keyboard:false,icon:L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],html:`<span style="display:block;width:${sz}px;height:${sz}px;background:rgba(40,52,70,.55);border:1.5px solid #fff;outline:1px solid rgba(40,52,70,.8)"></span>`})})
       .bindTooltip(`<b>${t[0]}</b>, ${fmtN(t[3])} people<br>7-day chance of damaging shaking: ${pct(p)}`,{direction:'top'}).addTo(townLayer)}
@@ -4501,22 +4617,32 @@ function drawPin(){if(pinMarker&&pinLayer.hasLayer(pinMarker)){pinMarker.setLatL
 function pinPopupHtml(){const c=cur;return `<div class="pp-h">A: ${esc(loc.name)}</div>Intensity ${R(c.sp.thr)}+ shaking from M5+ aftershocks:<br><b>${chance(c.exposure.probability)}</b> over ${exposureLabel()}<br><b>${pct(c.p24)}</b> next 24 h, <b>${pct(c.p7)}</b> next 7 days<br><span class="pp-k">${c.re===0?'Below your limit':c.re===Infinity?'Above your limit for 400+ days':'Below your limit from '+fmtDT(new Date(c.nowDate.getTime()+c.re*864e5))}</span>`}
 function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]?$('bld').selectedOptions[0].text.split(/ \(|,/)[0].toLowerCase():'';
   const spec={risk:[`Chance of damaging shaking, next 7 days (${bld})`,['0.3%','2%','10%','40%']],mmi:['Mainshock intensity (USGS ShakeMap)',['IV','VI','VIII','IX']],vs:['Vs30: lower = softer ground, more shaking',['150','400','900 m/s']],liq:['Liquefaction in the mainshock (USGS ground failure)',['2%','8%','20%+']],ls:['Landslides in the mainshock (USGS ground failure)',['1%','4%','12%+']],none:null}[layer];
-  L0.innerHTML=(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div>`:'')+
+  const pending=layer==='risk'&&!heat?(playing?'Map shading resumes when you pause.':heatError||'Updating map shading…'):'';
+  L0.setAttribute('aria-busy',String(!!heatPendingKey));
+  L0.innerHTML=(pending?`<p class="muted" role="status">${pending}</p>`:'')+(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div>`:'')+
    `<div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span><span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>town (size = people)</span>${$('reveal').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div>`;
   if(!spec)return;const rc=$('rampc').getContext('2d');for(let i=0;i<150;i++){const t=i/149,v=layer==='risk'?Math.pow(10,-2.5+t*2.1):layer==='mmi'?4+t*5:layer==='vs'?150+t*750:layer==='liq'?Math.pow(10,-2+t*1.4):Math.pow(10,-2.3+t*1.4);const c=rampAt(layer,v);rc.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(c[3],.35)})`;rc.fillRect(i,0,1,10)}}
 // The collapsed layers button names the current shading, so you can see what's shown without opening it.
 function renderLayTgl(){const r=document.querySelector('input[name=lay]:checked'),b=document.createElement('b');b.textContent='Map layers';$('layTgl').replaceChildren(b,': '+(r?r.parentElement.textContent.trim():''))}
-document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;drawOverlay();drawLegend();renderLayTgl()});
+document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;if(layer==='risk')update();else{cancelHeat();drawOverlay();drawLegend()}renderLayTgl()});
 renderLayTgl();
-['showQ','showT'].forEach(id=>$(id).onchange=()=>update());$('showC').onchange=renderCheckins;
+$('showQ').onchange=()=>drawQuakes(cur.now,$('reveal').checked);$('showT').onchange=drawTowns;$('showC').onchange=renderCheckins;
 $('layTgl').onclick=()=>{const o=$('layers').classList.toggle('open');$('layTgl').setAttribute('aria-expanded',String(o))};
 
 // ---------- charts ----------
 const NS='http://www.w3.org/2000/svg';
+const visibleCharts=new Set(),chartStates=new WeakMap();
+function chartNeedsDraw(box,inputs){const previous=chartStates.get(box),next=[box.clientWidth,...inputs];if(previous&&next.every((value,i)=>value===previous[i]))return false;chartStates.set(box,next);return true}
+// Charts below the fold wait until the reader approaches them. Hidden tabs and
+// closed simulation details do not need thousands of SVG elements.
+if(typeof IntersectionObserver==='function'){
+  const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting)visibleCharts.add(entry.target.id);else visibleCharts.delete(entry.target.id)}renderActiveTab()},{rootMargin:'150px'});
+  ['curve','sims','tigerChart'].forEach(id=>observer.observe($(id)));
+}else{['curve','sims','tigerChart'].forEach(id=>visibleCharts.add(id))}
 function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
 function niceStep(max,n=4){const raw=max/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),r=raw/mag;return (r<1.5?1:r<3?2:r<7?5:10)*mag}
 function tipper(box){let t=box.querySelector('.ctip');if(!t){t=document.createElement('div');t.className='ctip';box.appendChild(t)}return{show(x,y,h){t.innerHTML=h;t.style.left=x+'px';t.style.top=y+'px';t.style.opacity=1},hide(){t.style.opacity=0}}}
-function drawCurve(){const {f,cp,sp,tol,re,exposure}=cur,box=$('curve');box.innerHTML='';const W=Math.max(box.clientWidth,260),H=170,m={l:42,r:10,t:12,b:26};
+function drawCurve(){const {f,cp,sp,tol,re,exposure}=cur,box=$('curve');if(!chartNeedsDraw(box,[f,sp.qv,tol,re,exposure.days]))return;box.innerHTML='';const W=Math.max(box.clientWidth,260),H=170,m={l:42,r:10,t:12,b:26};
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':`Chance of shaking during ${exposureLabel()} by start time`},box);
   const span=Math.min(60,Math.max(7,isFinite(re)?re*2.2:30)),pts=[];for(let i=0;i<=100;i++){const t=span*i/100;pts.push([t,SHAKE.probQ(f,cp,sp.qv,t,t+exposure.days)])}
   const ymax=Math.max(tol*2.2,pts[0][1]*1.08,0.002),X=t=>m.l+t/span*(W-m.l-m.r),Y=p=>H-m.b-p/ymax*(H-m.t-m.b);
@@ -4535,7 +4661,7 @@ function drawCurve(){const {f,cp,sp,tol,re,exposure}=cur,box=$('curve');box.inne
 function simulate(n=200,days=30){const {f,cp,src,sp,calib}=cur;let seed=7;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
   const mark=SHAKE.marks(src,sp.x,sp.y,sp.gv.vs,sp.thr,calib);
   return SHAKE.simulateFutures(f,cp,mark,days,n,rng)}
-function drawSims(){const box=$('sims');box.innerHTML='';const sim=simulate(),W=Math.max(box.clientWidth,260),show=50,ch=4,gap=1,m={l:6,r:6,t:4,b:22},H=m.t+show*(ch+gap)+m.b;
+function drawSims(){const box=$('sims'),{f,src,sp,calib}=cur;if(!chartNeedsDraw(box,[f,src,sp.x,sp.y,sp.gv.vs,sp.thr,calib]))return;box.innerHTML='';const sim=simulate(),W=Math.max(box.clientWidth,260),show=50,ch=4,gap=1,m={l:6,r:6,t:4,b:22},H=m.t+show*(ch+gap)+m.b;
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Simulated futures'},box);const cw=(W-m.l-m.r)/30;
   sim.rows.slice(0,show).forEach((row,i)=>row.forEach((v,d)=>{el('rect',{x:m.l+d*cw+.5,y:m.t+i*(ch+gap),width:Math.max(1,cw-1),height:ch,fill:v===2?PAL.red:v===1?'#9aa3ad':'#eceef1'},svg)}));
   const ax=el('g',{class:'axis'},svg);for(const d of [0,7,14,21,29])el('text',{x:m.l+d*cw+cw/2,y:H-6,'text-anchor':'middle'},ax).textContent=d===0?'day 1':'day '+(d+1);
@@ -4550,7 +4676,7 @@ function renderAftList(now){const t0=Date.parse(S.t0);const big=S.events.filter(
 function renderPeople(){const sp=cur.sp;const near=TOWNS.towns.map(t=>({t,d:Math.hypot((t[1]-loc.lat)*110.57,(t[2]-loc.lon)*111.32*G.c)})).filter(o=>o.d<=15).sort((a,b)=>a.d-b.d);
   const pop=near.reduce((a,o)=>a+o.t[3],0);
   $('nearPeople').innerHTML=near.length?`<p class="p">About <b>${fmtN(pop)}</b> people live in the ${near.length} town${near.length>1?'s':''} within 15 km of your pin.</p><table><tr><th>Town</th><th class="num">People</th><th class="num">Distance</th></tr>${near.slice(0,6).map(o=>`<tr><td>${o.t[0]}</td><td class="num">${fmtN(o.t[3])}</td><td class="num">${o.d.toFixed(1)} km</td></tr>`).join('')}</table><p class="muted">These population figures come from GeoNames and cover listed towns, so rural homes outside them are not counted.</p>`:'<p class="p">No listed towns within 15 km of your pin.</p>';
-  const ts=TOWNS.towns.filter(t=>t.p7!=null);const exp=ts.reduce((a,t)=>a+t[3]*t.p7,0),hi=ts.filter(t=>t.p7>=0.1);
+  const ts=townRisks(),exp=ts.reduce((a,item)=>a+item.town[3]*item.p7,0),hi=ts.filter(item=>item.p7>=0.1).map(item=>item.town);
   $('atRisk').innerHTML=`<p class="p">Across the ${ts.length} largest towns in the area, the forecast expects about <b>${fmtN(exp)}</b> people to feel damaging shaking for their local buildings in the next 7 days.${hi.length?` ${hi.length} town${hi.length>1?'s have':' has'} a 1-in-10 chance or higher: ${hi.slice(0,5).map(t=>t[0]).join(', ')}.`:''}</p><p class="muted">We calculate this by multiplying each town's population by its 7-day shaking chance, using the same estimates as the map.</p>`}
 function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
   const warnings=[...(S.warnings||[]),S.refreshError?'Live updates are delayed; the last successful data is shown.':''].filter(Boolean).join(' ');
@@ -4578,11 +4704,11 @@ function renderLedger(){const sm=D.shakemaps[S.key],ex=EX[S.key]||{},gi=ex.gfInf
    ['validation','Validation scope','Regional M5+/M6+ occurrence checks on revised catalogue data','No independent validation of point shaking, building damage or re-entry. Overlapping forecast windows are correlated; later ShakeMaps and fitted soil terms are retrospective.'],
    ['map','Map','Natural Earth coastlines and borders (world-atlas)',S.live?'1:50m scale for live earthquakes, clipped to the area. Towns of 5,000+ people from GeoNames.':'Clipped to the area.']];
   $('ledger').innerHTML='<tr><th>Number</th><th>Source</th><th>What we did</th></tr>'+rows.map(r=>`<tr id="src-${r[0]}"><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
-function bindSrc(){document.querySelectorAll('.src[data-src]').forEach(b=>b.onclick=()=>{selectTab('sources');const row=$('src-'+b.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})})}
+document.addEventListener('click',event=>{const button=event.target.closest('.src[data-src]');if(!button)return;selectTab('sources');const row=$('src-'+button.dataset.src);if(!row)return;document.querySelectorAll('.ledger tr').forEach(r=>r.classList.remove('hl'));row.classList.add('hl');row.scrollIntoView({block:'center'})});
 
 // ---------- accuracy ----------
-let validationRows=null;
-function accuracy(){const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));
+let validationRows=null,accuracyRendered=false;
+function accuracy(){if(accuracyRendered)return;accuracyRendered=true;const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));
   const stats=[5,6].map(m=>VALIDATION.summarize(rows,m));
   let h='<tr><th>Forecast band</th><th class="num">M5+ n / observed</th><th class="num">M6+ n / observed</th></tr>';
   for(let i=0;i<4;i++){h+=`<tr><td>${['Under 10%','10–30%','30–60%','60–100%'][i]}</td>`;for(const st of stats){const bin=st.reliability[i];h+=`<td class="num">${bin.count} / ${bin.count?Math.round(bin.observed*100)+'%':'–'}</td>`}h+='</tr>'}
@@ -4719,16 +4845,25 @@ setInterval(()=>{if(!document.hidden&&mode==='detail')refreshCheckins()},15000);
 
 
 // ---------- tabs, controls, time ----------
-function selectTab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);if(t==='spot'){drawCurve();drawSims()}}
+function renderActiveTab(){
+  if(mode!=='detail'||!cur.f)return;
+  if(activeTab==='spot'){if(visibleCharts.has('curve'))drawCurve();if(!playing&&$('simsOptions').open&&visibleCharts.has('sims'))drawSims();renderFactors();renderAround();renderTiger()}
+  else if(activeTab==='people')renderPeople();
+  else if(activeTab==='events')renderAftList(cur.now);
+  else if(activeTab==='accuracy')accuracy();
+}
+function selectTab(t){activeTab=t;document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='pane-'+t);renderActiveTab()}
+$('simsOptions').ontoggle=()=>{if($('simsOptions').open&&activeTab==='spot'&&cur.f&&!playing)drawSims()};
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>selectTab(b.dataset.tab));
 ['bld','tol','shk','reveal','exposure'].forEach(id=>$(id).onchange=()=>update());
 let sT;$('now').oninput=()=>{replayTimeOverride=null;clearTimeout(sT);sT=setTimeout(update,60)};
 $('town').addEventListener('change',()=>{const n=$('town').value.trim().toLowerCase();const t=TOWNS.towns.find(t=>t[0].toLowerCase()===n)||B.towns.find(t=>t[0].toLowerCase()===n);if(t){setLoc(t[1],t[2],t[0]);map.setView([t[1],t[2]],Math.max(map.getZoom(),9))}});
 let playT=null;
+function pausePlayback(){clearTimeout(playT);playing=false;$('playIcon').setAttribute('d','M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label','Play the sequence')}
 $('play').onclick=()=>{replayTimeOverride=null;playing=!playing;$('playIcon').setAttribute('d',playing?'M3 1.5h3v11H3zM8 1.5h3v11H8z':'M3 1.5v11l9-5.5z');$('play').setAttribute('aria-label',playing?'Pause':'Play the sequence');
   if(playing){if(+$('now').value>=1000)$('now').value=0;const step=()=>{if(!playing)return;const v=Math.min(1000,+$('now').value+8);$('now').value=v;update();if(v>=1000){$('play').click();return}playT=setTimeout(step,90)};step()}
   else{clearTimeout(playT);heatKey='';update()}};
-let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{map.invalidateSize();update()},150)});
+let rT;addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{if(mode==='detail'&&S){map.invalidateSize();drawTowns();renderActiveTab()}},150)});
 
 
 // ---------- plain-English risk buttons ----------
@@ -5071,13 +5206,15 @@ document.querySelectorAll('#askSuggest button').forEach(b => b.onclick = () => a
 
 // ---------- world view: live USGS earthquakes on a globe ----------
 const WORLD=J('d-world'),WTOWNS=J('d-towns'),POLL_MS=120e3;
-const WGEO={land110:topojson.feature(WORLD.land110,WORLD.land110.objects.land),land50:topojson.feature(WORLD.land50,WORLD.land50.objects.land),
-  borders110:topojson.mesh(WORLD.countries110,WORLD.countries110.objects.countries,(a,b)=>a!==b),borders50:topojson.mesh(WORLD.countries50,WORLD.countries50.objects.countries,(a,b)=>a!==b)};
+const WGEO={land110:topojson.feature(WORLD.land110,WORLD.land110.objects.land),
+  borders110:topojson.mesh(WORLD.countries110,WORLD.countries110.objects.countries,(a,b)=>a!==b),
+  get land50(){return this.fineLand||(this.fineLand=topojson.feature(WORLD.land50,WORLD.land50.objects.land))},
+  get borders50(){return this.fineBorders||(this.fineBorders=topojson.mesh(WORLD.countries50,WORLD.countries50.objects.countries,(a,b)=>a!==b))}};
 const CASES=SEQ.map(s=>({id:'case:'+s.key,kind:'case',seq:s,lon:s.lon,lat:s.lat,M:s.M,t:Date.parse(s.t0),place:s.label}));
 let mode='detail',feed=null,feedAt=0,feedErr=null,gSel=null,gItems=[],loadingLive=false;const liveSeqs={};
 const globe=GLOBE.create($('globe'),WGEO,{accent:PAL.red,onPick:it=>{gSel=it;renderGCard();markWorldList();const row=document.querySelector('#wList li[aria-current]');if(row)row.scrollIntoView({block:'nearest'});if(it)globe.flyTo(it.lon,it.lat,Math.max(globe.zoom,1.8),900)},onHover:hoverGlobe});
 function enterWorld(){liveOpenToken++;stopSummary();if(tourOn)endTour();if(comparisonPicking)setComparisonPicking(false);mode='world';document.body.classList.add('world');
-  $('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS</small>';globe.resize();globe.start();renderWorld()}
+  pausePlayback();cancelHeat();$('hMag').textContent='Live';$('hTxt').innerHTML='Earthquakes worldwide <small>live from USGS</small>';globe.resize();globe.start();renderWorld()}
 function enterDetail(refresh=true){if(mode==='detail')return;mode='detail';document.body.classList.remove('world');globe.stop();$('gTip').hidden=true;
   if(refresh&&S){renderHeader();map.invalidateSize();update()}}
 function worldItems(){const min=+$('wMin').value,only=$('wOnlyF').checked;
@@ -5180,7 +5317,7 @@ async function refreshLive(){
     if(following){replayTimeOverride=null;$('now').value=1000}else setAbsoluteReplayTime(absoluteTime);
     // Invalidate on every successful refresh, including magnitude/location revisions
     // that leave the event count unchanged. The old count-only check missed these.
-    heatKey='';renderHeader();renderLedger();renderPager();renderEvents();update();return seq;
+    invalidateForecast();renderHeader();renderLedger();renderPager();renderEvents();update();return seq;
   }catch(e){
     if(S===seq){seq.refreshError=e.message||'Could not reach USGS.';renderDataStatus();renderPager();updateSpokenSummary()}
     return null;
@@ -5220,6 +5357,7 @@ function tigerExpected(f,ta,tb){
   const B=MODEL.params.B,a0=Math.max(ta,f.tm)-f.tm,b0=tb-f.tm;if(b0<=a0)return 0;
   let s=0;for(const [a,p,w] of f.post)s+=w*Math.pow(10,a+B*(f.Mm-4))*MODEL.integral(a0,b0,p);return s}
 function renderTiger(){
+  if(document.hidden||mode!=='detail'||activeTab!=='spot')return;
   const card=$('tigerCard');if(!card)return;
   const d=TIGER.data;
   if(!TIGER.enabled||!S||TIGER.key!==S.key||!d||!cur.f||cur.key!==S.key){card.hidden=true;return}
@@ -5227,6 +5365,7 @@ function renderTiger(){
   const total=d.buckets.reduce((n,b)=>n+b.n4,0);
   if(!total&&!S.live){card.hidden=true;return}
   card.hidden=false;
+  if(!visibleCharts.has('tigerChart'))return;
   const stamp=[S.key,cur.now,d.buckets.length,TIGER.fetchedAt,$('tigerChart').clientWidth].join('|');if(stamp===TIGER.drawnFor)return;TIGER.drawnFor=stamp;
   // Re-bin hourly buckets so the chart keeps at most about 72 bars.
   const w=tigerWindow(),t0=w.t0,spanH=Math.max(1,(Math.min(Date.parse(w.until),S.live?Date.now():Infinity)-t0)/36e5);
@@ -5254,7 +5393,7 @@ function renderTiger(){
 }
 let tigerLastFetch=0;
 setInterval(()=>{
-  if(!TIGER.enabled||!S||mode!=='detail')return;
+  if(document.hidden||!TIGER.enabled||!S||mode!=='detail'||activeTab!=='spot')return;
   if(TIGER.key!==S.key||(S.live&&Date.now()-tigerLastFetch>POLL_MS)){tigerLastFetch=Date.now();tigerFetch()}
   else renderTiger();
 },1500);
@@ -5262,6 +5401,7 @@ tigerProbe();
 
 let feedLoading=false;
 async function pollFeed(){
+  if(document.hidden)return;
   const detail=refreshLive();
   if(feedLoading){await detail;return}feedLoading=true;
   try{feed=await LIVE.feed();feedAt=Date.now();feedErr=null}catch(e){feedErr=e.message==='Failed to fetch'?'offline?':e.message}
@@ -5274,8 +5414,11 @@ $('worldBtn').onclick=toWorld;$('evWorld').onclick=toWorld;
 $('gIn').onclick=()=>globe.zoomBy(1.6);$('gOut').onclick=()=>globe.zoomBy(1/1.6);
 addEventListener('resize',()=>{if(mode==='world')globe.resize()});
 setInterval(pollFeed,POLL_MS);
-setInterval(()=>{if(S&&mode==='detail'){renderDataStatus();updateSpokenSummary()}},30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-feedAt>POLL_MS)pollFeed()});
+setInterval(()=>{if(!document.hidden&&S&&mode==='detail'){renderDataStatus();updateSpokenSummary()}},30000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){globe.stop();if(!tourOn)pausePlayback();cancelHeat()}
+  else{if(mode==='world')globe.start();else if(S)update();if(Date.now()-feedAt>POLL_MS)pollFeed()}
+});
 
 // Explicit sharing, saved setup restoration, and device-provided speech.
 // Shared links carry inputs and an absolute time; figures are recalculated on arrival.
@@ -5348,10 +5491,14 @@ function localLanguage(){
 }
 function populateLanguages(){
   if(!voiceCloud.ok)return;
-  const local=localLanguage(),name=code=>(voiceCloud.languages.find(l=>l.code===code)||{}).name||code;
-  $('summaryLang').innerHTML='<option value="en">English</option>'+(local?`<option value="${local}">${esc(name(local))}</option>`:'');
-  // Default to the local language; keep the listener's own choice once they make one.
-  $('summaryLang').value=voiceCloud.chosen==='en'||!local?'en':local;
+  const local=localLanguage(),name=code=>code==='zh'?'Chinese (中文)':(voiceCloud.languages.find(l=>l.code===code)||{}).name||code;
+  const codes=['en'];
+  if(voiceCloud.languages.some(l=>l.code==='zh'))codes.push('zh');
+  if(local&&!codes.includes(local))codes.push(local);
+  $('summaryLang').innerHTML=codes.map(code=>`<option value="${code}">${esc(name(code))}</option>`).join('');
+  // English and Chinese remain available across earthquakes. Keep an explicit
+  // choice when the forecast changes; otherwise start in the local language.
+  $('summaryLang').value=codes.includes(voiceCloud.chosen)?voiceCloud.chosen:local||'en';
   $('voiceLangBox').hidden=false;$('voiceCredit').hidden=false;
 }
 async function probeCloudVoice(){
@@ -5361,7 +5508,7 @@ async function probeCloudVoice(){
     const info=await r.json();if(!info||!info.configured)return;
     voiceCloud.ok=true;voiceCloud.languages=Array.isArray(info.languages)?info.languages:[{code:'en',name:'English'}];
     populateLanguages();updateSpokenSummary();
-    $('speechStatus').textContent='Natural voice by ElevenLabs. Choose English or the local language.';
+    $('speechStatus').textContent=voiceCloud.languages.some(l=>l.code==='zh')?'Natural voice by ElevenLabs. Choose English, Chinese or the local language.':'Natural voice by ElevenLabs. Choose a spoken language below.';
   }catch(e){/* Static hosting or offline: device voices remain. */}
 }
 function stopSummary(message='Reading stopped.'){
@@ -5539,9 +5686,11 @@ $('joinCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('joinU
 
 // Live forecast check: refit the model using only quakes recorded up to 24 hours ago, and compare
 // its expected count of M5+ aftershocks over the following day with what USGS has recorded since.
+let liveCheckCache=null;
 function forecastCheck(){
   if(!S||!S.live)return null;
   const end=S.daysAvailable,start=end-1;if(start<0.05)return null;
+  if(liveCheckCache?.seq===S&&liveCheckCache.events===S.events&&liveCheckCache.end===end&&liveCheckCache.fetchedAt===S.fetchedAt)return liveCheckCache.result;
   const f=MODEL.fit(S.events,start),cp=SHAKE.compact(f);
   const rates=cp.map(([w,a,p])=>[w,SHAKE.n5(f,a,p,0,1)]);
   const mean=rates.reduce((t,[w,n])=>t+w*n,0);
@@ -5552,7 +5701,8 @@ function forecastCheck(){
     let n=0;if(lam>40)n=Math.max(0,Math.round(lam+Math.sqrt(lam)*Math.sqrt(-2*Math.log(rng()||1e-9))*Math.cos(2*Math.PI*rng())));else{let L=Math.exp(-lam),p=1;do{n++;p*=rng()}while(p>L);n--}draws.push(n)}
   draws.sort((a,b)=>a-b);
   const observed=S.events.filter(e=>e[0]>start&&e[0]<=end&&e[1]>=5).length;
-  return{mean,lo:draws[200],hi:draws[3799],observed,since:new Date(Date.parse(S.fetchedAt)-864e5)};
+  const result={mean,lo:draws[200],hi:draws[3799],observed,since:new Date(Date.parse(S.fetchedAt)-864e5)};
+  liveCheckCache={seq:S,events:S.events,end,fetchedAt:S.fetchedAt,result};return result;
 }
 function renderLiveCheck(){
   const box=$('liveCheck');if(!box)return;const c=mode==='detail'?forecastCheck():null;
@@ -5565,6 +5715,7 @@ setInterval(()=>{if(!document.hidden)renderLiveCheck()},15000);
 
 // A large check-in count over the map while presenting, so the room can watch it rise.
 function renderBoard(){
+  if(document.hidden)return;
   const b=$('ciBoard');if(!b)return;
   const on=Date.now()<LM.fastUntil&&ci.ready&&ci.group&&mode==='detail'&&$('joinModal').hidden;
   if(!on){b.hidden=true;return}
@@ -5573,7 +5724,7 @@ function renderBoard(){
 }
 setInterval(renderBoard,1000);
 
-requestAnimationFrame(()=>{pickSeq(0);accuracy();initCheckins();enterWorld();pollFeed();openSharedView();arriveFromJoin();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen&&!new URLSearchParams(location.hash.slice(1)).has('view')){$('welcome').hidden=false;$('wStory').focus()}});
+requestAnimationFrame(()=>{const params=new URLSearchParams(location.hash.slice(1));renderEvents();initCheckins();enterWorld();pollFeed();openSharedView();arriveFromJoin();let seen=false;try{seen=localStorage.getItem('ar_seen')==='1'}catch(e){}if(!seen&&!params.has('view')&&!params.has('j')){$('welcome').hidden=false;$('wStory').focus()}});
 </script>
 </body>
 </html>

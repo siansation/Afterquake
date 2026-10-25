@@ -29,7 +29,7 @@ test('GET reports configuration without secrets; local languages need the transl
   });
   await withEnv({ELEVENLABS_API_KEY:'el-secret',GEMINI_API_KEY:'g'},async()=>{
     const r=res();await speak(req(null,'GET'),r);const codes=r.body.languages.map(l=>l.code);
-    for(const c of ['en','tr','ja','es','id','hi'])assert.ok(codes.includes(c),c);
+    for(const c of ['en','zh','tr','ja','es','id','hi'])assert.ok(codes.includes(c),c);
   });
   await withEnv({ELEVENLABS_API_KEY:null},async()=>{const r=res();await speak(req(null,'GET'),r);assert.equal(r.body.configured,false);assert.deepEqual(r.body.languages,[])});
 });
@@ -63,6 +63,20 @@ test('local language: Gemini translates first, then ElevenLabs speaks the transl
     assert.equal(g.contents[0].parts[0].text,EN);
     const el=JSON.parse(calls[1].init.body);assert.equal(el.text,tr);assert.equal(el.language_code,'tr');
     assert.equal(r.body.translated,true);assert.equal(r.body.transcript,tr);assert.equal(r.body.language,'Turkish');
+  }));
+});
+
+test('Chinese speech keeps the supplied figures and enforces Chinese in ElevenLabs',async()=>{
+  const calls=[],zh='停留24小时，预计概率为百分之9.2，范围为百分之2.4至19.9，时间为周一2月6日08:29 UTC。';
+  await withEnv({ELEVENLABS_API_KEY:'el',GEMINI_API_KEY:'g'},()=>withFetch(async(url,init)=>{
+    calls.push({url,init});return /generativelanguage/.test(url)?gemini(zh):audioResponse();
+  },async()=>{
+    const r=res();await speak(req({text:EN,lang:'zh'}),r);
+    assert.equal(r.code,200);assert.equal(r.body.lang,'zh');assert.equal(r.body.translated,true);
+    assert.equal(r.body.transcript,zh);assert.equal(speak.numbersPreserved(EN,zh),true);
+    assert.match(JSON.parse(calls[0].init.body).systemInstruction.parts[0].text,/Chinese/);
+    assert.equal(JSON.parse(calls[1].init.body).language_code,'zh');
+    assert.equal(JSON.parse(calls[1].init.body).text,zh);
   }));
 });
 

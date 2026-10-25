@@ -83,11 +83,12 @@ function cloudGlobals({fail=false,translated=true}={}){
   const posts=[],audios=[];
   class FakeAudio{constructor(src){this.src=src;this.paused=true;audios.push(this)}play(){this.paused=false;return Promise.resolve()}pause(){this.paused=true}}
   const fetch=async(url,init={})=>{
-    if(!init.method)return {ok:true,json:async()=>({configured:true,languages:[{code:'en',name:'English'},{code:'tr',name:'Turkish'}]})};
+    if(!init.method)return {ok:true,json:async()=>({configured:true,languages:[{code:'en',name:'English'},{code:'tr',name:'Turkish'},{code:'zh',name:'Chinese'}]})};
     posts.push(JSON.parse(init.body));
     if(fail)return {ok:false,json:async()=>({error:'Voice credits have run out on this server.'})};
-    return {ok:true,json:async()=>({audio:Buffer.from('ID3').toString('base64'),mime:'audio/mpeg',transcript:translated?'Türkçe özet':posts.at(-1).text,
-      translated,lang:translated?'tr':'en',language:translated?'Turkish':'English',note:null})};
+    const chinese=posts.at(-1).lang==='zh';
+    return {ok:true,json:async()=>({audio:Buffer.from('ID3').toString('base64'),mime:'audio/mpeg',transcript:translated?(chinese?'中文摘要':'Türkçe özet'):posts.at(-1).text,
+      translated,lang:translated?(chinese?'zh':'tr'):'en',language:translated?(chinese?'Chinese':'Turkish'):'English',note:null})};
   };
   return {posts,audios,globals:{fetch,Audio:FakeAudio,atob:s=>Buffer.from(s,'base64').toString('binary'),Blob:class{constructor(p,o){this.p=p;this.o=o}},
     URL:{createObjectURL:()=>'blob:x',revokeObjectURL(){}},pinCountry:()=>'TR',exposureLabel:()=>'24 hours',chance:p=>`${(p*100).toFixed(1)}%`}};
@@ -106,6 +107,25 @@ test('configured server: Read summary plays ElevenLabs audio in the local langua
   await h.node('readSummary').onclick();await h.node('readSummary').onclick();
   assert.equal(c.posts.length,2,'same summary and language is served from the page cache');
 });
+test('Chinese is available for every location and stays selected when the forecast changes',async()=>{
+  const c=cloudGlobals(),h=harness({access:true,globals:c.globals});await tick();await tick();
+  assert.match(h.node('summaryLang').innerHTML,/>Chinese \(中文\)</);
+  h.node('summaryLang').value='zh';h.node('summaryLang').onchange();
+  await h.node('readSummary').onclick();
+  assert.equal(c.posts.at(-1).lang,'zh');assert.match(h.node('spokenText').textContent,/中文摘要/);
+  h.ctx.pinCountry=()=>'US';h.ctx.loc.name='Another location';h.run('updateSpokenSummary()');
+  assert.equal(h.node('summaryLang').value,'zh');
+  assert.match(h.node('summaryLang').innerHTML,/>English</);
+  h.ctx.pinCountry=()=>'CN';h.run('populateLanguages()');
+  assert.equal((h.node('summaryLang').innerHTML.match(/value="zh"/g)||[]).length,1,'Local Chinese is not duplicated');
+});
+
+test('only languages advertised by the server can be selected',async()=>{
+  const c=cloudGlobals(),h=harness({access:true,globals:c.globals});await tick();await tick();
+  h.run('voiceCloud.languages=[{code:"en",name:"English"}]; voiceCloud.chosen="zh"; populateLanguages()');
+  assert.equal(h.node('summaryLang').value,'en');assert.ok(!h.node('summaryLang').innerHTML.includes('value="zh"'));
+});
+
 test('a voice-service error falls back to the device voice with an explanation',async()=>{
   const c=cloudGlobals({fail:true}),h=harness({access:true,globals:c.globals});await tick();await tick();
   await h.node('readSummary').onclick();

@@ -29,6 +29,7 @@ function tigerExpected(f,ta,tb){
   const B=MODEL.params.B,a0=Math.max(ta,f.tm)-f.tm,b0=tb-f.tm;if(b0<=a0)return 0;
   let s=0;for(const [a,p,w] of f.post)s+=w*Math.pow(10,a+B*(f.Mm-4))*MODEL.integral(a0,b0,p);return s}
 function renderTiger(){
+  if(document.hidden||mode!=='detail'||activeTab!=='spot')return;
   const card=$('tigerCard');if(!card)return;
   const d=TIGER.data;
   if(!TIGER.enabled||!S||TIGER.key!==S.key||!d||!cur.f||cur.key!==S.key){card.hidden=true;return}
@@ -36,6 +37,7 @@ function renderTiger(){
   const total=d.buckets.reduce((n,b)=>n+b.n4,0);
   if(!total&&!S.live){card.hidden=true;return}
   card.hidden=false;
+  if(!visibleCharts.has('tigerChart'))return;
   const stamp=[S.key,cur.now,d.buckets.length,TIGER.fetchedAt,$('tigerChart').clientWidth].join('|');if(stamp===TIGER.drawnFor)return;TIGER.drawnFor=stamp;
   // Re-bin hourly buckets so the chart keeps at most about 72 bars.
   const w=tigerWindow(),t0=w.t0,spanH=Math.max(1,(Math.min(Date.parse(w.until),S.live?Date.now():Infinity)-t0)/36e5);
@@ -63,7 +65,7 @@ function renderTiger(){
 }
 let tigerLastFetch=0;
 setInterval(()=>{
-  if(!TIGER.enabled||!S||mode!=='detail')return;
+  if(document.hidden||!TIGER.enabled||!S||mode!=='detail'||activeTab!=='spot')return;
   if(TIGER.key!==S.key||(S.live&&Date.now()-tigerLastFetch>POLL_MS)){tigerLastFetch=Date.now();tigerFetch()}
   else renderTiger();
 },1500);

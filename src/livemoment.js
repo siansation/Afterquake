@@ -91,9 +91,11 @@ $('joinCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('joinU
 
 // Live forecast check: refit the model using only quakes recorded up to 24 hours ago, and compare
 // its expected count of M5+ aftershocks over the following day with what USGS has recorded since.
+let liveCheckCache=null;
 function forecastCheck(){
   if(!S||!S.live)return null;
   const end=S.daysAvailable,start=end-1;if(start<0.05)return null;
+  if(liveCheckCache?.seq===S&&liveCheckCache.events===S.events&&liveCheckCache.end===end&&liveCheckCache.fetchedAt===S.fetchedAt)return liveCheckCache.result;
   const f=MODEL.fit(S.events,start),cp=SHAKE.compact(f);
   const rates=cp.map(([w,a,p])=>[w,SHAKE.n5(f,a,p,0,1)]);
   const mean=rates.reduce((t,[w,n])=>t+w*n,0);
@@ -104,7 +106,8 @@ function forecastCheck(){
     let n=0;if(lam>40)n=Math.max(0,Math.round(lam+Math.sqrt(lam)*Math.sqrt(-2*Math.log(rng()||1e-9))*Math.cos(2*Math.PI*rng())));else{let L=Math.exp(-lam),p=1;do{n++;p*=rng()}while(p>L);n--}draws.push(n)}
   draws.sort((a,b)=>a-b);
   const observed=S.events.filter(e=>e[0]>start&&e[0]<=end&&e[1]>=5).length;
-  return{mean,lo:draws[200],hi:draws[3799],observed,since:new Date(Date.parse(S.fetchedAt)-864e5)};
+  const result={mean,lo:draws[200],hi:draws[3799],observed,since:new Date(Date.parse(S.fetchedAt)-864e5)};
+  liveCheckCache={seq:S,events:S.events,end,fetchedAt:S.fetchedAt,result};return result;
 }
 function renderLiveCheck(){
   const box=$('liveCheck');if(!box)return;const c=mode==='detail'?forecastCheck():null;
@@ -117,6 +120,7 @@ setInterval(()=>{if(!document.hidden)renderLiveCheck()},15000);
 
 // A large check-in count over the map while presenting, so the room can watch it rise.
 function renderBoard(){
+  if(document.hidden)return;
   const b=$('ciBoard');if(!b)return;
   const on=Date.now()<LM.fastUntil&&ci.ready&&ci.group&&mode==='detail'&&$('joinModal').hidden;
   if(!on){b.hidden=true;return}

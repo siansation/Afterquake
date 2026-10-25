@@ -22,7 +22,10 @@ const SHAKE=(()=>{
   // tab6 is the JOINT probability of damage and M6+, not damage conditional on M6+.
   // Keeping that intersection lets the simulation colour M6+ events without double counting damage.
   const tab=new Float32Array(NT*NR),tab6=new Float32Array(NT*NR);
-  for(let i=0;i<NT;i++){const thr=T0+i*TS;for(let j=0;j<NR;j++){const d=j*RS,R=Math.sqrt(d*d+H*H+KERNEL*KERNEL);let s=0,s6=0;for(let k=0;k<mags.length;k++){const v=wts[k]*(1-Phi((thr-mu(mags[k],R))/sig(R)));s+=v;if(mags[k]>=6)s6+=v}tab[i*NR+j]=s;tab6[i*NR+j]=s6}}
+  // The distance response is independent of the threshold. Compute it once per
+  // distance/magnitude pair instead of repeating its logarithms 201 times.
+  for(let j=0;j<NR;j++){const d=j*RS,R=Math.sqrt(d*d+H*H+KERNEL*KERNEL),sigma=sig(R),means=mags.map(m=>mu(m,R));
+    for(let i=0;i<NT;i++){const thr=T0+i*TS;let s=0,s6=0;for(let k=0;k<mags.length;k++){const v=wts[k]*(1-Phi((thr-means[k])/sigma));s+=v;if(mags[k]>=6)s6+=v}tab[i*NR+j]=s;tab6[i*NR+j]=s6}}
   function g(thrEff,d,table=tab){let i=Math.round((thrEff-T0)/TS);if(i<0)i=0;if(i>=NT)return 0;let j=Math.round(d/RS);if(j>=NR)return 0;return table[i*NR+j]}
   // q = chance that a random future M>=5 aftershock produces shaking >= thr at (x,y), averaged over where aftershocks are expected
   function marks(src,x,y,vs,thr,calib){if(!src.length||src.length%2)throw new RangeError('At least one source coordinate pair is required.');const te=thr-site(vs)-(calib?BIAS:0);let damage=0,damageM6=0;for(let k=0;k<src.length;k+=2){const d=Math.hypot(src[k]-x,src[k+1]-y);damage+=g(te,d);damageM6+=g(te,d,tab6)}return{damage:damage/(src.length/2),damageM6:damageM6/(src.length/2),m6:m6Rate}}

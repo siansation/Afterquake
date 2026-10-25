@@ -69,10 +69,14 @@ function localLanguage(){
 }
 function populateLanguages(){
   if(!voiceCloud.ok)return;
-  const local=localLanguage(),name=code=>(voiceCloud.languages.find(l=>l.code===code)||{}).name||code;
-  $('summaryLang').innerHTML='<option value="en">English</option>'+(local?`<option value="${local}">${esc(name(local))}</option>`:'');
-  // Default to the local language; keep the listener's own choice once they make one.
-  $('summaryLang').value=voiceCloud.chosen==='en'||!local?'en':local;
+  const local=localLanguage(),name=code=>code==='zh'?'Chinese (中文)':(voiceCloud.languages.find(l=>l.code===code)||{}).name||code;
+  const codes=['en'];
+  if(voiceCloud.languages.some(l=>l.code==='zh'))codes.push('zh');
+  if(local&&!codes.includes(local))codes.push(local);
+  $('summaryLang').innerHTML=codes.map(code=>`<option value="${code}">${esc(name(code))}</option>`).join('');
+  // English and Chinese remain available across earthquakes. Keep an explicit
+  // choice when the forecast changes; otherwise start in the local language.
+  $('summaryLang').value=codes.includes(voiceCloud.chosen)?voiceCloud.chosen:local||'en';
   $('voiceLangBox').hidden=false;$('voiceCredit').hidden=false;
 }
 async function probeCloudVoice(){
@@ -82,7 +86,7 @@ async function probeCloudVoice(){
     const info=await r.json();if(!info||!info.configured)return;
     voiceCloud.ok=true;voiceCloud.languages=Array.isArray(info.languages)?info.languages:[{code:'en',name:'English'}];
     populateLanguages();updateSpokenSummary();
-    $('speechStatus').textContent='Natural voice by ElevenLabs. Choose English or the local language.';
+    $('speechStatus').textContent=voiceCloud.languages.some(l=>l.code==='zh')?'Natural voice by ElevenLabs. Choose English, Chinese or the local language.':'Natural voice by ElevenLabs. Choose a spoken language below.';
   }catch(e){/* Static hosting or offline: device voices remain. */}
 }
 function stopSummary(message='Reading stopped.'){

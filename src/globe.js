@@ -27,7 +27,9 @@ const GLOBE = (() => {
     const sizeOf = it => radius(it.M) * Math.min(2, Math.pow(k, 0.35));
 
     function drawBase() {
-      const fine = k >= 1.6, key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
+      // Use lighter outlines during movement; restore detailed coastlines at rest.
+      const fine = k >= 1.6 && !drag && !pinch && !fly && !vel;
+      const key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
       if (key === baseKey) return; baseKey = key;
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
@@ -102,7 +104,7 @@ const GLOBE = (() => {
     });
     const up = ev => {
       if (!pointers.has(ev.pointerId)) return; pointers.delete(ev.pointerId);
-      if (pinch) { if (pointers.size < 2) pinch = null; return }
+      if (pinch) { if (pointers.size < 2) pinch = null; kick(); return }
       if (drag) { const click = drag.moved <= 4, p = local(ev), recent = performance.now() - drag.lastT < 60; drag = null; canvas.style.cursor = 'grab';
         if (!recent) vel = null;
         if (click) { vel = null; const it = hit(p[0], p[1]); selected = it; opts.onPick(it) } }

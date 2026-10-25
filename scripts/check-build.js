@@ -41,7 +41,7 @@ for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonRes
 // CommonJS require/module. Syntax checks alone cannot catch a missed build-time
 // replacement of the fitted soil coefficient or a stale generated model module.
 const browser = vm.createContext({});
-for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO', 'VIEW_STATE', 'SPOKEN']) {
+for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO', 'VIEW_STATE', 'SPOKEN', 'FORECAST_CACHE', 'HEATMAP']) {
   const source = executable.find(code => new RegExp(`\\bconst ${name}\\s*=`).test(code));
   assert.ok(source, `Missing bundled ${name}`);
   assert.ok(!/\brequire\s*\(/.test(source), `${name} still needs CommonJS in the browser`);
@@ -55,6 +55,7 @@ browser.sampleEvents = sample.events;
 const bundled = vm.runInContext('MODEL.prob(MODEL.fit(sampleEvents,1),5,0,7)', browser);
 const MODEL = require('../src/model.js');
 assert.equal(bundled, MODEL.prob(MODEL.fit(sample.events, 1), 5, 0, 7), 'Browser and Node forecasts differ');
+assert.equal(vm.runInContext('FORECAST_CACHE.create(MODEL,SHAKE).at(sampleEvents,1).cp.length', browser), MODEL.fit(sample.events,1).post.length, 'Bundled forecast cache must retain every posterior weight');
 const SHAKE = require('../src/shake.js'), SCENARIO = require('../src/scenario.js');
 const f = MODEL.fit(sample.events, 1), cp = SHAKE.compact(f);
 const shortExposure = vm.runInContext('(()=>{const f=MODEL.fit(sampleEvents,1);return SCENARIO.exposure(SHAKE,f,SHAKE.compact(f),.1,10).probability})()', browser);
