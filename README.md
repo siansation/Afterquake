@@ -17,7 +17,6 @@ Open `index.html` in a browser. It's one self-contained file (about 10 MB, with 
 - **Story** (top right) runs a 7-step guided demo of the Türkiye 2023 sequence. Use **→ / ←** or a presentation clicker to move between steps, and **Esc** to exit.
 - The page opens on the **live globe**: drag to spin, scroll to zoom, click a quake, then **Open the forecast**. **World map** in the header comes back to it.
 - **Help** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
-- [`PITCH.md`](PITCH.md) has a timed 5-minute script that follows the story and ends on the live globe, plus answers to likely questions.
 
 **Live at https://afterquake.vercel.app** (Vercel). `vercel.json` serves the prebuilt `index.html` as it is, with no install or build step, and `.vercelignore` also includes the assistant's API function. The page asks search engines not to index it (a `robots` meta tag and an `X-Robots-Tag` header); the URL is still public. To redeploy after `npm run build`, run `npx vercel@65.2.0 deploy --prod`; `npx vercel@65.2.0 login` first on a new machine.
 
@@ -82,7 +81,6 @@ npm run check
 
 ```
 index.html                 built app, ready to open or host (works offline)
-PITCH.md                   5-minute pitch script and Q&A
 src/template.html          app UI and logic (placeholders filled by the build)
 src/model.js               aftershock rate model (Reasenberg–Jones + Bayesian update)
 src/shake.js               shaking, uncertainty ranges and consistent Monte Carlo futures
