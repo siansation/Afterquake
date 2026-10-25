@@ -19,7 +19,7 @@ for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
 }
 assert.equal(data, 7);
 assert.ok(scripts >= 13, 'Expected bundled map, globe libraries, live loader, globe, numerical modules, view state, speech and UI scripts');
-for (const name of ['LIVE', 'GLOBE']) assert.ok(executable.some(code => new RegExp(`\\bconst ${name}\\s*=`).test(code)), `Missing bundled ${name}`);
+for (const name of ['LIVE', 'GLOBE', 'MAP_RENDER']) assert.ok(executable.some(code => new RegExp(`\\bconst ${name}\\s*=`).test(code)), `Missing bundled ${name}`);
 assert.ok(executable.some(code => /geoOrthographic/.test(code)), 'Missing bundled d3-geo');
 assert.deepEqual(Object.keys(datasets.get('d-world')), ['land110', 'countries110', 'land50', 'countries50'], 'World outlines missing');
 assert.ok(datasets.get('d-towns').length > 40000, 'World towns missing');
@@ -27,7 +27,7 @@ assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote s
 // Design guard (docs/DESIGN.md): the app's own styles, markup and scripts must not bring back stock AI-template patterns.
 // Scans whole source files (every <style> block, inline styles, JS-built markup, canvas drawing), not just one block.
 // Leaflet's CSS is only a placeholder in the template, so it is not scanned.
-for (const file of ['src/template.html', 'src/globe.js', 'src/places.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js', 'src/checkins.js', 'src/timeseries.js', 'src/livemoment.js']) {
+for (const file of ['src/template.html', 'src/globe.js', 'src/places.js', 'src/story.js', 'src/map-render.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js', 'src/checkins.js', 'src/timeseries.js', 'src/livemoment.js']) {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   for (const [re, what] of [[/text-transform\s*:\s*uppercase/i, 'uppercase eyebrow labels'], [/letter-spacing/i, 'tracked-out labels'],
     [/monospace|--mono/i, 'monospace for non-code text'], [/gradient\(|create(Linear|Radial)Gradient/i, 'decorative gradients'],
@@ -42,7 +42,7 @@ for (const id of ['comparisonCard', 'savedCheckCard', 'simsOptions', 'shk', 'pan
 // CommonJS require/module. Syntax checks alone cannot catch a missed build-time
 // replacement of the fitted soil coefficient or a stale generated model module.
 const browser = vm.createContext({});
-for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO', 'VIEW_STATE', 'SPOKEN', 'FORECAST_CACHE', 'HEATMAP']) {
+for (const name of ['MODEL', 'SHAKE', 'VALIDATION', 'SCENARIO', 'VIEW_STATE', 'SPOKEN', 'FORECAST_CACHE', 'HEATMAP', 'MAP_RENDER']) {
   const source = executable.find(code => new RegExp(`\\bconst ${name}\\s*=`).test(code));
   assert.ok(source, `Missing bundled ${name}`);
   assert.ok(!/\brequire\s*\(/.test(source), `${name} still needs CommonJS in the browser`);

@@ -97,11 +97,12 @@ function populateVoices(){
 }
 function updateSpokenSummary(){
   if(!cur.f)return;
-  $('readSummary').disabled=!(speechSupported||voiceCloud.ok)||playing||tourOn;
+  $('readSummary').disabled=!(speechSupported||voiceCloud.ok)||playing;
   const delayed=S.live&&(S.refreshError||Date.now()-Date.parse(S.fetchedAt)>POLL_MS*2);
   const summary=SPOKEN.summary({place:loc.name,duration:exposureLabel(),probability:chance(cur.exposure.probability),
-    recorded:!S.live,delayed,hazards:typeof observedHazards==='function'?observedHazards():[]});
+    date:fmtDate(cur.nowDate),magnitude:S.M,building:$('bld').value,ground:cur.sp.gv,delayed,hazards:typeof observedHazards==='function'?observedHazards():[]});
   if(summary!==lastSummary){stopSummary('The forecast changed. Press Read summary to hear the updated figures.');lastSummary=summary;$('spokenText').textContent=summary;populateLanguages()}
+  if(typeof updateTourEstimate==='function')updateTourEstimate();
 }
 $('readSummary').disabled=!speechSupported;$('stopSummary').disabled=true;$('stopSummary').hidden=true;
 if(!speechSupported)$('speechStatus').textContent='Speech is unavailable in this browser. The text summary is available below.';

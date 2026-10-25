@@ -62,6 +62,12 @@ test('stale data warnings precede figures and navigating away cancels speech',()
   h.events.pagehide();assert.equal(h.node('stopSummary').disabled,true);
 });
 
+test('the story can demonstrate Read summary while ordinary playback still disables it',()=>{
+  const h=harness({access:true});h.ctx.tourOn=true;h.run('updateSpokenSummary()');
+  assert.equal(h.node('readSummary').disabled,false);h.node('readSummary').onclick();assert.equal(h.synth.calls.length,1);
+  h.ctx.playing=true;h.run('updateSpokenSummary()');assert.equal(h.node('readSummary').disabled,true);
+});
+
 // ElevenLabs path: only when the hosted /api/speak route says it is configured.
 function cloudGlobals({fail=false,translated=true}={}){
   const posts=[],audios=[];

@@ -27,7 +27,7 @@ async function openLive(it){
 function renderDataStatus(){
   if(!S)return;
   $('liveActions').hidden=!S.live;
-  if(!S.live){$('dataNotice').textContent='Recorded example. This is not a live forecast.';$('dataNotice').classList.toggle('data-delayed',false);$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
+  if(!S.live){$('dataNotice').textContent='';$('dataNotice').classList.toggle('data-delayed',false);$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
   const age=Date.now()-Date.parse(S.fetchedAt),delayed=!!S.refreshError||age>POLL_MS*2;
   $('dataNotice').textContent=delayed?`Updates delayed. Last data from ${fmtClock(new Date(S.fetchedAt))}. Follow local officials for current instructions.`:`Live estimate. Updated ${fmtClock(new Date(S.fetchedAt))}.`;
   $('dataNotice').classList.toggle('data-delayed',delayed);

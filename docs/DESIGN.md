@@ -17,7 +17,7 @@ So the look comes from the product's own field, not from a style.
   - The verdict is the only tinted box.
   - Overlays on the map copy Leaflet's own controls (white, 4 px radius, Leaflet's shadow), so the page matches its map library.
 - **Motion:** none, apart from the globe moving where you drag it and flying to a quake you pick. The globe doesn't spin by itself, pulse or glow. It is drawn flat like a printed map.
-- **Wording:** plain labels that say what a control does, and one short safety line per screen. The full caveats live on the Sources tab.
+- **Wording:** plain labels that say what a control does, and one short safety line per screen. The full caveats live under About.
 
 ## Avoid
 
@@ -34,3 +34,7 @@ From write-ups on recognisable AI-generated design ([Capital and Compute](https:
 - Repeating the same disclaimer on every panel
 
 `npm run check` fails if any of `src/template.html`, `src/globe.js` or `src/places.js` brings back uppercase or letter-spaced labels, monospace, gradients (CSS or canvas), glass, animations, "·" separators or glyph buttons. It checks whole files, so inline styles and JS-built markup count too. Colours used from JavaScript are read from the CSS tokens in `:root`, so the palette is defined in one place.
+
+## Rendering and story display
+
+The globe is a locator, so it uses light world outlines at every zoom level. Overview textures are bounded independently of the full-resolution data used for estimates. City names remain visible; population symbols and future events are optional. The story keeps its narrative and uses a compact panel above the app so the controls remain accessible. Its short aftershock replay uses six updates and respects reduced-motion preferences. Gemini, speech and database demonstrations are optional actions within the narrative.

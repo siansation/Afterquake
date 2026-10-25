@@ -1,6 +1,6 @@
 // World view: an orthographic globe drawn on a canvas with d3-geo. Drag to spin, scroll or pinch to zoom,
 // click an earthquake to select it. Drawn flat, like a printed map: no glow, shading or animation. Coastlines and borders are Natural Earth (world-atlas), like the detail map:
-// 1:110m when zoomed out, 1:50m when zoomed in.
+// The globe is a locator: 1:110m outlines stay light even when zoomed in.
 const GLOBE = (() => {
   const DEG = 180 / Math.PI, SEA = '#cfdce5', LAND = '#f4f4f1', COAST = '#8a959e', ACCENT = '#c80000';
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -11,14 +11,17 @@ const GLOBE = (() => {
   // Draws only when something changes (drag, zoom, fly-to, hover, selection, new items), not every animation frame.
   function create(canvas, geo, opts) {
     const ctx = canvas.getContext('2d'), base = document.createElement('canvas'), bctx = base.getContext('2d');
-    const proj = d3.geoOrthographic().clipAngle(90).precision(0.4), path = d3.geoPath(proj), grat = d3.geoGraticule10();
+    const proj = d3.geoOrthographic().clipAngle(90).precision(0.7), path = d3.geoPath(proj);
     let w = 0, h = 0, dpr = 1, R0 = 1, k = 1, rot = [-30, -18, 0], items = [], selected = null, hovered = null, baseKey = '';
-    let running = false, raf = 0, last = 0, fly = null, vel = null;
+    let running = false, raf = 0, last = 0, lastPaint = 0, fly = null, vel = null, screenItems = [];
+    const reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const accent = opts.accent || ACCENT;
     const pointers = new Map(); let drag = null, pinch = null;
 
     function resize() {
-      w = canvas.clientWidth; h = canvas.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+      const width = canvas.clientWidth, height = canvas.clientHeight, ratio = MAP_RENDER.globeRatio(width, height, devicePixelRatio || 1);
+      if (w === width && h === height && dpr === ratio) return;
+      w = width; h = height; dpr = ratio;
       canvas.width = base.width = Math.max(1, Math.round(w * dpr)); canvas.height = base.height = Math.max(1, Math.round(h * dpr));
       R0 = Math.max(60, Math.min(w, h) * 0.43); baseKey = ''; kick();
     }
@@ -27,17 +30,15 @@ const GLOBE = (() => {
     const sizeOf = it => radius(it.M) * Math.min(2, Math.pow(k, 0.35));
 
     function drawBase() {
-      // Use lighter outlines during movement; restore detailed coastlines at rest.
-      const fine = k >= 1.6 && !drag && !pinch && !fly && !vel;
-      const key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
+      const borders = !drag && !pinch && !fly && !vel;
+      const key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, borders].join();
       if (key === baseKey) return; baseKey = key;
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
       c.beginPath(); path({ type: 'Sphere' }); c.fillStyle = SEA; c.fill();
-      c.beginPath(); path(grat); c.strokeStyle = 'rgba(70,100,130,.13)'; c.lineWidth = .6; c.stroke();
-      c.beginPath(); path(fine ? geo.land50 : geo.land110); c.fillStyle = LAND; c.fill(); c.strokeStyle = COAST; c.lineWidth = .7; c.stroke();
-      c.beginPath(); path(fine ? geo.borders50 : geo.borders110); c.setLineDash([3, 3]); c.strokeStyle = '#a3adb7'; c.lineWidth = .6; c.stroke(); c.setLineDash([]);
+      c.beginPath(); path(geo.land110); c.fillStyle = LAND; c.fill(); c.strokeStyle = COAST; c.lineWidth = .8; c.stroke();
+      if (borders) { c.beginPath(); path(geo.borders110); c.strokeStyle = '#a3adb7'; c.lineWidth = .6; c.stroke(); }
       c.beginPath(); path({ type: 'Sphere' }); c.strokeStyle = '#6b7680'; c.lineWidth = 1; c.stroke();
     }
     function star(c, x, y, r) {
@@ -47,9 +48,10 @@ const GLOBE = (() => {
       drawBase(); proj.scale(R0 * k).translate([w / 2, h / 2]).rotate(rot);
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(base, 0, 0);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const t = Date.now(), vis = items.filter(visible);
+      const t = Date.now(), vis = items.filter(visible); screenItems = [];
       for (const it of vis) {
         const [x, y] = proj([it.lon, it.lat]), r = sizeOf(it);
+        screenItems.push({ it, x, y, r: Math.max(8, r + 4) });
         if (it.kind === 'case') { star(ctx, x, y, Math.max(7, r * .9)); ctx.fillStyle = accent; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); continue }
         const age = t - it.t;
         ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = ageColor(age); ctx.globalAlpha = .92; ctx.fill(); ctx.globalAlpha = 1;
@@ -64,10 +66,12 @@ const GLOBE = (() => {
 
     function kick() { if (running && !raf) raf = requestAnimationFrame(frame) }
     function frame(now) {
-      raf = 0; if (!running) return; const dt = Math.min(64, now - (last || now)); last = now;
+      raf = 0; if (!running) return;
+      if (now - lastPaint < 1000 / 30) { kick(); return; } lastPaint = now;
+      const dt = Math.min(64, now - (last || now)); last = now;
       if (fly) { const p = Math.max(0, Math.min(1, (now - fly.t0) / fly.ms)), e = ease(p); rot = [fly.r0[0] + (fly.r1[0] - fly.r0[0]) * e, fly.r0[1] + (fly.r1[1] - fly.r0[1]) * e, 0];
         k = Math.exp(Math.log(fly.k0) + (Math.log(fly.k1) - Math.log(fly.k0)) * e); if (p >= 1) { const done = fly.done; fly = null; if (done) done() } }
-      else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); vel = [vel[0] * .93, vel[1] * .93]; if (Math.hypot(vel[0], vel[1]) < 0.002) vel = null }
+      else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); const decay = Math.pow(.88, dt / 16.67); vel = [vel[0] * decay, vel[1] * decay]; if (Math.hypot(vel[0], vel[1]) < 0.002 || reducedMotion) vel = null }
       draw();
       if (fly || (vel && !drag)) kick(); else last = 0;   // keep going only while something is animating
     }
@@ -75,9 +79,8 @@ const GLOBE = (() => {
     function touch() { fly = null; kick() }
 
     function hit(px, py) {
-      proj.scale(R0 * k).translate([w / 2, h / 2]).rotate(rot);
       let best = null, bd = Infinity;
-      for (const it of items) { if (!visible(it)) continue; const [x, y] = proj([it.lon, it.lat]), d = Math.hypot(x - px, y - py), r = Math.max(8, sizeOf(it) + 4);
+      for (const {it, x, y, r} of screenItems) { const d = Math.hypot(x - px, y - py);
         if (d <= r && (d < bd || (it.kind === 'case' && best && best.kind !== 'case'))) { best = it; bd = d } }
       return best;
     }
@@ -106,7 +109,7 @@ const GLOBE = (() => {
       if (!pointers.has(ev.pointerId)) return; pointers.delete(ev.pointerId);
       if (pinch) { if (pointers.size < 2) pinch = null; kick(); return }
       if (drag) { const click = drag.moved <= 4, p = local(ev), recent = performance.now() - drag.lastT < 60; drag = null; canvas.style.cursor = 'grab';
-        if (!recent) vel = null;
+        if (!recent || reducedMotion) vel = null;
         if (click) { vel = null; const it = hit(p[0], p[1]); selected = it; opts.onPick(it) } }
       kick();
     };
@@ -129,15 +132,15 @@ const GLOBE = (() => {
 
     function flyTo(lon, lat, kTo = k, ms = 1100, done) {
       let l = -lon; while (l - rot[0] > 180) l -= 360; while (l - rot[0] < -180) l += 360;
-      vel = null; fly = { t0: performance.now(), ms, r0: rot.slice(), r1: [l, clampLat(-lat), 0], k0: k, k1: clampK(kTo), done }; kick();
+      vel = null; fly = { t0: performance.now(), ms: reducedMotion ? 1 : ms, r0: rot.slice(), r1: [l, clampLat(-lat), 0], k0: k, k1: clampK(kTo), done }; kick();
     }
     resize(); canvas.style.cursor = 'grab';
     return {
       resize, flyTo,
-      setItems(list) { items = list.slice().sort((a, b) => (a.kind === 'case') - (b.kind === 'case') || a.M - b.M);
+      setItems(list) { items = list.slice().sort((a, b) => (a.kind === 'case') - (b.kind === 'case') || a.M - b.M); screenItems = [];
         if (selected) selected = items.find(i => i.id === selected.id) || null; if (hovered) hovered = items.find(i => i.id === hovered.id) || null; kick() },
       select(id) { selected = items.find(i => i.id === id) || null; kick(); return selected },
-      zoomBy(f) { touch(); fly = { t0: performance.now(), ms: 300, r0: rot.slice(), r1: rot.slice(), k0: k, k1: clampK(k * f) } },
+      zoomBy(f) { touch(); fly = { t0: performance.now(), ms: reducedMotion ? 1 : 300, r0: rot.slice(), r1: rot.slice(), k0: k, k1: clampK(k * f) } },
       get zoom() { return k },
       start() { if (running) return; running = true; last = 0; baseKey = ''; kick() },
       stop() { running = false; cancelAnimationFrame(raf); raf = 0 },

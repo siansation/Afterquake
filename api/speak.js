@@ -21,7 +21,7 @@ const MAX_TEXT = 1500;
 const TRANSLATE_RULES = `Translate the user's text into LANGUAGE for a spoken earthquake safety summary that will be read aloud to the public.
 - Translate faithfully and completely. Do not add, remove, soften or strengthen anything, and add no advice.
 - Use short, everyday sentences suitable for someone listening under stress. Stay as brief as the source: no introduction, extra explanations, repeated warnings or model terminology.
-- Preserve safety conditions exactly, including whether an action applies indoors, outdoors or only after shaking. Keep any delayed-data or recorded-example warning.
+- Preserve safety conditions exactly, including whether an action applies indoors, outdoors or only after shaking. Keep the selected date and any delayed-data warning. Do not add "recorded example" labels or other preambles.
 - Keep every number, percentage, date and time exactly as given (you may use the language's usual decimal separator and date order).
 - Keep place names recognisable. Keep numeric values in digits, including magnitudes and percentages; translate their surrounding words and units, but do not spell out the digits.
 - Reply with the translation only: no notes, quotes or headings.`;

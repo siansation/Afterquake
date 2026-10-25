@@ -26,13 +26,27 @@ test('untrusted links reject unsupported settings, coordinates, IDs and timestam
   assert.throws(()=>VIEW.url('javascript:alert(1)',view()));
 });
 test('spoken summaries prioritise one estimate and actions in at most 60 words',()=>{
-  const input={place:'Town A',duration:'10 minutes',probability:'0.005%',recorded:true,
+  const input={place:'Town A',duration:'10 minutes',probability:'0.005%',date:'7 Feb 2023',magnitude:7.8,
     low:'<0.0001%',high:'1.2%',decision:'Below the limit from next week',time:'12:00 UTC'};
   const text=SPOKEN.summary(input);
-  for(const phrase of ['Recorded example','0.005 percent','10 minutes','drop, cover and hold on','If outside','Wait for a building inspection'])assert.ok(text.includes(phrase));
+  for(const phrase of ['7 Feb 2023','magnitude 7.8','0.005 percent','10 minutes','drop, cover and hold on','If outside','Wait for a building inspection'])assert.ok(text.includes(phrase));
+  assert.ok(!/recorded example/i.test(text));
   assert.ok(text.split(/\s+/).length<=60);
   for(const obsolete of ['0.0001','1.2','12:00','next week','posterior','threshold'])assert.ok(!text.includes(obsolete));
   assert.ok(!/safe to enter|go back inside/i.test(text));
+});
+
+test('a concise local condition differentiates scenarios without claiming an inspection',()=>{
+  const input={place:'Town A',duration:'10 minutes',probability:'0.5%',date:'7 Feb 2023',magnitude:7.8};
+  const slopes=SPOKEN.summary({...input,ground:{ls:.1,liq:.2,mmi:8}});
+  assert.ok(slopes.includes('Landslide risk was mapped'));assert.ok(!slopes.includes('unstable ground'));
+  const soft=SPOKEN.summary({...input,ground:{vs:150,mmi:6}});
+  assert.ok(soft.includes('Soft ground'));assert.notEqual(slopes,soft);
+  assert.ok(slopes.split(/\s+/).length<=65&&soft.split(/\s+/).length<=65);
+  assert.ok(SPOKEN.localContext('6',{ls:.1}).includes('You selected'));
+  assert.equal(SPOKEN.localContext('local',{vs:0,mmi:4}),'');
+  const observed=SPOKEN.summary({...input,ground:{ls:.1},hazards:['trees']});
+  assert.ok(observed.includes('trees'));assert.ok(!observed.includes('Landslide risk'));
 });
 
 test('delayed data comes before the estimate and observed hazards change the action',()=>{

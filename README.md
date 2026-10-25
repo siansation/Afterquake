@@ -25,7 +25,7 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 ## What it does
 
 - **Live world view.** The page opens on a globe of every M4.5+ earthquake in the last 30 days, from the USGS feed and checked every 2 minutes. Drag to spin, scroll to zoom, click a quake. Any quake with a USGS ShakeMap opens the same forecast, built in the browser from its live catalogue, ShakeMap and PAGER report. While open, all three are checked every 2 minutes; revised products replace earlier versions without resetting your pins or selected time. **Refresh USGS** checks immediately; **Go to live time** resumes following the latest data. Failed or delayed updates are labelled, with the last successful data retained. The 13 case studies are the red stars.
-- **Story mode.** Follow the Türkiye 2023 sequence through a guided story, from the first shaking to the people waiting outside.
+- **Story mode.** Follow the same Türkiye 2023 narrative, from the first shaking to checking in and opening a recent earthquake. A compact panel above the app keeps Back, Next and Exit visible. Optional controls within the story demonstrate time, Gemini answers, ElevenLabs speech and Tiger Data records.
 - **Live now.** Jumps to the most active shallow aftershock sequence of the past week that has a USGS shaking map (most M4.5+ quakes within 250 km, then the largest mainshock), flies the globe to it and opens its forecast. `?live=<USGS event id>` pins a specific quake.
 - **Live forecast check.** For a live sequence, refits the model using only quakes recorded up to 24 hours earlier and compares its expected count of M5+ aftershocks over the next day (with a 90% range) with what USGS has recorded since. If USGS products for the newest quake are incomplete it tries the next one, and it says so if neither loads. The story's last step hands off to it.
 - **Join on your phone.** Shows a QR code with a short link (`#j=<earthquake>.<group>`). Scanning it opens the same earthquake on a phone, joins the check-in group and lands on the check-in buttons; check-ins on the presenting screen refresh every 3 seconds while presenting. Without the check-in service, the code simply opens the same forecast.
@@ -33,7 +33,7 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 - **Exposure duration.** Choose 5, 10 or 30 minutes, 1 hour, 8 hours or 24 hours. The probability, parameter range, projected start and curve use that entire interval. The 24-hour, 7-day and 30-day context figures remain available.
 - **Read summary.** A short readout in English, Chinese or the earthquake's local language, with stop and speed controls and a transcript. It uses one calculated estimate, labels recorded or delayed data, and gives practical next steps. The hosted voice uses ElevenLabs and Gemini; device English speech remains the fallback.
 - **Optional forecast detail.** Explore the next 24 hours, 7 days and 30 days, the uncertainty range, and how estimates change with time. A projected lower chance is not a re-entry time.
-- **Quick summary.** One estimate with its timeframe, followed by three practical safety steps. Recorded examples and delayed data are labelled. Model ranges, settings and projected entry times are left out of the readout.
+- **Quick summary.** The selected date, one estimate and timeframe, earthquake magnitude, a relevant local condition and practical next steps. Delayed data is flagged; repeated example labels, model ranges, settings and projected entry times are left out of the readout.
 - **Share this place.** Share the selected place, timeframe and replay time. Older links open their main place using the standard estimate.
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
 - **People.** Population near you, people at risk this week, and the official count of people who felt each shaking level.
@@ -88,6 +88,8 @@ src/model.js               aftershock rate model (Reasenberg–Jones + Bayesian 
 src/shake.js               shaking, uncertainty ranges and consistent Monte Carlo futures
 src/forecast-cache.js      current-fit reuse with explicit live-data invalidation
 src/heatmap.js             cancellable map shading in short batches
+src/map-render.js          bounded overview textures and globe pixel budgets
+src/story.js               narrative display and optional live feature demos
 src/validation.js          regional occurrence checks shared by the UI and CLI
 src/scenario.js            duration estimates, probability labels and geographic distance
 src/places.js              shared place helpers and the short action card
@@ -173,7 +175,7 @@ npm run build      # writes index.html
 
 To rebuild only the page after editing `src/`, run `npm install` and then `npm run build`.
 
-The main navigation is Your area, Check in and About. Spoken summaries use one calculated estimate and three short safety steps; uncertainty ranges and model settings stay in optional detail. Comparison pins, saved-check history, simulation galleries and the alternative shaking-model switch have been removed. Older links still open their primary place using the standard estimate. The globe opens without fitting a case study or running the accuracy backtest. Charts are drawn as they come into view, and risk trends, population context and model checks sit in optional details. Map shading runs in short, cancellable batches; the displayed figures still use the complete posterior. Display changes reuse the current fit, while live-data revisions clear it and the map caches. Background tabs pause polling and playback.
+The main navigation is Your area, Check in and About. Spoken summaries include the date, one estimate, earthquake magnitude and a relevant local condition; uncertainty ranges and model settings stay in optional detail. Comparison pins, saved-check history, simulation galleries and the alternative shaking-model switch have been removed. Older links still open their primary place using the standard estimate. The globe opens without fitting a case study or running the accuracy backtest. Charts are drawn as they come into view, and risk trends, population context and model checks sit in optional details. Map overviews are capped at 128 pixels per edge, with cached masks and images; globe drawing uses simplified outlines and a two-million-pixel budget. Place names stay visible, while population markers and future events are optional. Map shading runs in short, cancellable batches; the displayed figures still use the complete posterior. Display changes reuse the current fit, while live-data revisions clear it and the map caches. Background tabs pause polling and playback.
 
 `scripts/fetch_usgs.mjs` is a Node port of the browser code that produced the shipped data. Every other script was checked to reproduce the files in `data/` exactly. To add an earthquake, append its USGS event ID to `MAINS` in `fetch_usgs.mjs` and its country to `SEQC` in `prep_population.js`.
 

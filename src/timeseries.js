@@ -9,20 +9,22 @@ function tigerWindow(){
   return{since:new Date(t0-864e5).toISOString(),until:new Date(Math.min(end+36e5,t0+400*864e5)).toISOString(),t0}}
 async function tigerProbe(){
   if(!['http:','https:'].includes(location.protocol))return;
-  try{const r=await fetch('/api/quakes',{cache:'no-store'});const j=await r.json();TIGER.enabled=!!j.configured;TIGER.timescale=j.timescale??null}catch(e){TIGER.enabled=false}
+  const request=new AbortController(),timer=setTimeout(()=>request.abort(),10000);
+  try{const r=await fetch('/api/quakes',{cache:'no-store',signal:request.signal});const j=await r.json();TIGER.enabled=!!j.configured;TIGER.timescale=j.timescale??null}catch(e){TIGER.enabled=false}
+  finally{clearTimeout(timer)}
 }
 async function tigerFetch(){
   if(!TIGER.enabled||!S||TIGER.busy)return;
-  const seq=S,w=tigerWindow();TIGER.busy=true;
+  const seq=S,w=tigerWindow(),request=new AbortController(),timer=setTimeout(()=>request.abort(),10000);TIGER.busy=true;
   try{
     const ageDays=(Date.now()-w.t0)/864e5;
     const params=new URLSearchParams({lat:seq.lat.toFixed(3),lon:seq.lon.toFixed(3),radiusKm:String(Math.round(Math.min(600,Math.max(10,seq.radiusKm||150)))),since:w.since,until:w.until});
     if(seq.live&&ageDays>0.75)params.set('backfill','1');  // the 1-day feed may not reach back to the mainshock
-    const r=await fetch('/api/quakes?'+params,{cache:'no-store'}),j=await r.json().catch(()=>null);
+    const r=await fetch('/api/quakes?'+params,{cache:'no-store',signal:request.signal}),j=await r.json().catch(()=>null);
     if(S!==seq)return;
     TIGER.key=seq.key;TIGER.fetchedAt=Date.now();TIGER.data=r.ok&&j?j:{error:(j&&j.error)||'Unavailable'};TIGER.drawnFor='';
   }catch(e){if(S===seq){TIGER.key=seq.key;TIGER.data={error:'Could not reach the server.'};TIGER.drawnFor=''}}
-  finally{TIGER.busy=false;renderTiger()}
+  finally{clearTimeout(timer);TIGER.busy=false;renderTiger();if(typeof updateTourData==='function')updateTourData()}
 }
 // Expected M>=4 count in [ta, tb] days after the original mainshock, averaged over the posterior.
 function tigerExpected(f,ta,tb){

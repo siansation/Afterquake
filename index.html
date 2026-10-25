@@ -839,15 +839,20 @@ details summary{cursor:pointer;font-weight:600}
 .seg button small{display:block;font-size:12px;color:var(--mute);margin-top:1px}
 .seg button[aria-pressed="true"]{background:var(--link);border-color:var(--link);color:#fff;position:relative}
 .seg button[aria-pressed="true"] small{color:#d4e5f3}
-.tour{position:absolute;left:56px;bottom:96px;z-index:700;width:min(420px,calc(100% - 80px));padding:12px 15px}
-.tour .tstep{font-size:13px;color:var(--mute)}
-.tour h3{font-size:18px;line-height:1.25;margin:2px 0 6px;font-weight:700}
-.tour p{margin:0 0 6px;font-size:14.5px;color:var(--ink2)}
-.tour p b{color:var(--ink)}
-.tour .tnav{display:flex;align-items:center;gap:8px;margin-top:8px}
-.tour .dots{display:flex;gap:5px;flex:1}
-.tour .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
-.tour .dots i.on{background:var(--ink2)}
+.tour{flex:none;display:grid;grid-template-columns:minmax(240px,1fr) minmax(260px,1fr);gap:12px 24px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);max-height:40vh;overflow:auto;z-index:800}
+.tour[hidden]{display:none}
+.tour .tstep{margin:0;color:var(--mute);font-size:13px}
+.tour h2{margin:2px 0 4px;font-size:18px}
+.tour-copy>p:last-child{margin:0;color:var(--ink2);font-size:14.5px;max-width:70ch}
+.tour-tools{display:flex;flex-direction:column;justify-content:center;gap:8px}
+.tour p:empty,.tour-actions:empty{display:none}
+.tour-extra>div{margin-top:8px}
+.tour .tnav{display:flex;gap:8px;align-items:center}
+.tour .btn{min-height:40px}
+.tour-actions .btn[aria-pressed="true"]{background:var(--linkbg);border-color:var(--link)}
+.tour-focus{outline:2px solid var(--link);outline-offset:3px}
+@media(max-width:640px){.tour{position:sticky;top:0;grid-template-columns:1fr;gap:8px;max-height:38vh;padding:10px 14px}.tour .btn{min-height:44px}}
+
 .welcome{position:fixed;inset:0;z-index:2000;background:rgba(20,26,32,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .welcome[hidden]{display:none}
 .wbox{background:#fff;border-radius:4px;max-width:540px;width:100%;padding:20px 22px 18px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
@@ -859,14 +864,13 @@ details summary{cursor:pointer;font-weight:600}
 .wbox .wbtns .btn{padding:7px 14px}
 .wbox .fine{font-size:13px;color:var(--mute);margin:14px 0 0}
 .kbd{font-size:12px;border:1px solid #8d98a3;border-radius:2px;padding:0 4px;background:#f5f6f7}
-@media (max-width:860px){.askwrap{bottom:96px}.askpanel{width:100%}.tour{left:10px;right:10px;width:auto;bottom:auto;top:56px}.hbtn.fs{display:none}}
+@media (max-width:860px){.askwrap{bottom:96px}.askpanel{width:100%}.hbtn.fs{display:none}}
 @media (max-width:860px){.legend .keys{display:none}.legend{bottom:96px;top:auto;right:10px;left:auto;max-width:190px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
 .method p{font-size:14px;color:var(--ink2);margin:6px 0}
 .ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line2)}
 .ci:first-child{border-top:0}
 .ci .dot{width:10px;height:10px;border-radius:50%}
 .askwrap{position:absolute;left:10px;bottom:84px;z-index:650;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:calc(100% - 20px)}
-.tour:not([hidden]) ~ .askwrap{display:none}
 .askopen{width:46px;height:46px;border-radius:50%;border:0;background:var(--bar);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.4)}
 .askopen:hover{background:#33434f}
 .askopen[aria-expanded="true"]{background:var(--link)}
@@ -946,6 +950,7 @@ body:not(.world) .wpane{display:none}
   <button class="hbtn" id="helpBtn">Help</button>
   <button class="hbtn fs" id="fsBtn">Fullscreen</button>
 </header>
+<section class="tour" id="tour" hidden aria-labelledby="tourTitle"></section>
 <p id="sharedNotice" class="shared-notice" role="status" hidden></p>
 <div class="lm-banner" id="lmBanner" hidden role="status" aria-live="polite"></div>
 <div class="lm-modal" id="joinModal" hidden role="dialog" aria-modal="true" aria-labelledby="joinTitle">
@@ -966,7 +971,7 @@ body:not(.world) .wpane{display:none}
     <h1 id="wTitle">After an earthquake, what should you do next?</h1>
     <p class="lead">Choose your area, hear the key steps, and check in with your group.</p>
     <ol>
-      <li><b>Choose an earthquake</b> on the globe. Recorded examples are labelled.</li>
+      <li><b>Choose an earthquake</b> on the globe, or follow the Türkiye story.</li>
       <li><b>Pick your place</b> on the map, then press Read summary for a short estimate and next steps.</li>
       <li><b>Check in</b> to let your group know how you are. These posts do not contact emergency services.</li>
     </ol>
@@ -1109,7 +1114,7 @@ body:not(.world) .wpane{display:none}
 
     <section class="pane" id="pane-sources" hidden>
       <h2>About these estimates</h2>
-      <p class="p">Afterquake estimates further shaking using public USGS earthquake data. It cannot inspect a building or give an all-clear. Early data can change, and recorded examples are not live warnings.</p>
+      <p class="p">Afterquake estimates further shaking using public USGS earthquake data. It cannot inspect a building or give an all-clear. Early data can change. Check the selected date when exploring past earthquakes.</p>
       <p class="p">For safety instructions, follow local officials. Our short guidance draws on <a href="https://www.usgs.gov/faqs/what-should-i-do-during-earthquake" target="_blank" rel="noopener">USGS earthquake guidance</a> and <a href="https://www.cdc.gov/earthquakes/safety/stay-safe-after-an-earthquake.html" target="_blank" rel="noopener">CDC guidance after an earthquake</a>.</p>
       <details class="card tool-options"><summary>Data status</summary><p class="muted" id="dataStatus"></p><p class="coords" id="coords"></p></details>
       <details class="card tool-options" id="sourcesDetails"><summary>Data sources</summary><table class="ledger" id="ledger"></table></details>
@@ -1156,11 +1161,10 @@ body:not(.world) .wpane{display:none}
         <hr>
         <h4>Show</h4>
         <label><input type="checkbox" id="showQ" checked> Aftershocks</label>
-        <label><input type="checkbox" id="showT" checked> Towns and population</label>
+        <label><input type="checkbox" id="showT"> Population markers</label>
         <label><input type="checkbox" id="showC" checked> Check-ins</label>
       </div>
     </div>
-    <div class="ctl tour" id="tour" hidden aria-live="polite"></div>
     <div class="askwrap" id="askWrap">
       <section class="ctl askpanel" id="askPanel" hidden aria-label="Ask about this forecast">
         <div class="askhead"><b>Ask about this forecast</b><button class="askx" id="askClose" aria-label="Close">✕</button></div>
@@ -1186,7 +1190,7 @@ body:not(.world) .wpane{display:none}
       <button class="play" id="play" aria-label="Play the sequence"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path id="playIcon" d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg></button>
       <input type="range" id="now" min="0" max="1000" value="300" aria-label="Time since the mainshock">
       <span class="clock" id="clock"></span>
-      <div class="sub"><label><input type="checkbox" id="reveal" checked> Show later quakes (the model can't see them)</label></div>
+      <div class="sub"><label><input type="checkbox" id="reveal"> Show later earthquakes in this example</label></div>
     </div>
   </div>
 </div>
@@ -1396,9 +1400,34 @@ const LIVE = (() => {
 })();
 
 </script>
+<script>// Bound drawing work, not the underlying forecast grids. A selected place always
+// uses the full-resolution data; these sizes apply only to the map overview.
+const MAP_RENDER = (() => {
+  function fit(width, height, maxSide = 128, maxPixels = 16384) {
+    if (!(width > 0 && height > 0 && Number.isFinite(width + height))) throw new RangeError('Invalid map dimensions.');
+    const scale = Math.min(1, maxSide / Math.max(width, height), Math.sqrt(maxPixels / (width * height)));
+    return { cols: Math.max(1, Math.floor(width * scale)), rows: Math.max(1, Math.floor(height * scale)) };
+  }
+  function heatSize(grid) {
+    const cols = Math.min(96, grid.nc);
+    const rows = Math.max(1, Math.round(cols * (grid.lat0 - grid.lat1) / ((grid.lon1 - grid.lon0) * grid.c)));
+    return fit(cols, rows, 96, 6400);
+  }
+  function sampleIndex(index, cols, rows, sourceCols, sourceRows) {
+    const x = Math.min(sourceCols - 1, Math.floor((index % cols + .5) * sourceCols / cols));
+    const y = Math.min(sourceRows - 1, Math.floor((Math.floor(index / cols) + .5) * sourceRows / rows));
+    return y * sourceCols + x;
+  }
+  function globeRatio(width, height, ratio = 1) {
+    return Math.min(Math.max(1, ratio || 1), 1.5, Math.sqrt(2000000 / (Math.max(1, width) * Math.max(1, height))));
+  }
+  return { fit, heatSize, sampleIndex, globeRatio };
+})();
+
+</script>
 <script>// World view: an orthographic globe drawn on a canvas with d3-geo. Drag to spin, scroll or pinch to zoom,
 // click an earthquake to select it. Drawn flat, like a printed map: no glow, shading or animation. Coastlines and borders are Natural Earth (world-atlas), like the detail map:
-// 1:110m when zoomed out, 1:50m when zoomed in.
+// The globe is a locator: 1:110m outlines stay light even when zoomed in.
 const GLOBE = (() => {
   const DEG = 180 / Math.PI, SEA = '#cfdce5', LAND = '#f4f4f1', COAST = '#8a959e', ACCENT = '#c80000';
   const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -1409,14 +1438,17 @@ const GLOBE = (() => {
   // Draws only when something changes (drag, zoom, fly-to, hover, selection, new items), not every animation frame.
   function create(canvas, geo, opts) {
     const ctx = canvas.getContext('2d'), base = document.createElement('canvas'), bctx = base.getContext('2d');
-    const proj = d3.geoOrthographic().clipAngle(90).precision(0.4), path = d3.geoPath(proj), grat = d3.geoGraticule10();
+    const proj = d3.geoOrthographic().clipAngle(90).precision(0.7), path = d3.geoPath(proj);
     let w = 0, h = 0, dpr = 1, R0 = 1, k = 1, rot = [-30, -18, 0], items = [], selected = null, hovered = null, baseKey = '';
-    let running = false, raf = 0, last = 0, fly = null, vel = null;
+    let running = false, raf = 0, last = 0, lastPaint = 0, fly = null, vel = null, screenItems = [];
+    const reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const accent = opts.accent || ACCENT;
     const pointers = new Map(); let drag = null, pinch = null;
 
     function resize() {
-      w = canvas.clientWidth; h = canvas.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+      const width = canvas.clientWidth, height = canvas.clientHeight, ratio = MAP_RENDER.globeRatio(width, height, devicePixelRatio || 1);
+      if (w === width && h === height && dpr === ratio) return;
+      w = width; h = height; dpr = ratio;
       canvas.width = base.width = Math.max(1, Math.round(w * dpr)); canvas.height = base.height = Math.max(1, Math.round(h * dpr));
       R0 = Math.max(60, Math.min(w, h) * 0.43); baseKey = ''; kick();
     }
@@ -1425,17 +1457,15 @@ const GLOBE = (() => {
     const sizeOf = it => radius(it.M) * Math.min(2, Math.pow(k, 0.35));
 
     function drawBase() {
-      // Use lighter outlines during movement; restore detailed coastlines at rest.
-      const fine = k >= 1.6 && !drag && !pinch && !fly && !vel;
-      const key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, fine].join();
+      const borders = !drag && !pinch && !fly && !vel;
+      const key = [rot[0].toFixed(3), rot[1].toFixed(3), k.toFixed(4), w, h, borders].join();
       if (key === baseKey) return; baseKey = key;
       const R = R0 * k, cx = w / 2, cy = h / 2, c = bctx;
       proj.scale(R).translate([cx, cy]).rotate(rot); path.context(c);
       c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
       c.beginPath(); path({ type: 'Sphere' }); c.fillStyle = SEA; c.fill();
-      c.beginPath(); path(grat); c.strokeStyle = 'rgba(70,100,130,.13)'; c.lineWidth = .6; c.stroke();
-      c.beginPath(); path(fine ? geo.land50 : geo.land110); c.fillStyle = LAND; c.fill(); c.strokeStyle = COAST; c.lineWidth = .7; c.stroke();
-      c.beginPath(); path(fine ? geo.borders50 : geo.borders110); c.setLineDash([3, 3]); c.strokeStyle = '#a3adb7'; c.lineWidth = .6; c.stroke(); c.setLineDash([]);
+      c.beginPath(); path(geo.land110); c.fillStyle = LAND; c.fill(); c.strokeStyle = COAST; c.lineWidth = .8; c.stroke();
+      if (borders) { c.beginPath(); path(geo.borders110); c.strokeStyle = '#a3adb7'; c.lineWidth = .6; c.stroke(); }
       c.beginPath(); path({ type: 'Sphere' }); c.strokeStyle = '#6b7680'; c.lineWidth = 1; c.stroke();
     }
     function star(c, x, y, r) {
@@ -1445,9 +1475,10 @@ const GLOBE = (() => {
       drawBase(); proj.scale(R0 * k).translate([w / 2, h / 2]).rotate(rot);
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(base, 0, 0);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const t = Date.now(), vis = items.filter(visible);
+      const t = Date.now(), vis = items.filter(visible); screenItems = [];
       for (const it of vis) {
         const [x, y] = proj([it.lon, it.lat]), r = sizeOf(it);
+        screenItems.push({ it, x, y, r: Math.max(8, r + 4) });
         if (it.kind === 'case') { star(ctx, x, y, Math.max(7, r * .9)); ctx.fillStyle = accent; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); continue }
         const age = t - it.t;
         ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = ageColor(age); ctx.globalAlpha = .92; ctx.fill(); ctx.globalAlpha = 1;
@@ -1462,10 +1493,12 @@ const GLOBE = (() => {
 
     function kick() { if (running && !raf) raf = requestAnimationFrame(frame) }
     function frame(now) {
-      raf = 0; if (!running) return; const dt = Math.min(64, now - (last || now)); last = now;
+      raf = 0; if (!running) return;
+      if (now - lastPaint < 1000 / 30) { kick(); return; } lastPaint = now;
+      const dt = Math.min(64, now - (last || now)); last = now;
       if (fly) { const p = Math.max(0, Math.min(1, (now - fly.t0) / fly.ms)), e = ease(p); rot = [fly.r0[0] + (fly.r1[0] - fly.r0[0]) * e, fly.r0[1] + (fly.r1[1] - fly.r0[1]) * e, 0];
         k = Math.exp(Math.log(fly.k0) + (Math.log(fly.k1) - Math.log(fly.k0)) * e); if (p >= 1) { const done = fly.done; fly = null; if (done) done() } }
-      else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); vel = [vel[0] * .93, vel[1] * .93]; if (Math.hypot(vel[0], vel[1]) < 0.002) vel = null }
+      else if (vel && !drag) { rot[0] += vel[0] * dt; rot[1] = clampLat(rot[1] + vel[1] * dt); const decay = Math.pow(.88, dt / 16.67); vel = [vel[0] * decay, vel[1] * decay]; if (Math.hypot(vel[0], vel[1]) < 0.002 || reducedMotion) vel = null }
       draw();
       if (fly || (vel && !drag)) kick(); else last = 0;   // keep going only while something is animating
     }
@@ -1473,9 +1506,8 @@ const GLOBE = (() => {
     function touch() { fly = null; kick() }
 
     function hit(px, py) {
-      proj.scale(R0 * k).translate([w / 2, h / 2]).rotate(rot);
       let best = null, bd = Infinity;
-      for (const it of items) { if (!visible(it)) continue; const [x, y] = proj([it.lon, it.lat]), d = Math.hypot(x - px, y - py), r = Math.max(8, sizeOf(it) + 4);
+      for (const {it, x, y, r} of screenItems) { const d = Math.hypot(x - px, y - py);
         if (d <= r && (d < bd || (it.kind === 'case' && best && best.kind !== 'case'))) { best = it; bd = d } }
       return best;
     }
@@ -1504,7 +1536,7 @@ const GLOBE = (() => {
       if (!pointers.has(ev.pointerId)) return; pointers.delete(ev.pointerId);
       if (pinch) { if (pointers.size < 2) pinch = null; kick(); return }
       if (drag) { const click = drag.moved <= 4, p = local(ev), recent = performance.now() - drag.lastT < 60; drag = null; canvas.style.cursor = 'grab';
-        if (!recent) vel = null;
+        if (!recent || reducedMotion) vel = null;
         if (click) { vel = null; const it = hit(p[0], p[1]); selected = it; opts.onPick(it) } }
       kick();
     };
@@ -1527,15 +1559,15 @@ const GLOBE = (() => {
 
     function flyTo(lon, lat, kTo = k, ms = 1100, done) {
       let l = -lon; while (l - rot[0] > 180) l -= 360; while (l - rot[0] < -180) l += 360;
-      vel = null; fly = { t0: performance.now(), ms, r0: rot.slice(), r1: [l, clampLat(-lat), 0], k0: k, k1: clampK(kTo), done }; kick();
+      vel = null; fly = { t0: performance.now(), ms: reducedMotion ? 1 : ms, r0: rot.slice(), r1: [l, clampLat(-lat), 0], k0: k, k1: clampK(kTo), done }; kick();
     }
     resize(); canvas.style.cursor = 'grab';
     return {
       resize, flyTo,
-      setItems(list) { items = list.slice().sort((a, b) => (a.kind === 'case') - (b.kind === 'case') || a.M - b.M);
+      setItems(list) { items = list.slice().sort((a, b) => (a.kind === 'case') - (b.kind === 'case') || a.M - b.M); screenItems = [];
         if (selected) selected = items.find(i => i.id === selected.id) || null; if (hovered) hovered = items.find(i => i.id === hovered.id) || null; kick() },
       select(id) { selected = items.find(i => i.id === id) || null; kick(); return selected },
-      zoomBy(f) { touch(); fly = { t0: performance.now(), ms: 300, r0: rot.slice(), r1: rot.slice(), k0: k, k1: clampK(k * f) } },
+      zoomBy(f) { touch(); fly = { t0: performance.now(), ms: reducedMotion ? 1 : 300, r0: rot.slice(), r1: rot.slice(), k0: k, k1: clampK(k * f) } },
       get zoom() { return k },
       start() { if (running) return; running = true; last = 0; baseKey = ''; kick() },
       stop() { running = false; cancelAnimationFrame(raf); raf = 0 },
@@ -1837,8 +1869,8 @@ const VIEW_STATE=(()=>{
 })();
 
 </script>
-<script>// One figure and practical next steps. Technical detail stays on the page, rather
-// than making people listen through settings, ranges and projected entry times.
+<script>// One estimate, event context and practical next steps. The selected date gives
+// historical context without a repeated label or a long explanation.
 const SPOKEN=(()=>{
   function percentage(text){return text.replace(/^</,'less than ').replace(/^>/,'more than ').replace('%',' percent')}
   function actions(hazards=[]){
@@ -1849,14 +1881,27 @@ const SPOKEN=(()=>{
       'Wait for a building inspection and local officials’ guidance before returning.'];
   }
   function summary(s){
+    const steps=actions(s.hazards),observed=(s.hazards||[]).some(h=>h==='slope'||h==='trees');
+    const context=observed?'':localContext(s.building,s.ground);
     return [
       s.delayed?'Updates are delayed. Do not rely on this estimate alone.':'',
-      s.recorded?'Recorded example.':'',
-      `${s.place}: the estimated chance of damaging shaking over ${s.duration} is ${percentage(s.probability)}.`,
-      ...actions(s.hazards)
+      `${s.place}${s.date?', '+s.date:''}: the estimated chance of damaging shaking over ${s.duration} is ${percentage(s.probability)}.`,
+      Number.isFinite(s.magnitude)?`The main earthquake was magnitude ${s.magnitude.toFixed(1)}.`:'',
+      context,
+      steps[0],context?'':steps[1],steps[2]
     ].filter(Boolean).join(' ');
   }
-  return {summary,actions};
+  // These are map/model conditions or an explicit user choice, not an inspection
+  // of the building. Mention only the most relevant one to keep the readout short.
+  function localContext(building,ground={}){
+    if(building==='6')return 'You selected a building that is already damaged.';
+    if(ground.ls!=null&&ground.ls>=.05)return 'Landslide risk was mapped on slopes here.';
+    if(ground.liq!=null&&ground.liq>=.1)return 'Possible unstable ground was mapped here.';
+    if(ground.vs>0&&ground.vs<180)return 'Soft ground here can increase shaking.';
+    if(ground.mmi>=7)return 'Strong earlier shaking was mapped here.';
+    return '';
+  }
+  return {summary,actions,localContext};
 })();
 
 </script>
@@ -4260,7 +4305,7 @@ function cancelHeat(){heatRequest++;heatPendingKey=''}
 function invalidateForecast(){
   forecastCache.clear();cancelHeat();heat=null;heatKey='';townRiskCache=null;quakeCatalogue=null;overlayKey='';quakeKey='';townKey='';
   // A revised epicentre changes projected coordinates even if the grid is unchanged.
-  if(G)G.heatSites=null;
+  if(G){G.heatSites=null;G.overlayImages?.clear()}
 }
 const sliderToT=v=>tMin*Math.pow(tMax/tMin,v/1000),tToSlider=t=>Math.round(1000*Math.log(t/tMin)/Math.log(tMax/tMin));
 const km=(lat,lon)=>[(lon-S.lon)*111.32*G.c,(lat-S.lat)*110.57];
@@ -4292,7 +4337,7 @@ function installSequenceGrid(fit=true){
   landLayer.clearLayers();
   for(const r of B.land)L.polygon(r.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',stroke:true,color:'#8a959e',weight:1,fillColor:'#f4f4f1',fillOpacity:1,interactive:false}).addTo(landLayer);
   for(const l of B.borders)L.polyline(l.map(([lo,la])=>[la,lo]),{renderer:RND.land,pane:'land',color:'#7d8893',weight:1.2,dashArray:'4 4',interactive:false}).addTo(landLayer);
-  G.mask=null;
+  G.masks=new Map();G.overlayImages=new Map();
   map.invalidateSize();map.setMaxBounds(G.bounds.pad(0.4));if(fit)map.fitBounds(G.bounds.pad(-0.08));
   $('towns').innerHTML=[...new Set([...TOWNS.towns.map(t=>t[0]),...B.towns.map(t=>t[0])])].sort().map(n=>`<option value="${esc(n)}"></option>`).join('');
 }
@@ -4375,7 +4420,7 @@ function requestHeat(f,cp,src,calib,key){
   }).catch(()=>{if(isCurrent()){heatPendingKey='';heatError='Map shading is unavailable. Choose another layer or change the time to retry.';drawLegend()}});
 }
 function computeHeat(f,cp,src,calib,isCurrent){
-  const cols=Math.min(150,G.nc),rows=Math.max(1,Math.round(cols*(G.lat0-G.lat1)/((G.lon1-G.lon0)*G.c)));
+  const {cols,rows}=MAP_RENDER.heatSize(G);
   const local=$('bld').value==='local',building=+$('bld').value,sites=G.heatSites||(G.heatSites=new Array(cols*rows));
   return HEATMAP.build({cols,rows,isCurrent,probability:q=>SHAKE.probQ(f,cp,q,0,7),sample:i=>{
     let site=sites[i];
@@ -4419,18 +4464,23 @@ function rampAt(n,v){const Rr=RAMPS[n],X=x=>LOGR[n]?Math.log10(Math.max(x,1e-5))
 let overlayKey='',quakeKey='',townKey='';
 function drawOverlay(){const key=[S.key,layer,layer==='risk'?heatKey:''].join('|');if(key===overlayKey)return;overlayKey=key;
   if(layer==='none'||(layer==='risk'&&!heat)){overlayLayer.clearLayers();return}
+  let url=G.overlayImages.get(key);
+  if(!url){
   let w,h,get;
   if(layer==='risk'){w=heat.cols;h=heat.rows;get=i=>heat.P[i]}
-  else{w=G.nc;h=G.nr;const a=layer==='mmi'?G.mmi:layer==='vs'?G.vs:layer==='liq'?G.liq:G.ls;if(!a){overlayLayer.clearLayers();return}const sc=layer==='mmi'?1/20:layer==='vs'?8:layer==='liq'?1/500:1/1000;get=i=>a[i]*sc}
+  else{const size=MAP_RENDER.fit(G.nc,G.nr);w=size.cols;h=size.rows;const a=layer==='mmi'?G.mmi:layer==='vs'?G.vs:layer==='liq'?G.liq:G.ls;if(!a){overlayLayer.clearLayers();return}const sc=layer==='mmi'?1/20:layer==='vs'?8:layer==='liq'?1/500:1/1000;get=i=>a[MAP_RENDER.sampleIndex(i,w,h,G.nc,G.nr)]*sc}
   const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h);
   for(let i=0;i<w*h;i++){const v=get(i);if(layer==='vs'&&!v)continue;const col=rampAt(layer,v);im.data[i*4]=col[0];im.data[i*4+1]=col[1];im.data[i*4+2]=col[2];im.data[i*4+3]=Math.round(col[3]*255)}
   x.putImageData(im,0,0);
   // keep shading on land only: paint the land shape at the same scale and keep pixels inside it
-  const mk=document.createElement('canvas');mk.width=w;mk.height=h;const mx=mk.getContext('2d'),b=G.bounds,W0=b.getWest(),N0=b.getNorth(),sx=w/(b.getEast()-W0),sy=h/(N0-b.getSouth());
-  mx.beginPath();for(const r of B.land){r.forEach(([lo,la],i)=>i?mx.lineTo((lo-W0)*sx,(N0-la)*sy):mx.moveTo((lo-W0)*sx,(N0-la)*sy));mx.closePath()}mx.fillStyle='#000';mx.fill('evenodd');
+  const maskKey=w+'x'+h;let mk=G.masks.get(maskKey);
+  if(!mk){mk=document.createElement('canvas');mk.width=w;mk.height=h;const mx=mk.getContext('2d'),b=G.bounds,W0=b.getWest(),N0=b.getNorth(),sx=w/(b.getEast()-W0),sy=h/(N0-b.getSouth());
+    mx.beginPath();for(const r of B.land){r.forEach(([lo,la],i)=>i?mx.lineTo((lo-W0)*sx,(N0-la)*sy):mx.moveTo((lo-W0)*sx,(N0-la)*sy));mx.closePath()}mx.fillStyle='#000';mx.fill('evenodd');G.masks.set(maskKey,mk)}
   x.globalCompositeOperation='destination-in';x.drawImage(mk,0,0);
+  url=c.toDataURL();if(G.overlayImages.size>=6)G.overlayImages.delete(G.overlayImages.keys().next().value);G.overlayImages.set(key,url);
+  }
   // keep the old image until the new one has loaded, so the shading never blinks out
-  const old=overlayLayer.getLayers(),ov=L.imageOverlay(c.toDataURL(),G.bounds,{opacity:1,interactive:false,pane:'shade'});
+  const old=overlayLayer.getLayers(),ov=L.imageOverlay(url,G.bounds,{opacity:.72,interactive:false,pane:'shade'});
   ov.once('load',()=>old.forEach(l=>overlayLayer.removeLayer(l)));ov.addTo(overlayLayer)}
 function ageColor(age){return age<1/24?'#d7191c':age<1?'#fd8d3c':age<7?'#fed24c':'#ffffff'}
 let quakeCatalogue=null,quakeEntries=[];
@@ -4463,14 +4513,14 @@ function townRisks(){
   });
   townRiskCache={f:cur.f,grid:G,building,calib:cur.calib,items};return items;
 }
-function drawTowns(){const key=[S.key,cur.key,cur.now,$('bld').value,cur.calib,map.getZoom(),$('showT').checked].join('|');if(key===townKey)return;townKey=key;
-  townLayer.clearLayers();if(!$('showT').checked||!cur.f||cur.key!==S.key)return;
-  const risks=townRisks(),top=risks.map(item=>item.town);
+function drawTowns(){const population=$('showT').checked,key=[S.key,cur.key,population?cur.now:'labels',population?$('bld').value:'',map.getZoom(),population].join('|');if(key===townKey)return;townKey=key;
+  townLayer.clearLayers();if(!cur.f||cur.key!==S.key)return;
+  const risks=population?townRisks():[],top=population?risks.map(item=>item.town):TOWNS.towns.filter(t=>gridAt(t[1],t[2])).slice(0,8);
   for(const {town:t,p7:p} of risks){
     const sz=Math.round(Math.min(26,6+Math.sqrt(t[3])/70));
     L.marker([t[1],t[2]],{pane:'towns',keyboard:false,icon:L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],html:`<span style="display:block;width:${sz}px;height:${sz}px;background:rgba(40,52,70,.55);border:1.5px solid #fff;outline:1px solid rgba(40,52,70,.8)"></span>`})})
       .bindTooltip(`<b>${t[0]}</b>, ${fmtN(t[3])} people<br>7-day chance of damaging shaking: ${pct(p)}`,{direction:'top'}).addTo(townLayer)}
-  const placed=[];for(const t of top.slice(0,14)){const pt=map.latLngToContainerPoint([t[1],t[2]]);if(placed.some(q=>Math.abs(q.x-pt.x)<70&&Math.abs(q.y-pt.y)<16))continue;placed.push(pt);
+  const placed=[];for(const t of top.slice(0,population?14:8)){const pt=map.latLngToContainerPoint([t[1],t[2]]);if(placed.some(q=>Math.abs(q.x-pt.x)<70&&Math.abs(q.y-pt.y)<16))continue;placed.push(pt);
     L.tooltip({permanent:true,direction:'right',className:'townlbl',offset:[6,0],pane:'labels'}).setLatLng([t[1],t[2]]).setContent(t[0]).addTo(townLayer)}}
 map.on('zoomend',()=>{if(S)drawTowns()});
 let pinMarker=null;
@@ -4481,14 +4531,14 @@ function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]
   const spec={risk:[`Chance of damaging shaking, next 7 days (${bld})`,['0.3%','2%','10%','40%']],mmi:['Mainshock intensity (USGS ShakeMap)',['IV','VI','VIII','IX']],vs:['Vs30: lower = softer ground, more shaking',['150','400','900 m/s']],liq:['Liquefaction in the mainshock (USGS ground failure)',['2%','8%','20%+']],ls:['Landslides in the mainshock (USGS ground failure)',['1%','4%','12%+']],none:null}[layer];
   const pending=layer==='risk'&&!heat?(playing?'Map shading resumes when you pause.':heatError||'Updating map shading…'):'';
   L0.setAttribute('aria-busy',String(!!heatPendingKey));
-  L0.innerHTML=(pending?`<p class="muted" role="status">${pending}</p>`:'')+(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div>`:'')+
-   `<div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span><span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>town (size = people)</span>${$('reveal').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div>`;
+  L0.innerHTML=(pending?`<p class="muted" role="status">${pending}</p>`:'')+(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div><div class="t">Tap a place for its estimate.</div>`:'')+
+   `<div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span>${$('showT').checked?'<span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>population markers</span>':''}${$('reveal').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div>`;
   if(!spec)return;const rc=$('rampc').getContext('2d');for(let i=0;i<150;i++){const t=i/149,v=layer==='risk'?Math.pow(10,-2.5+t*2.1):layer==='mmi'?4+t*5:layer==='vs'?150+t*750:layer==='liq'?Math.pow(10,-2+t*1.4):Math.pow(10,-2.3+t*1.4);const c=rampAt(layer,v);rc.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(c[3],.35)})`;rc.fillRect(i,0,1,10)}}
 // The collapsed layers button names the current shading, so you can see what's shown without opening it.
 function renderLayTgl(){const r=document.querySelector('input[name=lay]:checked'),b=document.createElement('b');b.textContent='Map layers';$('layTgl').replaceChildren(b,': '+(r?r.parentElement.textContent.trim():''))}
 document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;if(layer==='risk')update();else{cancelHeat();drawOverlay();drawLegend()}renderLayTgl()});
 renderLayTgl();
-$('showQ').onchange=()=>drawQuakes(cur.now,$('reveal').checked);$('showT').onchange=drawTowns;$('showC').onchange=renderCheckins;
+$('showQ').onchange=()=>drawQuakes(cur.now,$('reveal').checked);$('showT').onchange=()=>{drawTowns();drawLegend()};$('showC').onchange=renderCheckins;
 $('layTgl').onclick=()=>{const o=$('layers').classList.toggle('open');$('layTgl').setAttribute('aria-expanded',String(o))};
 
 // ---------- charts ----------
@@ -4734,39 +4784,99 @@ function goSeq(key){const i=seqIndex(key);if(S&&S.key===key){enterDetail();retur
 function setDays(d){replayTimeOverride=null;$('now').value=Math.max(0,Math.min(1000,tToSlider(Math.max(tMin,Math.min(tMax,d)))))}
 function goTown(name){const t=TOWNS.towns.find(t=>t[0]===name)||B.towns.find(t=>t[0]===name);if(t)loc={lat:t[1],lon:t[2],name:t[0]};$('town').value=loc.name;buildBuildingOptions()}
 function setLayer(v){layer=v;document.querySelectorAll('input[name=lay]').forEach(r=>r.checked=r.value===v);renderLayTgl()}
-function resetChoices(){$('bld').value='local';setTol('0.01');$('exposure').value='1440';$('reveal').checked=true}
-function animateDays(from,to,ms){return new Promise(res=>{const t0=performance.now(),a=Math.log(from),b=Math.log(to);playing=true;
-  const step=now=>{const k=Math.min(1,(now-t0)/ms);setDays(Math.exp(a+(b-a)*k));update();if(k<1&&tourOn)requestAnimationFrame(step);else{playing=false;heatKey='';update();res()}};requestAnimationFrame(step)})}
-
-// ---------- story mode ----------
-let tourOn=false,tourI=0,tourPopup=null;const tourLayer=L.layerGroup().addTo(map);
+function resetChoices(){$('bld').value='local';setTol('0.01');$('exposure').value='1440';$('reveal').checked=false}
+// Keep the Türkiye narrative while making its controls and optional feature
+// demos easier to use. AI and speech run only when the visitor requests them.
+let tourOn=false,tourI=0,tourVersion=0,tourTargets=[],tourPopup=null,tourDataRequested=false;
 const STEPS=[
- {t:'After the first shaking, the uncertainty remains.',
-  go(){resetChoices();goSeq('turkey');setLayer('mmi');setDays(1/24);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-.15),{duration:.8});selectTab('spot')},
-  b:()=>'<p>This is the Türkiye 2023 example. The map shows the original shaking. Further earthquakes can follow, so an estimate cannot tell you that a building is safe to enter.</p>'},
- {t:'Choose your place and how long you need.',
-  go(){setLayer('risk');setDays(.3);goTown('Kahramanmaraş');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>For <b>${esc(loc.name)}</b>, the estimated chance of damaging shaking over ${exposureLabel()} is <b>${chance(cur.exposure.probability)}</b>. Change the building or timeframe, or press Read summary for the key steps.</p>`},
- {t:'A larger aftershock can change the picture.',
-  async go(){setLayer('risk');goTown('Elbistan');setDays(.3);update();map.flyTo([38.1,37.15],8,{duration:.6});await animateDays(.3,.5,2600);tourPopup=L.popup({closeButton:false,autoPan:false}).setLatLng([38.011,37.196]).setContent('<div class="pp-h">M7.5, 9 hours later</div>A second large earthquake.').openOn(map)},
-  b:()=>'<p>A second large earthquake struck nine hours later. New earthquakes and revised data can change an estimate. Follow local officials’ instructions before returning to a building.</p>'},
- {t:'Let your group know how you are.',
-  go(){if(tourPopup){map.closePopup(tourPopup);tourPopup=null}selectTab('people')},
-  b:()=>'<p>Create or join a group, then share your status at your map location. The phone QR link helps others join. These posts are not monitored by emergency services.</p>'},
- {t:'Use the same tools for a recent earthquake.',
-  go(){selectTab('spot')},
-  b:()=>'<p>Live now opens a recent earthquake with enough data for an estimate.</p><p><button class="btn primary" id="tLive">Open a recent earthquake</button></p>'}
+  {id:'place',title:'After the first shaking, the uncertainty remains.',targets:['town'],
+    body:()=> 'This is the Türkiye 2023 example. The map shows the original shaking. Further earthquakes can follow, so an estimate cannot tell you that a building is safe to enter.',
+    go(){resetChoices();goSeq('turkey');setLayer('mmi');setDays(1/24);goTown('Kahramanmaraş');update();map.fitBounds(G.bounds.pad(-.15));selectTab('spot')}},
+  {id:'time',title:'Choose your place and how long you need.',targets:['exposure','now'],
+    body:()=> `For ${loc.name}, the estimated chance of damaging shaking over ${exposureLabel()} is ${chance(cur.exposure.probability)}. Change the building or timeframe, or press Read summary for the key steps.`,
+    go(){setLayer('risk');setDays(.3);goTown('Kahramanmaraş');update();selectTab('spot');map.setView([loc.lat,loc.lon],8)},
+    actions:[['tShort','10 minutes',()=>setTourStay('10')],['tLong','24 hours',()=>setTourStay('1440')]],
+    tools:[['tAsk','Ask Gemini',()=>{setAskOpen(true);markTourTargets({targets:['askPanel']});return ask('Give me a quick summary')}],['tSpeak','Read summary',()=>$('readSummary').click()]]},
+  {id:'aftershock',title:'A larger aftershock can change the picture.',targets:['now'],
+    body:()=> 'A second large earthquake struck nine hours later. New earthquakes and revised data can change an estimate. Follow local officials’ instructions before returning to a building.',
+    async go(){setAskOpen(false);setLayer('risk');goTown('Elbistan');setDays(.3);update();map.setView([38.1,37.15],8);if(!await replayStoryEvent(.3,.5,2600))return;tourPopup=L.popup({closeButton:false,autoPan:false}).setLatLng([38.011,37.196]).setContent('<div class="pp-h">M7.5, 9 hours later</div>A second large earthquake.').openOn(map)},
+    actions:[['tData','See the earthquake record',showStoryRecords]]},
+  {id:'group',title:'Let your group know how you are.',targets:['ciPosting','ciSetup'],
+    body:()=> 'Create or join a group, then share your status at your map location. The phone QR link helps others join. These posts are not monitored by emergency services.',
+    go(){selectTab('people')},actions:[['tQR','Show phone QR',()=>openJoin()]]},
+  {id:'live',title:'Use the same tools for a recent earthquake.',targets:['liveBtn'],
+    body:()=> 'Live now opens a recent earthquake with enough data for an estimate.',
+    go(){selectTab('spot')},actions:[['tLive','Open a recent earthquake',()=>liveNow()]]},
 ];
+function setTourStay(minutes){$('exposure').value=minutes;update()}
+function clearTourTargets(){for(const target of tourTargets)target.classList.remove('tour-focus');tourTargets=[]}
+function markTourTargets(step){
+  clearTourTargets();
+  for(const id of step.targets){const target=$(id);if(target){target.classList.add('tour-focus');tourTargets.push(target)}}
+}
+function updateTourEstimate(){
+  if(!tourOn)return;
+  const step=STEPS[tourI],estimate=$('tourEstimate');
+  if(step.id==='time'&&cur.f){
+    estimate.textContent=`Viewing ${dur(cur.now)} after the earthquake.`;
+    $('tShort').setAttribute('aria-pressed',String($('exposure').value==='10'));
+    $('tLong').setAttribute('aria-pressed',String($('exposure').value==='1440'));
+    $('tourBody').textContent=step.body();
+  }
+  if(step.id==='time')$('tSpeak').disabled=$('readSummary').disabled;
+}
+function updateTourData(){
+  if(!tourOn||!tourDataRequested)return;
+  $('tourFeedback').textContent=TIGER.enabled&&TIGER.data&&!TIGER.data.error&&TIGER.key===S.key
+    ?'Tiger Data: bars show recorded earthquakes; the line shows what this forecast expects.'
+    :'The earthquake record is unavailable right now. You can still follow the story.';
+}
+async function showStoryRecords(){
+  const version=tourVersion;tourDataRequested=true;selectTab('spot');setAskOpen(false);$('tigerCard').open=true;
+  $('tourFeedback').textContent='Opening the earthquake record from Tiger Data…';
+  if(!TIGER.enabled)await tigerProbe();await tigerFetch();
+  if(tourOn&&version===tourVersion){renderTiger();updateTourData();markTourTargets({targets:['tigerCard']});$('tigerCard').scrollIntoView({block:'nearest'})}
+}
+async function replayStoryEvent(from,to,ms){
+  const version=tourVersion,reduced=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const frames=reduced?1:6;playing=true;
+  for(let i=1;i<=frames;i++){
+    if(!reduced)await new Promise(resolve=>setTimeout(resolve,ms/frames));
+    if(!tourOn||version!==tourVersion)return false;
+    setDays(from*Math.pow(to/from,i/frames));update();
+  }
+  playing=false;update();return true;
+}
+function closeTourPopup(){if(tourPopup){map.closePopup(tourPopup);tourPopup=null}}
+function tourLayout(){requestAnimationFrame(()=>{if(mode==='detail'&&S)map.invalidateSize({pan:false});else if(mode==='world')globe.resize()})}
+async function showStep(index){
+  if(!tourOn)return;
+  const version=++tourVersion;stopSummary();pausePlayback();closeTourPopup();tourDataRequested=false;tourI=Math.max(0,Math.min(STEPS.length-1,index));
+  const step=STEPS[tourI],box=$('tour');clearTourTargets();box.hidden=false;
+  const buttons=items=>items.map(([id,label])=>`<button class="btn" id="${id}">${label}</button>`).join('');
+  box.innerHTML=`<div class="tour-copy"><p class="tstep">Step ${tourI+1} of ${STEPS.length}</p><h2 id="tourTitle">${step.title}</h2><p id="tourBody">${esc(step.body())}</p></div><div class="tour-tools"><nav class="tnav" aria-label="Story"><button class="btn" id="tBack" ${tourI===0?'disabled':''}>Back</button><button class="btn primary" id="tNext">${tourI===STEPS.length-1?'Finish':'Next'}</button><button class="btn" id="tExit">Exit</button></nav><div class="row tour-actions">${buttons(step.actions||[])}</div>${step.tools?`<details class="tour-extra"><summary>Try Gemini or ElevenLabs</summary><div class="row">${buttons(step.tools)}</div></details>`:''}<p class="p" id="tourEstimate" role="status"></p><p class="muted" id="tourFeedback" role="status"></p></div>`;
+  $('tBack').onclick=()=>showStep(tourI-1);
+  $('tNext').onclick=()=>tourI===STEPS.length-1?endTour():showStep(tourI+1);
+  $('tExit').onclick=endTour;
+  // Navigation stays available during a database read or AI/voice request.
+  for(const [id,,action] of [...(step.actions||[]),...(step.tools||[])])$(id).onclick=async()=>{
+    const button=$(id);button.disabled=true;
+    try{await action()}catch{if(tourOn&&version===tourVersion)$('tourFeedback').textContent='That service is unavailable. You can still continue the walkthrough.'}
+    finally{if(tourOn&&version===tourVersion){button.disabled=false;updateTourEstimate()}}
+  };
+  $('tNext').focus({preventScroll:true});tourLayout();
+  try{
+    await step.go();
+    if(!tourOn||version!==tourVersion)return;
+    $('tourBody').textContent=step.body();markTourTargets(step);updateSpokenSummary();updateTourEstimate();tourLayout();
+  }catch{if(tourOn&&version===tourVersion)$('tourFeedback').textContent='This feature is unavailable right now. Continue to try the other controls.'}
+}
+function startTour(){$('welcome').hidden=true;tourOn=true;showStep(0)}
+function endTour(){tourOn=false;tourVersion++;stopSummary();pausePlayback();closeTourPopup();clearTourTargets();$('tour').hidden=true;tourLayout();$('storyBtn').focus({preventScroll:true})}
+$('storyBtn').onclick=startTour;$('wStory').onclick=startTour;
+
 let skillCache={};
 function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));return skillCache[M]=VALIDATION.summarize(rows,M).heldOutSkill.toFixed(2)}
-async function showStep(i){tourI=Math.max(0,Math.min(STEPS.length-1,i));const st=STEPS[tourI],T=$('tour');
-  tourLayer.clearLayers();T.hidden=false;T.innerHTML=`<div class="tstep">${tourI+1} of ${STEPS.length}</div><h3>${st.t}</h3><p class="muted">…</p>`;
-  await st.go();if(!tourOn||STEPS[tourI]!==st)return;
-  T.innerHTML=`<div class="tstep">${tourI+1} of ${STEPS.length}</div><h3>${st.t}</h3>${st.b()}<div class="tnav"><div class="dots">${STEPS.map((_,k)=>`<i class="${k===tourI?'on':''}"></i>`).join('')}</div><button class="btn" id="tBack" ${tourI===0?'disabled':''}>Back</button><button class="btn primary" id="tNext">${tourI===STEPS.length-1?'Finish':'Next'}</button><button class="btn" id="tExit" aria-label="Exit the story">✕</button></div>`;
-  if($('tLive'))$('tLive').onclick=()=>liveNow();$('tBack').onclick=()=>showStep(tourI-1);$('tNext').onclick=()=>tourI===STEPS.length-1?endTour():showStep(tourI+1);$('tExit').onclick=endTour;$('tNext').focus({preventScroll:true})}
-function startTour(){$('welcome').hidden=true;tourOn=true;showStep(0)}
-function endTour(){tourOn=false;$('tour').hidden=true;tourLayer.clearLayers();if(tourPopup){map.closePopup(tourPopup);tourPopup=null}selectTab('spot')}
-$('storyBtn').onclick=startTour;$('wStory').onclick=startTour;
 $('wExplore').onclick=()=>{$('welcome').hidden=true;try{localStorage.setItem('ar_seen','1')}catch(e){}};
 $('helpBtn').onclick=()=>{$('welcome').hidden=false;$('wStory').focus()};
 $('fsBtn').onclick=()=>{const d=document;(d.fullscreenElement?d.exitFullscreen():d.documentElement.requestFullscreen()).catch(()=>{})};
@@ -5022,7 +5132,7 @@ async function openLive(it){
 function renderDataStatus(){
   if(!S)return;
   $('liveActions').hidden=!S.live;
-  if(!S.live){$('dataNotice').textContent='Recorded example. This is not a live forecast.';$('dataNotice').classList.toggle('data-delayed',false);$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
+  if(!S.live){$('dataNotice').textContent='';$('dataNotice').classList.toggle('data-delayed',false);$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
   const age=Date.now()-Date.parse(S.fetchedAt),delayed=!!S.refreshError||age>POLL_MS*2;
   $('dataNotice').textContent=delayed?`Updates delayed. Last data from ${fmtClock(new Date(S.fetchedAt))}. Follow local officials for current instructions.`:`Live estimate. Updated ${fmtClock(new Date(S.fetchedAt))}.`;
   $('dataNotice').classList.toggle('data-delayed',delayed);
@@ -5083,20 +5193,22 @@ function tigerWindow(){
   return{since:new Date(t0-864e5).toISOString(),until:new Date(Math.min(end+36e5,t0+400*864e5)).toISOString(),t0}}
 async function tigerProbe(){
   if(!['http:','https:'].includes(location.protocol))return;
-  try{const r=await fetch('/api/quakes',{cache:'no-store'});const j=await r.json();TIGER.enabled=!!j.configured;TIGER.timescale=j.timescale??null}catch(e){TIGER.enabled=false}
+  const request=new AbortController(),timer=setTimeout(()=>request.abort(),10000);
+  try{const r=await fetch('/api/quakes',{cache:'no-store',signal:request.signal});const j=await r.json();TIGER.enabled=!!j.configured;TIGER.timescale=j.timescale??null}catch(e){TIGER.enabled=false}
+  finally{clearTimeout(timer)}
 }
 async function tigerFetch(){
   if(!TIGER.enabled||!S||TIGER.busy)return;
-  const seq=S,w=tigerWindow();TIGER.busy=true;
+  const seq=S,w=tigerWindow(),request=new AbortController(),timer=setTimeout(()=>request.abort(),10000);TIGER.busy=true;
   try{
     const ageDays=(Date.now()-w.t0)/864e5;
     const params=new URLSearchParams({lat:seq.lat.toFixed(3),lon:seq.lon.toFixed(3),radiusKm:String(Math.round(Math.min(600,Math.max(10,seq.radiusKm||150)))),since:w.since,until:w.until});
     if(seq.live&&ageDays>0.75)params.set('backfill','1');  // the 1-day feed may not reach back to the mainshock
-    const r=await fetch('/api/quakes?'+params,{cache:'no-store'}),j=await r.json().catch(()=>null);
+    const r=await fetch('/api/quakes?'+params,{cache:'no-store',signal:request.signal}),j=await r.json().catch(()=>null);
     if(S!==seq)return;
     TIGER.key=seq.key;TIGER.fetchedAt=Date.now();TIGER.data=r.ok&&j?j:{error:(j&&j.error)||'Unavailable'};TIGER.drawnFor='';
   }catch(e){if(S===seq){TIGER.key=seq.key;TIGER.data={error:'Could not reach the server.'};TIGER.drawnFor=''}}
-  finally{TIGER.busy=false;renderTiger()}
+  finally{clearTimeout(timer);TIGER.busy=false;renderTiger();if(typeof updateTourData==='function')updateTourData()}
 }
 // Expected M>=4 count in [ta, tb] days after the original mainshock, averaged over the posterior.
 function tigerExpected(f,ta,tb){
@@ -5265,11 +5377,12 @@ function populateVoices(){
 }
 function updateSpokenSummary(){
   if(!cur.f)return;
-  $('readSummary').disabled=!(speechSupported||voiceCloud.ok)||playing||tourOn;
+  $('readSummary').disabled=!(speechSupported||voiceCloud.ok)||playing;
   const delayed=S.live&&(S.refreshError||Date.now()-Date.parse(S.fetchedAt)>POLL_MS*2);
   const summary=SPOKEN.summary({place:loc.name,duration:exposureLabel(),probability:chance(cur.exposure.probability),
-    recorded:!S.live,delayed,hazards:typeof observedHazards==='function'?observedHazards():[]});
+    date:fmtDate(cur.nowDate),magnitude:S.M,building:$('bld').value,ground:cur.sp.gv,delayed,hazards:typeof observedHazards==='function'?observedHazards():[]});
   if(summary!==lastSummary){stopSummary('The forecast changed. Press Read summary to hear the updated figures.');lastSummary=summary;$('spokenText').textContent=summary;populateLanguages()}
+  if(typeof updateTourEstimate==='function')updateTourEstimate();
 }
 $('readSummary').disabled=!speechSupported;$('stopSummary').disabled=true;$('stopSummary').hidden=true;
 if(!speechSupported)$('speechStatus').textContent='Speech is unavailable in this browser. The text summary is available below.';
