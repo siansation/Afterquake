@@ -148,8 +148,27 @@ async function ask(q) {
     entry.fail(e.message === 'Failed to fetch' ? 'Could not reach the assistant. Check the internet connection.' : e.message);
   } finally { ASK.busy = false; $('askBtn').disabled = false }
 }
-// The chat bubble in the bottom-left corner of the map opens and closes the panel.
-function setAskOpen(open) { $('askPanel').hidden = !open; $('askOpen').setAttribute('aria-expanded', String(open)); if (open) $('askInput').focus({ preventScroll: true }); else $('askOpen').focus({ preventScroll: true }) }
+// Bound the floating panel to the visible screen, including a resized phone viewport.
+function layoutAskPanel(){
+  const panel=$('askPanel');if(panel.hidden)return;
+  const viewport=window.visualViewport,width=viewport?.width||innerWidth,height=viewport?.height||innerHeight;
+  const x=viewport?.offsetLeft||0,y=viewport?.offsetTop||0,panelWidth=Math.min(390,Math.max(0,width-24));
+  const anchor=$('askOpen').getBoundingClientRect();
+  panel.style.width=panelWidth+'px';
+  panel.style.left=Math.max(x+12,Math.min(anchor.left,x+width-panelWidth-12))+'px';
+  panel.style.bottom=Math.max(12,innerHeight-y-height+12)+'px';
+  panel.style.maxHeight=Math.min(560,Math.max(0,height-24))+'px';
+}
+let askLayoutFrame=0;
+function queueAskLayout(){
+  if($('askPanel').hidden||askLayoutFrame)return;
+  askLayoutFrame=requestAnimationFrame(()=>{askLayoutFrame=0;layoutAskPanel()});
+}
+addEventListener('resize',queueAskLayout);
+window.visualViewport?.addEventListener('resize',queueAskLayout);
+window.visualViewport?.addEventListener('scroll',queueAskLayout);
+// The map launcher and story button both use the same foreground panel.
+function setAskOpen(open) { $('askPanel').hidden = !open; $('askOpen').setAttribute('aria-expanded', String(open)); if (open) {layoutAskPanel();$('askInput').focus({ preventScroll: true })} else $('askOpen').focus({ preventScroll: true }) }
 $('askOpen').onclick = () => setAskOpen($('askPanel').hidden);
 $('askClose').onclick = () => setAskOpen(false);
 $('askPanel').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); setAskOpen(false) } });

@@ -214,7 +214,7 @@ details summary{cursor:pointer;font-weight:600}
 .wbox .wbtns .btn{padding:7px 14px}
 .wbox .fine{font-size:13px;color:var(--mute);margin:14px 0 0}
 .kbd{font-size:12px;border:1px solid #8d98a3;border-radius:2px;padding:0 4px;background:#f5f6f7}
-@media (max-width:860px){.askwrap{bottom:96px}.askpanel{width:100%}.hbtn.fs{display:none}}
+@media (max-width:860px){.askwrap{bottom:96px}.hbtn.fs{display:none}}
 @media (max-width:860px){.legend .keys{display:none}.legend{bottom:96px;top:auto;right:10px;left:auto;max-width:145px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
 @media (max-width:860px){#map.ci-popup-open~.legend,#map.ci-popup-open~.map-status,#map.ci-popup-open~.layers{display:none}}
 .method p{font-size:14px;color:var(--ink2);margin:6px 0}
@@ -233,13 +233,14 @@ details summary{cursor:pointer;font-weight:600}
 .askopen{width:46px;height:46px;border-radius:50%;border:0;background:var(--bar);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.4)}
 .askopen:hover{background:#33434f}
 .askopen[aria-expanded="true"]{background:var(--link)}
-.askpanel{width:340px;max-width:100%;padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:min(520px,calc(100vh - 260px))}
+.askpanel{position:fixed;left:12px;bottom:12px;z-index:1950;box-sizing:border-box;width:390px;max-width:calc(100vw - 24px);padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:min(560px,calc(100vh - 24px));overflow:hidden}
 .askpanel[hidden]{display:none}
+.askhead,.askrow,.askfine{flex-shrink:0}
 .askhead{display:flex;justify-content:space-between;align-items:center;font-size:14.5px}
-.askx{border:0;background:none;cursor:pointer;color:var(--mute);font-size:16px;line-height:1;padding:2px 4px}
+.askx{border:0;background:none;cursor:pointer;color:var(--mute);font-size:16px;line-height:1;padding:2px 4px;min-width:44px;min-height:44px}
 .askrow{display:flex;gap:8px}
 .askrow input{flex:1}
-#askSuggest{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+#askSuggest{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:0;overflow-y:auto}
 #askSuggest .btn{font-size:13px;padding:3px 8px;text-align:left}
 #askLog:not(:empty) ~ #askSuggest{display:none}
 #askLog{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;flex:1}
@@ -257,7 +258,7 @@ details summary{cursor:pointer;font-weight:600}
 body.world #globeWrap{display:block}
 #globe{position:absolute;inset:0;width:100%;height:100%;touch-action:none;outline:none}
 #globe:focus-visible{outline:2px solid #2491ff;outline-offset:-3px}
-body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .tour,body.world .askwrap,body.world #hMag,body.world #worldBtn{display:none!important}
+body.world .tabs,body.world .pane,body.world .layers,body.world .legend,body.world .timebar,body.world .tour,body.world .askwrap,body.world .askpanel,body.world #hMag,body.world #worldBtn{display:none!important}
 .wpane{overflow:auto;flex:1;padding:12px 14px 20px;padding-left:max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:9px}
 body:not(.world) .wpane{display:none}
 .wfilter{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px}
@@ -528,13 +529,6 @@ body:not(.world) .wpane{display:none}
       </div>
     </div>
     <div class="askwrap" id="askWrap">
-      <section class="ctl askpanel" id="askPanel" hidden aria-label="Ask about this forecast">
-        <div class="askhead"><b>Ask about this forecast</b><button class="askx" id="askClose" aria-label="Close">✕</button></div>
-        <div id="askLog" aria-live="polite"></div>
-        <div id="askSuggest"><button type="button" class="btn">Give me a quick summary</button><button type="button" class="btn">What should I do if shaking starts?</button><button type="button" class="btn">Why might shaking be stronger here?</button></div>
-        <form class="askrow" id="askForm"><input type="text" id="askInput" maxlength="300" autocomplete="off" placeholder="Ask a question about this spot" aria-label="Question about this forecast"><button class="btn primary" id="askBtn">Ask</button></form>
-        <p class="askfine">Gemini uses this page's forecast to answer, and you can see what it checked beneath each reply. It can still make mistakes, so its answers cannot clear a building for entry.</p>
-      </section>
       <button class="askopen" id="askOpen" aria-expanded="false" aria-controls="askPanel" title="Ask about this forecast" aria-label="Ask about this forecast"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 4.5h16v11.5H10l-5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
     </div>
     <div id="globeWrap">
@@ -556,6 +550,15 @@ body:not(.world) .wpane{display:none}
     </div>
   </div>
 </div>
+
+<!-- Keep the chat outside the map's stacking contexts and the story's layout. -->
+<section class="ctl askpanel" id="askPanel" hidden role="dialog" aria-label="Ask about this forecast">
+  <div class="askhead"><b>Ask about this forecast</b><button class="askx" id="askClose" aria-label="Close">✕</button></div>
+  <div id="askLog" aria-live="polite"></div>
+  <div id="askSuggest"><button type="button" class="btn">Give me a quick summary</button><button type="button" class="btn">What should I do if shaking starts?</button><button type="button" class="btn">Why might shaking be stronger here?</button></div>
+  <form class="askrow" id="askForm"><input type="text" id="askInput" maxlength="300" autocomplete="off" placeholder="Ask a question about this spot" aria-label="Question about this forecast"><button class="btn primary" id="askBtn">Ask</button></form>
+  <p class="askfine">Gemini uses this page's forecast to answer, and you can see what it checked beneath each reply. It can still make mistakes, so its answers cannot clear a building for entry.</p>
+</section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script id="d-data" type="application/json">__DATA__</script>

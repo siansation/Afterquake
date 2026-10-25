@@ -41,4 +41,6 @@ The forecast map starts with bundled land context and loads OpenStreetMap street
 
 Recorded earthquakes use circles, while check-ins use labelled flags for help and shields for safe. Check-in meaning must be clear from shape and text as well as colour, with 44 px keyboard-accessible targets. Help requests appear above other symbols and first in the group list. Reuse unchanged markers during polling so an open note or keyboard focus remains in place.
 
+The Gemini panel floats outside the map and story layout, above map controls and status banners. Bound it to the visible viewport and scroll the conversation inside it so its heading, close button and question field remain accessible on smaller screens.
+
 The globe is a locator, so it uses light world outlines at every zoom level. Overview textures are bounded independently of the full-resolution data used for estimates. City names remain visible; population symbols and future events are optional. The story keeps its narrative and uses a compact panel above the app so the controls remain accessible. Its short aftershock replay uses six updates and respects reduced-motion preferences. Gemini, speech and database demonstrations are optional actions within the narrative.
