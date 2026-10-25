@@ -28,7 +28,14 @@ function harness({backend=service(),stored={},blocked=false,href='https://afterq
   const nodes=new Map(),storage=new Map(Object.entries(stored)),events={},intervals=[],markers=[],copies=[];
   const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,checked:true,
     classList:{toggle(){}},focus(){this.focused=true},select(){this.selected=true}});return nodes.get(id)};
-  const layer={clearLayers(){markers.length=0}};
+  const layer={clearLayers(){markers.length=0},removeLayer(marker){const i=markers.indexOf(marker);if(i>=0)markers.splice(i,1)}};
+  const L={divIcon:options=>options,marker(position,options){
+    const element={attributes:{},title:'',setAttribute(k,v){this.attributes[k]=v},focus(){this.focused=true}};
+    return {position,options,element,open:false,events:{},on(name,fn){this.events[name]=fn;return this},bindPopup(html){this.html=html;return this},addTo(){markers.push(this);return this},
+      setLatLng(p){this.position=p;return this},setIcon(icon){this.options.icon=icon;return this},
+      setZIndexOffset(z){this.options.zIndexOffset=z;return this},setPopupContent(html){this.html=html;return this},
+      getElement(){return element},openPopup(){this.open=true;this.events.popupopen?.();return this}};
+  }};
   const ctx=vm.createContext({$:node,URL,URLSearchParams,Uint8Array,crypto:webcrypto,AbortController,setTimeout,clearTimeout,
     location:new URL(href),history:{replaceState(_state,_title,url){ctx.location=new URL(url,ctx.location.href)}},
     navigator:{clipboard:{async writeText(text){if(!clipboard)throw new Error('denied');copies.push(text)}}},
@@ -36,8 +43,7 @@ function harness({backend=service(),stored={},blocked=false,href='https://afterq
     fetch:(...args)=>backend.fetch(...args),document:{hidden:false,querySelectorAll:()=>[],addEventListener:(name,fn)=>events['document:'+name]=fn},
     addEventListener:(name,fn)=>events[name]=fn,setInterval:fn=>intervals.push(fn),
     S:{key:'example',lon:0},loc:{lat:1.123456,lon:2.123456,name:'Park'},mode:'detail',ciLayer:layer,RND:{checks:{}},PAL:{help:'red',good:'green'},
-    L:{circleMarker(position){return {bindPopup(html){this.html=html;return this},addTo(){markers.push({position,html:this.html});return this}}}},
-    map:{setView(){}},VIEW_STATE,SCENARIO,fmtDT:d=>d.toISOString(),ago:()=> 'just now',
+    L,map:{getZoom:()=>8,setView(position,zoom){this.position=position;this.zoom=zoom}},VIEW_STATE,SCENARIO,fmtDT:d=>d.toISOString(),ago:()=> 'just now',
     esc:s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
     currentView:()=>({v:1,event:{kind:'case',id:'example'},a:ctx.loc,b:null,minutes:10,building:'7',tolerance:.01,calibrated:false,at:'2026-10-25T12:00:00Z',dataAt:'2026-10-25'})});
   new vm.Script(source).runInContext(ctx);
@@ -90,4 +96,39 @@ test('failed refreshes preserve confirmed posts and hidden pages do not poll',as
   const h=harness();await h.run('initCheckins()');h.run('ciSetGroup(ciRandom(16))');await h.run('checkIn("safe")');h.backend.failReads=true;
   await h.run('refreshCheckins()');assert.equal(h.run('ci.items.length'),1);assert.ok(h.node('ciStatus').textContent.includes('Connection interrupted'));
   h.ctx.document.hidden=true;const before=h.backend.calls.length;h.intervals[0]();assert.equal(h.backend.calls.length,before);
+});
+
+test('help flags and safe shields have labels, keyboard access and different display priority',async()=>{
+  const h=harness();await h.run('initCheckins()');h.run('ciSetGroup(ciRandom(16))');
+  await h.run('checkIn("help")');const marker=h.markers[0],helpPriority=marker.options.zIndexOffset;
+  assert.equal(marker.options.pane,'checkins');assert.equal(marker.options.keyboard,true);
+  assert.deepEqual(Array.from(marker.options.icon.iconSize),[44,44]);
+  assert.match(marker.options.icon.html,/ci-symbol-help/);assert.match(marker.options.icon.html,/Needs help/);
+  assert.match(marker.element.attributes['aria-label'],/check-in: needs help/);
+  await h.run('checkIn("safe")');assert.equal(h.markers[0],marker);
+  assert.match(marker.options.icon.html,/ci-symbol-safe/);assert.match(marker.options.icon.html,/>Safe</);
+  assert.ok(helpPriority>marker.options.zIndexOffset);assert.match(marker.element.attributes['aria-label'],/marked safe/);
+  assert.match(h.node('checkinKey').innerHTML,/Group check-ins/);
+});
+
+test('unchanged polls preserve an open check-in popup and help requests appear first',async()=>{
+  const backend=service(),a=harness({backend}),b=harness({backend});await a.run('initCheckins()');await b.run('initCheckins()');
+  a.run('ciSetGroup(ciRandom(16))');b.run('ciSetGroup('+JSON.stringify(a.run('ci.group'))+')');
+  await a.run('checkIn("safe")');await b.run('checkIn("help")');await a.run('refreshCheckins()');
+  assert.ok(a.node('ciList').innerHTML.indexOf('needs help')<a.node('ciList').innerHTML.indexOf('marked safe'));
+  const marker=a.markers[0];marker.openPopup();marker.element.focus();
+  await a.run('refreshCheckins()');assert.equal(a.markers[0],marker);assert.equal(marker.open,true);assert.equal(marker.element.focused,true);
+});
+
+test('Show reveals a hidden check-in, opens its note and focuses the correct wrapped location',async()=>{
+  const h=harness();await h.run('initCheckins()');h.run('ciSetGroup(ciRandom(16))');
+  h.ctx.S.lon=181;h.ctx.loc.lon=-179;h.node('ciNote').value='At the entrance';await h.run('checkIn("help")');
+  const id=h.run('ci.items[0].id');h.node('showC').checked=false;h.run('renderCheckins()');
+  assert.equal(h.markers.length,0);assert.equal(h.node('checkinKey').hidden,true);
+  h.run('focusCheckin('+JSON.stringify(id)+')');
+  assert.equal(h.node('showC').checked,true);assert.equal(h.markers.length,1);assert.equal(h.node('checkinKey').hidden,false);
+  assert.equal(h.markers[0].open,true);assert.match(h.markers[0].html,/At the entrance/);assert.equal(h.markers[0].element.focused,true);
+  assert.deepEqual(Array.from(h.ctx.map.position),[h.ctx.loc.lat,181]);
+  for(const record of h.backend.records.values())record.expiresAt=new Date(Date.now()-1000).toISOString();
+  await h.run('refreshCheckins()');assert.equal(h.markers.length,0,'Expired help requests must not stay on the map');
 });

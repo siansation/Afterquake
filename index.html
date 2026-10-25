@@ -876,11 +876,20 @@ details summary{cursor:pointer;font-weight:600}
 .wbox .fine{font-size:13px;color:var(--mute);margin:14px 0 0}
 .kbd{font-size:12px;border:1px solid #8d98a3;border-radius:2px;padding:0 4px;background:#f5f6f7}
 @media (max-width:860px){.askwrap{bottom:96px}.askpanel{width:100%}.hbtn.fs{display:none}}
-@media (max-width:860px){.legend .keys{display:none}.legend{bottom:96px;top:auto;right:10px;left:auto;max-width:190px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
+@media (max-width:860px){.legend .keys{display:none}.legend{bottom:96px;top:auto;right:10px;left:auto;max-width:145px;padding:6px 8px}.legend .t{font-size:11.5px}.legend canvas{width:120px}.legend .ramp[style]{width:120px!important}}
+@media (max-width:860px){#map.ci-popup-open~.legend,#map.ci-popup-open~.map-status,#map.ci-popup-open~.layers{display:none}}
 .method p{font-size:14px;color:var(--ink2);margin:6px 0}
 .ci{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--line2)}
 .ci:first-child{border-top:0}
-.ci .dot{width:10px;height:10px;border-radius:50%}
+.ci-symbol{width:22px;height:27px;flex:none;vertical-align:middle}
+.ci-symbol-help{color:var(--help)}.ci-symbol-safe{color:var(--good)}
+.ci-map-marker{background:none;border:0}
+.ci-map-marker .ci-symbol{width:36px;height:44px;margin-left:4px}
+.ci-map-label{position:absolute;left:40px;top:4px;white-space:nowrap;background:#fff;color:var(--ink);border:1px solid var(--ink2);border-radius:2px;padding:2px 5px;font-size:12px;font-weight:700;line-height:18px}
+.ci-map-marker:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+.checkin-key{display:flex;flex-wrap:wrap;gap:2px 10px;border-top:1px solid var(--line);padding-top:5px;margin-top:5px;font-size:12px}
+.checkin-key[hidden]{display:none}
+.checkin-key b{flex-basis:100%}.checkin-key span{display:flex;align-items:center;gap:3px}
 .askwrap{position:absolute;left:10px;bottom:84px;z-index:650;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:calc(100% - 20px)}
 .askopen{width:46px;height:46px;border-radius:50%;border:0;background:var(--bar);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,.4)}
 .askopen:hover{background:#33434f}
@@ -4361,12 +4370,12 @@ function gridAt(lat,lon){const c=Math.round((lon-G.lon0)/G.dlon),r=Math.round((G
 const map=L.map('map',{zoomControl:true,preferCanvas:true,attributionControl:true,worldCopyJump:false,minZoom:4,maxZoom:13});
 map.attributionControl.setPrefix('');map.attributionControl.addAttribution('Data: USGS, Natural Earth, GeoNames');
 // Street images sit above the offline land map and below the forecast and pins.
-[['land',300],['streets',320],['shade',380],['towns',420],['quakes',440],['checks',460],['labels',640]].forEach(([n,z])=>{map.createPane(n);map.getPane(n).style.zIndex=z});
+[['land',300],['streets',320],['shade',380],['towns',420],['quakes',440],['checks',460],['labels',640],['checkins',660]].forEach(([n,z])=>{map.createPane(n);map.getPane(n).style.zIndex=z});
 map.getPane('land').style.pointerEvents='none';map.getPane('shade').style.pointerEvents='none';map.getPane('labels').style.pointerEvents='none';
 map.getPane('streets').style.pointerEvents='none';
 const streetMap=BASEMAP.create(L,map,$('mapStatus'));
 window.addEventListener('online',()=>streetMap.retry());
-const RND={land:L.canvas({pane:'land'}),quakes:L.canvas({pane:'quakes'}),checks:L.canvas({pane:'checks'})};
+const RND={land:L.canvas({pane:'land'}),quakes:L.canvas({pane:'quakes'})};
 const landLayer=L.layerGroup().addTo(map),overlayLayer=L.layerGroup().addTo(map),townLayer=L.layerGroup().addTo(map),quakeLayer=L.layerGroup().addTo(map),ciLayer=L.layerGroup().addTo(map),pinLayer=L.layerGroup().addTo(map);
 const pinIcon=L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,35],popupAnchor:[0,-30],html:'<svg class="pin" viewBox="0 0 26 36" aria-hidden="true"><path d="M13 35C13 35 2 21 2 13a11 11 0 1 1 22 0c0 8-11 22-11 22z" fill="'+PAL.red+'" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.2" fill="#fff"/></svg>'});
 const starIcon=L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><path d="M13 1.5l3.3 7.6 8.2.7-6.2 5.4 1.9 8L13 19l-7.2 4.2 1.9-8L1.5 9.8l8.2-.7z" fill="'+PAL.red+'" stroke="#fff" stroke-width="1.6"/></svg>'});
@@ -4585,13 +4594,14 @@ function drawLegend(){const L0=$('legend');const bld=$('bld').selectedOptions[0]
   const pending=layer==='risk'&&!heat?(playing?'Map shading resumes when you pause.':heatError||'Updating map shading…'):'';
   L0.setAttribute('aria-busy',String(!!heatPendingKey));
   L0.innerHTML=(pending?`<p class="muted" role="status">${pending}</p>`:'')+(spec?`<div class="ramp"><canvas id="rampc" width="150" height="10"></canvas></div><div class="ramp" style="justify-content:space-between;width:150px">${spec[1].map(t=>`<span>${t}</span>`).join('')}</div><div class="t">${spec[0]}</div><div class="t">Tap a place for its estimate.</div>`:'')+
-   `<div class="keys"><span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span>${$('showT').checked?'<span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>population markers</span>':''}${$('reveal').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div>`;
+   ($('showQ').checked?'<div class="t">Circles: recorded earthquakes.</div>':'')+`<div class="keys">${$('showQ').checked?'<span><i style="background:#d7191c"></i>past hour</span><span><i style="background:#fd8d3c"></i>past day</span><span><i style="background:#fed24c"></i>past week</span><span><i style="background:#fff"></i>older</span>':''}${$('showT').checked?'<span><i style="background:rgba(40,52,70,.55);border-radius:0;border-color:#fff"></i>population markers</span>':''}${$('reveal').checked&&$('showQ').checked?'<span><i style="background:transparent;border-style:dashed"></i>later</span>':''}</div><div class="checkin-key" id="checkinKey" hidden></div>`;
+  renderCheckinLegend();
   if(!spec)return;const rc=$('rampc').getContext('2d');for(let i=0;i<150;i++){const t=i/149,v=layer==='risk'?Math.pow(10,-2.5+t*2.1):layer==='mmi'?4+t*5:layer==='vs'?150+t*750:layer==='liq'?Math.pow(10,-2+t*1.4):Math.pow(10,-2.3+t*1.4);const c=rampAt(layer,v);rc.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(c[3],.35)})`;rc.fillRect(i,0,1,10)}}
 // The collapsed layers button names the current shading, so you can see what's shown without opening it.
 function renderLayTgl(){const r=document.querySelector('input[name=lay]:checked'),b=document.createElement('b');b.textContent='Map layers';$('layTgl').replaceChildren(b,': '+(r?r.parentElement.textContent.trim():''))}
 document.querySelectorAll('input[name=lay]').forEach(r=>r.onchange=()=>{layer=r.value;if(layer==='risk')update();else{cancelHeat();drawOverlay();drawLegend()}renderLayTgl()});
 renderLayTgl();
-$('showQ').onchange=()=>drawQuakes(cur.now,$('reveal').checked);$('showT').onchange=()=>{drawTowns();drawLegend()};$('showC').onchange=renderCheckins;
+$('showQ').onchange=()=>{drawQuakes(cur.now,$('reveal').checked);drawLegend()};$('showT').onchange=()=>{drawTowns();drawLegend()};$('showC').onchange=renderCheckins;
 $('layTgl').onclick=()=>{const o=$('layers').classList.toggle('open');$('layTgl').setAttribute('aria-expanded',String(o))};
 
 // ---------- charts ----------
@@ -4677,6 +4687,50 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 // invites contain only the group token, never the token that edits your entry.
 const CI_KEYS={owner:'afterquake.checkins.owner.v1',group:'afterquake.checkins.group.v1'};
 const ci={ready:false,connecting:false,group:null,owner:null,scope:null,items:[],payload:null,busy:false,request:null,sessionOnly:false,error:'',message:'',version:0};
+const ciMarkers=new Map(),ciIcons=new Map();
+function ciSymbol(status){
+  const help=status==='help';
+  return `<svg class="ci-symbol ci-symbol-${status}" viewBox="0 0 36 44" aria-hidden="true" focusable="false"><path d="${help?'M3 2h30v30H23l-5 10-5-10H3z':'M18 2l15 5v13c0 10-9 16-15 22C12 36 3 30 3 20V7z'}" fill="currentColor" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>${help?'<path d="M18 9v11" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="26" r="2.2" fill="#fff"/>':'<path d="m10 19 6 6 11-13" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'}</svg>`;
+}
+function ciMarkerIcon(status){
+  if(!ciIcons.has(status))ciIcons.set(status,L.divIcon({className:'ci-map-marker',iconSize:[44,44],iconAnchor:[22,43],popupAnchor:[0,-42],
+    html:ciSymbol(status)+`<span class="ci-map-label">${status==='help'?'Needs help':'Safe'}</span>`}));
+  return ciIcons.get(status);
+}
+function renderCheckinLegend(){
+  const key=$('checkinKey');if(!key)return;
+  const visible=ci.ready&&!!ci.group&&$('showC').checked;
+  key.hidden=!visible;key.innerHTML=visible?`<b>Group check-ins</b><span>${ciSymbol('help')}Needs help</span><span>${ciSymbol('safe')}Safe</span>`:'';
+}
+function renderCheckinMarkers(items){
+  const visible=S&&ci.ready&&ci.group&&$('showC').checked,ids=new Set(visible?items.map(d=>d.id):[]);
+  for(const [id,entry] of ciMarkers)if(!ids.has(id)){ciLayer.removeLayer(entry.marker);ciMarkers.delete(id)}
+  if(!visible)return;
+  for(const d of items){
+    const lon=d.lon+360*Math.round((S.lon-d.lon)/360),signature=JSON.stringify([d.status,d.lat,lon,d.mine,d.note,d.ts]);
+    const previous=ciMarkers.get(d.id);if(previous?.signature===signature)continue;
+    const title=`${d.mine?'Your':'Group'} check-in: ${d.status==='help'?'needs help':'marked safe'}. Open details.`;
+    const popup=`<div class="pp-h">${d.mine?'You':'Someone'}: ${d.status==='help'?'needs help':'marked safe'}</div>${d.note?esc(d.note)+'<br>':''}<span class="pp-k">Group check-in, ${esc(fmtDT(new Date(d.ts)))}</span>`;
+    // Keep help requests above safe check-ins, town labels and the forecast pin.
+    // Reuse unchanged markers so polling doesn't interrupt a popup or keyboard focus.
+    const priority=d.status==='help'?20000:10000;
+    let marker=previous?.marker;
+    if(marker)marker.setLatLng([d.lat,lon]).setIcon(ciMarkerIcon(d.status)).setZIndexOffset(priority).setPopupContent(popup);
+    else marker=L.marker([d.lat,lon],{pane:'checkins',icon:ciMarkerIcon(d.status),title,keyboard:true,zIndexOffset:priority,riseOnHover:true,riseOffset:30000})
+      .bindPopup(popup,{className:'ci-popup',maxWidth:260,autoPanPaddingTopLeft:[48,10],autoPanPaddingBottomRight:[10,100]})
+      .on('popupopen',()=>$('map').classList.toggle('ci-popup-open',true))
+      .on('popupclose',()=>$('map').classList.toggle('ci-popup-open',false)).addTo(ciLayer);
+    marker.options.title=title;const element=marker.getElement();if(element){element.title=title;element.setAttribute('aria-label',title)}
+    ciMarkers.set(d.id,{marker,signature});
+  }
+}
+function focusCheckin(id){
+  const d=ci.items.find(item=>item.id===id&&Date.parse(item.expiresAt)>Date.now());if(!d||!S)return;
+  $('showC').checked=true;renderCheckins();
+  map.setView([d.lat,d.lon+360*Math.round((S.lon-d.lon)/360)],Math.max(11,map.getZoom()));
+  if(typeof matchMedia==='function'&&matchMedia('(max-width:860px)').matches)$('map').scrollIntoView({block:'end'});
+  const marker=ciMarkers.get(id)?.marker;marker?.openPopup();marker?.getElement()?.focus({preventScroll:true});
+}
 function ciRandom(bytes){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return [...data].map(n=>n.toString(16).padStart(2,'0')).join('')}
 function ciRemember(key,value){try{if(value==null)localStorage.removeItem(key);else localStorage.setItem(key,value)}catch{ci.sessionOnly=true}}
 function ciStored(key){try{return localStorage.getItem(key)}catch{ci.sessionOnly=true;return null}}
@@ -4742,13 +4796,14 @@ async function initCheckins(){
 }
 function renderCheckinLocation(){if(loc)$('ciLocation').textContent=`Posting at ${loc.name}. Check your pin on the map before sharing.`}
 function renderCheckins(){
-  ciLayer.clearLayers();const joined=ci.ready&&!!ci.group;
+  const joined=ci.ready&&!!ci.group;
   $('ciSetup').hidden=joined;$('ciPosting').hidden=!joined;$('ciGroupOptions').hidden=!ci.group;renderCheckinLocation();
   $('ciCreate').disabled=!ci.ready||ci.busy;$('ciJoin').disabled=!ci.ready||ci.busy;
   $('ciCopy').disabled=!joined||ci.busy;$('ciLeave').disabled=!ci.group||ci.busy;
   $('ciReconnect').hidden=ci.ready;$('ciReconnect').disabled=ci.connecting;$('ciRefresh').disabled=!joined||ci.busy;
   $('ciSafe').disabled=!joined||ci.busy;$('ciHelp').disabled=!joined||ci.busy;$('ciNote').disabled=!joined||ci.busy;
-  const items=ci.items.filter(d=>Date.parse(d.expiresAt)>Date.now());
+  const items=ci.items.filter(d=>Date.parse(d.expiresAt)>Date.now()).sort((a,b)=>Number(b.status==='help')-Number(a.status==='help')||b.ts-a.ts);
+  renderCheckinMarkers(items);renderCheckinLegend();
   $('ciDel').disabled=!joined||ci.busy||!items.some(d=>d.mine);
   const storage=ci.sessionOnly?' Browser storage is blocked, so you can edit your entry only during this visit.':'';
   const checked=ci.payload?` Last checked ${fmtDT(new Date(ci.payload.checkedAt))}.`:'';
@@ -4756,13 +4811,8 @@ function renderCheckins(){
   $('ciStatus').classList.toggle('data-delayed',!!ci.error);
   $('ciSummary').textContent=joined&&ci.payload?`${ci.payload.counts.safe} marked safe; ${ci.payload.counts.help} need help.${ci.payload.limited?' Showing up to 200 recent posts, including yours.':''}`:'';
   if(!joined){$('ciList').innerHTML='';$('ciActivity').innerHTML='';return}
-  if(S&&$('showC').checked)for(const d of items){
-    const lon=d.lon+360*Math.round((S.lon-d.lon)/360);
-    L.circleMarker([d.lat,lon],{renderer:RND.checks,pane:'checks',radius:8,color:'#fff',weight:2,fillColor:d.status==='help'?PAL.help:PAL.good,fillOpacity:1})
-      .bindPopup(`<div class="pp-h">${d.mine?'You':'Someone'}: ${d.status==='help'?'needs help':'marked safe'}</div>${d.note?esc(d.note)+'<br>':''}<span class="pp-k">${esc(fmtDT(new Date(d.ts)))}</span>`).addTo(ciLayer);
-  }
-  $('ciList').innerHTML=items.length?items.map(d=>`<div class="ci"><span class="dot" style="background:${d.status==='help'?PAL.help:PAL.good}"></span><span><b>${d.mine?'You':'Someone'}</b>: ${d.status==='help'?'needs help':'marked safe'}${d.note?'. '+esc(d.note):''}<br><small>${esc(ago(Math.max(0,Date.now()-d.ts)))}${loc?', '+SCENARIO.distanceKm(loc,d).toFixed(1)+' km from your pin':''}</small></span><button class="src" data-ci-id="${esc(d.id)}">Show</button></div>`).join(''):'<p class="muted">No current check-ins for this earthquake in your group.</p>';
-  document.querySelectorAll('#ciList button[data-ci-id]').forEach(button=>{const d=items.find(item=>item.id===button.dataset.ciId);button.onclick=()=>map.setView([d.lat,d.lon+360*Math.round((S.lon-d.lon)/360)],11)});
+  $('ciList').innerHTML=items.length?items.map(d=>`<div class="ci">${ciSymbol(d.status)}<span><b>${d.mine?'You':'Someone'}</b>: ${d.status==='help'?'needs help':'marked safe'}${d.note?'. '+esc(d.note):''}<br><small>${esc(ago(Math.max(0,Date.now()-d.ts)))}${loc?', '+SCENARIO.distanceKm(loc,d).toFixed(1)+' km from your pin':''}</small></span><button class="src" data-ci-id="${esc(d.id)}">Show</button></div>`).join(''):'<p class="muted">No current check-ins for this earthquake in your group.</p>';
+  document.querySelectorAll('#ciList button[data-ci-id]').forEach(button=>{button.onclick=()=>focusCheckin(button.dataset.ciId)});
   $('ciActivity').innerHTML=ci.payload?.activity.length?'<p class="muted">Status updates in the last 24 hours. Repeat updates count again; these are not counts of people.</p><table><tr><th>Hour (UTC)</th><th class="num">Safe</th><th class="num">Need help</th></tr>'+ci.payload.activity.map(d=>`<tr><td>${esc(fmtDT(new Date(d.hour)))}</td><td class="num">${d.safe}</td><td class="num">${d.help}</td></tr>`).join('')+'</table>':'<p class="muted">No status updates in the last 24 hours.</p>';
 }
 async function checkIn(status){

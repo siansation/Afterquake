@@ -2,6 +2,50 @@
 // invites contain only the group token, never the token that edits your entry.
 const CI_KEYS={owner:'afterquake.checkins.owner.v1',group:'afterquake.checkins.group.v1'};
 const ci={ready:false,connecting:false,group:null,owner:null,scope:null,items:[],payload:null,busy:false,request:null,sessionOnly:false,error:'',message:'',version:0};
+const ciMarkers=new Map(),ciIcons=new Map();
+function ciSymbol(status){
+  const help=status==='help';
+  return `<svg class="ci-symbol ci-symbol-${status}" viewBox="0 0 36 44" aria-hidden="true" focusable="false"><path d="${help?'M3 2h30v30H23l-5 10-5-10H3z':'M18 2l15 5v13c0 10-9 16-15 22C12 36 3 30 3 20V7z'}" fill="currentColor" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>${help?'<path d="M18 9v11" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="26" r="2.2" fill="#fff"/>':'<path d="m10 19 6 6 11-13" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'}</svg>`;
+}
+function ciMarkerIcon(status){
+  if(!ciIcons.has(status))ciIcons.set(status,L.divIcon({className:'ci-map-marker',iconSize:[44,44],iconAnchor:[22,43],popupAnchor:[0,-42],
+    html:ciSymbol(status)+`<span class="ci-map-label">${status==='help'?'Needs help':'Safe'}</span>`}));
+  return ciIcons.get(status);
+}
+function renderCheckinLegend(){
+  const key=$('checkinKey');if(!key)return;
+  const visible=ci.ready&&!!ci.group&&$('showC').checked;
+  key.hidden=!visible;key.innerHTML=visible?`<b>Group check-ins</b><span>${ciSymbol('help')}Needs help</span><span>${ciSymbol('safe')}Safe</span>`:'';
+}
+function renderCheckinMarkers(items){
+  const visible=S&&ci.ready&&ci.group&&$('showC').checked,ids=new Set(visible?items.map(d=>d.id):[]);
+  for(const [id,entry] of ciMarkers)if(!ids.has(id)){ciLayer.removeLayer(entry.marker);ciMarkers.delete(id)}
+  if(!visible)return;
+  for(const d of items){
+    const lon=d.lon+360*Math.round((S.lon-d.lon)/360),signature=JSON.stringify([d.status,d.lat,lon,d.mine,d.note,d.ts]);
+    const previous=ciMarkers.get(d.id);if(previous?.signature===signature)continue;
+    const title=`${d.mine?'Your':'Group'} check-in: ${d.status==='help'?'needs help':'marked safe'}. Open details.`;
+    const popup=`<div class="pp-h">${d.mine?'You':'Someone'}: ${d.status==='help'?'needs help':'marked safe'}</div>${d.note?esc(d.note)+'<br>':''}<span class="pp-k">Group check-in, ${esc(fmtDT(new Date(d.ts)))}</span>`;
+    // Keep help requests above safe check-ins, town labels and the forecast pin.
+    // Reuse unchanged markers so polling doesn't interrupt a popup or keyboard focus.
+    const priority=d.status==='help'?20000:10000;
+    let marker=previous?.marker;
+    if(marker)marker.setLatLng([d.lat,lon]).setIcon(ciMarkerIcon(d.status)).setZIndexOffset(priority).setPopupContent(popup);
+    else marker=L.marker([d.lat,lon],{pane:'checkins',icon:ciMarkerIcon(d.status),title,keyboard:true,zIndexOffset:priority,riseOnHover:true,riseOffset:30000})
+      .bindPopup(popup,{className:'ci-popup',maxWidth:260,autoPanPaddingTopLeft:[48,10],autoPanPaddingBottomRight:[10,100]})
+      .on('popupopen',()=>$('map').classList.toggle('ci-popup-open',true))
+      .on('popupclose',()=>$('map').classList.toggle('ci-popup-open',false)).addTo(ciLayer);
+    marker.options.title=title;const element=marker.getElement();if(element){element.title=title;element.setAttribute('aria-label',title)}
+    ciMarkers.set(d.id,{marker,signature});
+  }
+}
+function focusCheckin(id){
+  const d=ci.items.find(item=>item.id===id&&Date.parse(item.expiresAt)>Date.now());if(!d||!S)return;
+  $('showC').checked=true;renderCheckins();
+  map.setView([d.lat,d.lon+360*Math.round((S.lon-d.lon)/360)],Math.max(11,map.getZoom()));
+  if(typeof matchMedia==='function'&&matchMedia('(max-width:860px)').matches)$('map').scrollIntoView({block:'end'});
+  const marker=ciMarkers.get(id)?.marker;marker?.openPopup();marker?.getElement()?.focus({preventScroll:true});
+}
 function ciRandom(bytes){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return [...data].map(n=>n.toString(16).padStart(2,'0')).join('')}
 function ciRemember(key,value){try{if(value==null)localStorage.removeItem(key);else localStorage.setItem(key,value)}catch{ci.sessionOnly=true}}
 function ciStored(key){try{return localStorage.getItem(key)}catch{ci.sessionOnly=true;return null}}
@@ -67,13 +111,14 @@ async function initCheckins(){
 }
 function renderCheckinLocation(){if(loc)$('ciLocation').textContent=`Posting at ${loc.name}. Check your pin on the map before sharing.`}
 function renderCheckins(){
-  ciLayer.clearLayers();const joined=ci.ready&&!!ci.group;
+  const joined=ci.ready&&!!ci.group;
   $('ciSetup').hidden=joined;$('ciPosting').hidden=!joined;$('ciGroupOptions').hidden=!ci.group;renderCheckinLocation();
   $('ciCreate').disabled=!ci.ready||ci.busy;$('ciJoin').disabled=!ci.ready||ci.busy;
   $('ciCopy').disabled=!joined||ci.busy;$('ciLeave').disabled=!ci.group||ci.busy;
   $('ciReconnect').hidden=ci.ready;$('ciReconnect').disabled=ci.connecting;$('ciRefresh').disabled=!joined||ci.busy;
   $('ciSafe').disabled=!joined||ci.busy;$('ciHelp').disabled=!joined||ci.busy;$('ciNote').disabled=!joined||ci.busy;
-  const items=ci.items.filter(d=>Date.parse(d.expiresAt)>Date.now());
+  const items=ci.items.filter(d=>Date.parse(d.expiresAt)>Date.now()).sort((a,b)=>Number(b.status==='help')-Number(a.status==='help')||b.ts-a.ts);
+  renderCheckinMarkers(items);renderCheckinLegend();
   $('ciDel').disabled=!joined||ci.busy||!items.some(d=>d.mine);
   const storage=ci.sessionOnly?' Browser storage is blocked, so you can edit your entry only during this visit.':'';
   const checked=ci.payload?` Last checked ${fmtDT(new Date(ci.payload.checkedAt))}.`:'';
@@ -81,13 +126,8 @@ function renderCheckins(){
   $('ciStatus').classList.toggle('data-delayed',!!ci.error);
   $('ciSummary').textContent=joined&&ci.payload?`${ci.payload.counts.safe} marked safe; ${ci.payload.counts.help} need help.${ci.payload.limited?' Showing up to 200 recent posts, including yours.':''}`:'';
   if(!joined){$('ciList').innerHTML='';$('ciActivity').innerHTML='';return}
-  if(S&&$('showC').checked)for(const d of items){
-    const lon=d.lon+360*Math.round((S.lon-d.lon)/360);
-    L.circleMarker([d.lat,lon],{renderer:RND.checks,pane:'checks',radius:8,color:'#fff',weight:2,fillColor:d.status==='help'?PAL.help:PAL.good,fillOpacity:1})
-      .bindPopup(`<div class="pp-h">${d.mine?'You':'Someone'}: ${d.status==='help'?'needs help':'marked safe'}</div>${d.note?esc(d.note)+'<br>':''}<span class="pp-k">${esc(fmtDT(new Date(d.ts)))}</span>`).addTo(ciLayer);
-  }
-  $('ciList').innerHTML=items.length?items.map(d=>`<div class="ci"><span class="dot" style="background:${d.status==='help'?PAL.help:PAL.good}"></span><span><b>${d.mine?'You':'Someone'}</b>: ${d.status==='help'?'needs help':'marked safe'}${d.note?'. '+esc(d.note):''}<br><small>${esc(ago(Math.max(0,Date.now()-d.ts)))}${loc?', '+SCENARIO.distanceKm(loc,d).toFixed(1)+' km from your pin':''}</small></span><button class="src" data-ci-id="${esc(d.id)}">Show</button></div>`).join(''):'<p class="muted">No current check-ins for this earthquake in your group.</p>';
-  document.querySelectorAll('#ciList button[data-ci-id]').forEach(button=>{const d=items.find(item=>item.id===button.dataset.ciId);button.onclick=()=>map.setView([d.lat,d.lon+360*Math.round((S.lon-d.lon)/360)],11)});
+  $('ciList').innerHTML=items.length?items.map(d=>`<div class="ci">${ciSymbol(d.status)}<span><b>${d.mine?'You':'Someone'}</b>: ${d.status==='help'?'needs help':'marked safe'}${d.note?'. '+esc(d.note):''}<br><small>${esc(ago(Math.max(0,Date.now()-d.ts)))}${loc?', '+SCENARIO.distanceKm(loc,d).toFixed(1)+' km from your pin':''}</small></span><button class="src" data-ci-id="${esc(d.id)}">Show</button></div>`).join(''):'<p class="muted">No current check-ins for this earthquake in your group.</p>';
+  document.querySelectorAll('#ciList button[data-ci-id]').forEach(button=>{button.onclick=()=>focusCheckin(button.dataset.ciId)});
   $('ciActivity').innerHTML=ci.payload?.activity.length?'<p class="muted">Status updates in the last 24 hours. Repeat updates count again; these are not counts of people.</p><table><tr><th>Hour (UTC)</th><th class="num">Safe</th><th class="num">Need help</th></tr>'+ci.payload.activity.map(d=>`<tr><td>${esc(fmtDT(new Date(d.hour)))}</td><td class="num">${d.safe}</td><td class="num">${d.help}</td></tr>`).join('')+'</table>':'<p class="muted">No status updates in the last 24 hours.</p>';
 }
 async function checkIn(status){
