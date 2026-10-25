@@ -36,11 +36,11 @@ The app is deployed on Vercel. To run the project locally or configure shared ch
 
 - **People.** Shows population near you, people at risk this week, and the official count of people who felt each shaking level.
 
-- **Ask about this forecast.** A chat bubble in the bottom-left corner of the forecast map, answered by Google Gemini. Gemini calls the page's own forecast as tools: forecast at a place or for a different stay, how risk changes over time, danger factors, aftershocks so far, people at risk, method and limits. Each answer lists what it checked, and its instructions prohibit clearing a building for entry. Requires the configured assistant API (see [the assistant](#the-assistant)).
+- **Gemini forecast chat.** Open **Ask about this forecast** from the chat bubble in the bottom-left corner of the map. Ask about your selected place, a different stay, how risk changes over time, local risk factors or the data behind the estimate. Gemini uses the page's calculated forecast, and each answer lets you inspect what it checked. Its instructions prohibit clearing a building for entry. Requires the configured assistant API (see [the assistant](#the-assistant)).
 
 - **Aftershock rate from Tiger Data.** Every USGS quake the app sees is stored in a Tiger Data hypertable. An hourly continuous aggregate feeds a chart comparing the observed aftershock rate with the forecast model's expected rate. See [the time series](docs/tiger.md).
 
-- **Shared safety check-ins with Tiger Data.** Create an invite-only group, share a selected map pin and short note, then update or remove your own status from this browser. The People tab shows current safe/help counts and hourly status updates; entries stop appearing after 24 hours. Requires the hosted API and a configured Tiger Data PostgreSQL service. See [database setup](docs/checkins.md).
+- **Group check-ins and notes with Tiger Data.** Open **Check in** to create a group or join one using an invite link, code or phone QR. Choose **I'm safe here** or **I need help here**, add an optional short note at your map pin, and update or remove your own post. Your group can see shared pins, notes, safe/help counts and hourly status updates; posts expire after 24 hours. These updates do not contact emergency services. Requires the hosted API and a configured Tiger Data PostgreSQL service. See [database setup](docs/checkins.md).
 
 - **Sources and accuracy tabs.** View source links, processing dates and model assumptions, with regional occurrence checks where complete outcome windows exist.
 
