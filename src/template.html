@@ -48,6 +48,12 @@ a{color:var(--link)}
 .lm-qr svg{width:100%;height:auto;display:block}
 .lm-count{font-size:17px;color:var(--ink)}
 .lm-count.lm-new b{color:var(--good)}
+#liveCheck[hidden]{display:none}
+.ci-board{position:absolute;left:56px;top:12px;width:max-content;max-width:calc(100% - 300px);z-index:1000;background:#fff;border:1px solid var(--line);border-radius:4px;box-shadow:0 1px 5px rgba(0,0,0,.4);padding:10px 16px;display:flex;flex-wrap:wrap;gap:4px 22px;align-items:baseline;font-size:20px}
+.ci-board b{font-size:36px;margin-right:6px}
+.ci-board span:first-child b{color:var(--good)}
+.ci-board span:nth-child(2) b{color:var(--help)}
+.ci-board small{flex-basis:100%;font-size:13px;color:var(--mute)}
 @media (max-width:640px){.lm-box{grid-template-columns:1fr}.lm-qr{max-width:260px}#joinBtn{display:none}}
 
 .app{flex:1;display:grid;grid-template-columns:390px 1fr;min-height:0}
@@ -358,6 +364,7 @@ body:not(.world) .wpane{display:none}
       <div id="shareLinkBox" hidden><label for="shareURL">Comparison link</label><input id="shareURL" type="text" readonly aria-describedby="shareStatus"></div>
       <p class="muted" id="shareStatus" role="status"></p>
       <div class="verdict" id="verdict" aria-live="polite"></div>
+      <!-- live:start --><div class="card" id="liveCheck" hidden aria-live="polite"></div><!-- live:end -->
       <div class="fields">
         <div class="f wide"><label for="bld">Building</label><select id="bld"></select></div>
         <div class="f wide"><label for="exposure">How long will you be here?</label>
@@ -505,6 +512,7 @@ body:not(.world) .wpane{display:none}
 
   <div class="mapwrap">
     <div id="map" role="application" aria-label="Map. Click to choose your location."></div>
+    <!-- live:start --><div class="ci-board" id="ciBoard" hidden role="status" aria-live="polite"></div><!-- live:end -->
     <div class="ctl layers" id="layers">
       <button class="tgl" id="layTgl" aria-expanded="false" aria-controls="layBody" title="Show or hide the map layers">Map layers</button>
       <div class="body" id="layBody">
