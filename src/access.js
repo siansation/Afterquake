@@ -126,12 +126,15 @@ async function readWithCloud(){
   $('stopSummary').disabled=false;$('stopSummary').hidden=false;activeSpeech={pending:true};
   $('speechStatus').textContent=lang==='en'?'Preparing the natural voice...':'Translating and preparing the natural voice...';
   let clip=voiceCloud.cache.get(key);
+  if(clip&&lang!=='en'&&(!clip.translated||clip.lang!==lang)){voiceCloud.cache.delete(key);clip=null}
   if(!clip){
     try{
       const r=await fetch('/api/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
       const data=await r.json().catch(()=>({}));
       if(!r.ok||!data.audio)throw new Error(data.error||'The natural voice is unavailable right now.');
-      clip=data;if(voiceCloud.cache.size>20)voiceCloud.cache.clear();voiceCloud.cache.set(key,clip);
+      clip=data;if(voiceCloud.cache.size>20)voiceCloud.cache.clear();
+      // A temporary English fallback must not trap this language in English on replay.
+      if(lang==='en'||(clip.translated&&clip.lang===lang))voiceCloud.cache.set(key,clip);
     }catch(e){
       if(token!==speechToken)return;activeSpeech=null;$('stopSummary').disabled=true;$('stopSummary').hidden=true;
       readWithDevice(`${e.message} Using your device voice instead. `);return;

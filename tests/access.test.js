@@ -139,6 +139,14 @@ test('a voice-service error falls back to the device voice with an explanation',
   await h.node('readSummary').onclick();
   assert.equal(h.synth.calls.length,1);assert.ok(h.node('speechStatus').textContent.includes('credits'));assert.ok(h.node('speechStatus').textContent.includes('device voice'));
 });
+
+test('an English fallback is never cached as a successful non-English summary',async()=>{
+  const c=cloudGlobals({translated:false}),h=harness({access:true,globals:c.globals});await tick();await tick();
+  h.node('summaryLang').value='es';h.node('summaryLang').onchange();
+  await h.node('readSummary').onclick();await h.node('readSummary').onclick();
+  assert.equal(c.posts.length,2,'The next click must retry translation rather than replay cached English');
+  assert.equal(h.run('voiceCloud.cache.size'),0);
+});
 test('opened as a file, the page never calls the voice route and keeps device speech',async()=>{
   const c=cloudGlobals(),h=harness({access:true,href:'file:///x/index.html',globals:c.globals});await tick();
   assert.notEqual(h.node('voiceLangBox').hidden,false);h.node('readSummary').onclick();assert.equal(c.posts.length,0);assert.equal(h.synth.calls.length,1);

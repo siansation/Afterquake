@@ -6,8 +6,7 @@ const EL_MODEL = process.env.ELEVENLABS_MODEL || 'eleven_flash_v2_5';
 // "George", one of ElevenLabs' default voices. Override with ELEVENLABS_VOICE_ID (any voice in your ElevenLabs library).
 const EL_VOICE = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
 const EL_ENDPOINT = v => `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(v)}?output_format=mp3_44100_64`;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const GEMINI_ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
+const GEMINI = require('../server/gemini');
 
 // Languages Flash v2.5 / Turbo v2.5 speak (ISO 639-1), with names for the page's menu.
 const LANGUAGES = {
@@ -52,16 +51,12 @@ function numbersPreserved(source, translated) {
 }
 
 async function translate(text, lang, key, signal) {
-  const r = await fetch(GEMINI_ENDPOINT(GEMINI_MODEL), { method: 'POST', signal,
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
+  const {data}=await GEMINI.generate({key,signal,build:()=>({
       systemInstruction: { parts: [{ text: TRANSLATE_RULES.replace('LANGUAGE', LANGUAGES[lang]) }] },
       contents: [{ role: 'user', parts: [{ text }] }],
       generationConfig: { temperature: 0, maxOutputTokens: 1500 },
-    }) });
-  if (!r.ok) throw Object.assign(new Error('translation failed'), { status: r.status });
-  const data = await r.json().catch(() => ({}));
-  const out = (((data.candidates || [])[0] || {}).content?.parts || []).map(p => p.text || '').join('').trim();
+    })});
+  const out = (((data.candidates || [])[0] || {}).content?.parts || []).filter(p=>!p.thought).map(p => p.text || '').join('').trim();
   if (!out) throw new Error('empty translation');
   return out;
 }
@@ -96,7 +91,8 @@ async function handler(req, res) {
   if (bad) return res.status(400).json({ error: bad });
   const want = body.lang || 'en';
   let text = body.text.trim(), lang = 'en', translated = false, note = null;
-  const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 25e3);
+  // Leave time for bounded Gemini recovery and then ElevenLabs, within Vercel's limit.
+  const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 50e3);
   try {
     if (want !== 'en') {
       if (!gemini) note = `${LANGUAGES[want]} needs the translation service, which is not set up. Reading in English.`;

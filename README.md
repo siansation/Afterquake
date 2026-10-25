@@ -120,7 +120,7 @@ docs/
 
 ## The assistant
 
-`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling). The default model is `gemini-3.1-flash-lite` with minimal thinking. Set `GEMINI_MODEL` or `GEMINI_THINKING` to change them. Every new question must start with a tool call, so figures can't be reused or invented. Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
+`api/chat.js` runs on Vercel and calls the Gemini API (`generateContent` with function calling). The default is `gemini-3.5-flash-lite` with minimal thinking, with `gemini-3.1-flash-lite` as a backup for temporary overloads. `server/gemini.js` limits each attempt to 10 seconds and each request to two attempts. Tool continuations stay on the model that created their signed calls. Invalid keys, permissions and quota errors are not retried. Set `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` or `GEMINI_THINKING` to override the defaults. Every new question must start with a tool call, so figures can't be reused or invented. Gemini replies with tool calls, the browser runs them against the open forecast (`src/assistant.js`), and the results go back to Gemini, so every figure comes from the model on the page. Replies use the language of the question unless another language is requested. The function only accepts this app's message shapes and tool names, and allows about 40 requests per visitor per 10 minutes.
 
 It needs a Gemini API key (free from [Google AI Studio](https://aistudio.google.com/apikey)) stored as a Vercel environment variable, never in the code:
 
@@ -142,6 +142,8 @@ npx vercel@65.2.0 deploy --prod                            # redeploy so the fun
 ```
 
 **English, Chinese (中文), Turkish (Türkçe) and Spanish (Español)** are available for every earthquake when translation is configured, alongside any other local language. In story step 2, open **Try Gemini or ElevenLabs** and choose **Summary language** beside **Read summary**. It shares the forecast's language setting, so your choice stays selected as you move through the story or between forecasts. Translated languages need `GEMINI_API_KEY` too (already set for the assistant). For `npm run dev`, put the same variables in `.env.local`.
+
+Translation uses the same bounded recovery as chat. The speech function allows up to 50 seconds for translation and audio within a 60-second server limit. Successful clips are cached, while an English fallback is never cached as a successful translation, so the next press can retry the selected language.
 
 ## Rebuild from scratch
 

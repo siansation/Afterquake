@@ -3,12 +3,11 @@
 // Gemini answers by calling tools, and the TOOLS run in the visitor's browser against the page's own model and data
 // (src/assistant.js), so every number it quotes comes from the forecast, not from the language model.
 // Flash-Lite with minimal thinking handles the forecast tool calls and short answers.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const THINKING = process.env.GEMINI_THINKING || (/flash-lite/.test(MODEL) ? 'minimal' : 'low');
-const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
+const GEMINI = require('../server/gemini');
 
 const RULES = `You are the assistant inside AfterQuake, a prototype that estimates the chance of damaging shaking from M5+ aftershocks at a chosen spot after an earthquake.
 Rules:
+- Reply in the language of the latest question unless the user asks for another language. Preserve place names and every numeric value when translating.
 - Answer only questions about the open earthquake, its aftershocks, this forecast, the data behind it and how to read it. Politely decline anything else in one sentence.
 - Get every number from a tool called for this question. Never estimate, round, reuse figures from earlier answers, or invent probabilities, ranges, times, counts or distances yourself. If no tool can answer, say so.
 - Never say or imply that a building is safe to enter. The forecast only covers the chance of more shaking. Whether a building can be re-entered is decided by a structural inspection and local authorities. Say this briefly whenever someone asks about going back inside.
@@ -55,6 +54,7 @@ function limited(ip, now = Date.now()) {
 function validate(body) {
   if (!body || typeof body !== 'object') return 'Expected a JSON body.';
   const { contents, context } = body;
+  if(body.model!=null&&!GEMINI.models().includes(body.model))return 'Unsupported assistant model.';
   if (typeof context !== 'string' || context.length > 4000) return 'Missing or oversized context.';
   if (!Array.isArray(contents) || !contents.length || contents.length > 40) return 'Expected 1 to 40 messages.';
   for (const c of contents) {
@@ -72,7 +72,7 @@ function validate(body) {
   return null;
 }
 
-function request(contents, context) {
+function request(contents, context, model=GEMINI.models()[0]) {
   // A new question must start with a tool call (mode ANY), so answers can't reuse or invent figures;
   // after the tool results come back, Gemini may call more tools or answer (mode AUTO).
   const last = contents[contents.length - 1], fresh = last.role === 'user' && last.parts.some(p => typeof p.text === 'string');
@@ -81,7 +81,7 @@ function request(contents, context) {
     contents,
     tools: [{ functionDeclarations: TOOLS }],
     toolConfig: { functionCallingConfig: { mode: fresh ? 'ANY' : 'AUTO' } },
-    generationConfig: { temperature: 0.2, maxOutputTokens: 450, thinkingConfig: { thinkingLevel: THINKING } },
+    generationConfig: { temperature: 0.2, maxOutputTokens: 1200, thinkingConfig: GEMINI.thinking(model) },
   };
 }
 
@@ -100,20 +100,15 @@ async function handler(req, res) {
   // Give up before Vercel's 60 s function limit, so the page gets a clear message instead of an error page.
   const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 50e3);
   try {
-    const r = await fetch(ENDPOINT(MODEL), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(request(body.contents, body.context)), signal: abort.signal });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      const msg = r.status === 429 ? 'The assistant is busy right now. Try again in a minute.' : 'The assistant could not answer that.';
-      console.error('Gemini error', r.status, data && data.error && data.error.message);
-      return res.status(r.status === 429 ? 429 : 502).json({ error: msg });
-    }
+    const {data,model}=await GEMINI.generate({key,signal:abort.signal,model:body.model,
+      build:model=>request(body.contents,body.context,model)});
     const cand = (data.candidates || [])[0];
     const parts = (cand && cand.content && cand.content.parts) || [];
     if (!parts.length) return res.status(502).json({ error: cand && cand.finishReason === 'SAFETY' ? 'The assistant declined to answer that.' : 'The assistant returned no answer.' });
-    return res.status(200).json({ parts, model: MODEL });   // parts are passed back unchanged next turn (keeps thought signatures)
+    return res.status(200).json({ parts, model });   // parts are passed back unchanged next turn (keeps thought signatures)
   } catch (e) {
     if (e.name === 'AbortError') return res.status(504).json({ error: 'The assistant is taking too long right now. Try again, or ask something simpler.' });
+    if(e instanceof GEMINI.GeminiError){const [status,message]=GEMINI.publicError(e);return res.status(status).json({error:message})}
     console.error('Gemini request failed', e);
     return res.status(502).json({ error: 'Could not reach the assistant. Try again.' });
   } finally { clearTimeout(timer) }
