@@ -12,7 +12,7 @@ Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
 ## Try it
 
-**Try Afterquake:** https://afterquake-one.vercel.app
+**Try AfterQuake:** https://afterquake-one.vercel.app
 
 The app is deployed on Vercel. To run the project locally or configure shared check-ins, see the setup instructions in [`docs/checkins.md`](docs/checkins.md).
 
