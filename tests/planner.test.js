@@ -16,7 +16,7 @@ test('choosing comparison B leaves A fixed and compares the same intensity and d
   const expected=SCENARIO.formatProbability(SHAKE.probQ(h.ctx.cur.f,h.ctx.cur.cp,qb,0,1));
   const html=h.node('comparisonResult').innerHTML;
   assert.ok(html.includes('A: Town A')&&html.includes('B: Town B'));
-  assert.ok(html.includes('7+</b> at both'));
+  assert.ok(html.includes('both use intensity <b>7+</b> and the same replay time'));
   assert.ok(html.includes(`<td>${expected}</td>`));
 });
 
@@ -41,7 +41,7 @@ test('saving, comparing and reloading a check preserve the original replay basel
   const h=harness();h.node('saveCheck').onclick();
   const saved=h.storage.get(storageKey),record=JSON.parse(saved).example;
   assert.equal(record.now,1);assert.equal(record.events.length,2);
-  assert.ok(h.node('changesFeedback').textContent.includes('saved on this browser'));
+  assert.ok(h.node('changesFeedback').textContent.includes('saved in this browser'));
   h.advance(2);h.run('renderChanges()');
   assert.ok(h.node('changesResult').innerHTML.includes('additional catalogue event'));
   assert.equal(JSON.parse(h.storage.get(storageKey)).example.now,1,'Rendering must not overwrite the baseline');
@@ -64,7 +64,7 @@ test('corrupted persisted records reset rather than entering the comparison',()=
   for(const stored of ['not JSON','null','{"example":{"version":99}}']){
     const h=harness({stored});h.run('renderChanges()');
     assert.equal(h.node('forgetCheck').disabled,true);
-    assert.ok(h.node('changesResult').innerHTML.includes('Save your spot A'));
+    assert.ok(h.node('changesResult').innerHTML.includes('Save a check for spot A'));
   }
 });
 

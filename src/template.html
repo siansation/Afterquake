@@ -273,14 +273,14 @@ body:not(.world) .wpane{display:none}
 <div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
   <div class="wbox">
     <h1 id="wTitle">After an earthquake, how long does the risk of strong shaking last?</h1>
-    <p class="lead">Pick an earthquake and a place. We estimate the chance of strong aftershock shaking there, and how it falls over the following hours and days.</p>
+    <p class="lead">Choose an earthquake, then pick a place to see the estimated chance of strong aftershock shaking there. From there, you can follow how that chance changes over the coming hours and days.</p>
     <ol>
-      <li><b>Turn the globe</b> and pick an earthquake. Recent ones come live from USGS; <span class="nseq">13</span> older ones have extra detail.</li>
-      <li><b>Click the map</b> or search a town to choose a place.</li>
-      <li><b>Say how long you will be there</b>, what the building is like and how much risk you would accept.</li>
-      <li><b>Compare two places</b>, or save a check and come back to see what changed.</li>
+      <li><b>Start with the globe</b> and pick an earthquake. Recent ones come live from USGS, while <span class="nseq">13</span> recorded case studies let you explore past sequences in more detail.</li>
+      <li><b>Then choose a place</b> by clicking the map or searching for a town.</li>
+      <li><b>Set the length of your stay</b>, along with the building type and the risk level you would accept.</li>
+      <li><b>Explore from there:</b> compare two places, or save a check so you can return and see what changed.</li>
     </ol>
-    <div class="wbtns"><button class="btn primary" id="wStory">Watch the two-minute story</button><button class="btn" id="wExplore">Explore the globe</button></div>
+    <div class="wbtns"><button class="btn primary" id="wStory">Follow the story</button><button class="btn" id="wExplore">Explore the globe</button></div>
     <p class="fine">Made at OxHack 2026. A prototype, not safety advice: only a building inspection can say a building is safe to enter. Keys: <span class="kbd">←</span> <span class="kbd">→</span> story steps, <span class="kbd">Space</span> plays the timeline, <span class="kbd">Esc</span> closes</p>
   </div>
 </div>
@@ -296,7 +296,7 @@ body:not(.world) .wpane{display:none}
       </div>
       <ul class="evlist" id="wList"></ul>
       <h2 style="margin-top:8px">Case studies</h2>
-      <p class="muted"><span class="nseq">13</span> past sequences with landslide and liquefaction maps. The story follows Türkiye, 2023.</p>
+      <p class="muted">Explore <span class="nseq">13</span> past sequences with landslide and liquefaction maps, or follow the story through Türkiye in 2023.</p>
       <ul class="evlist" id="wCases"></ul>
     </section>
     <div class="tabs" role="tablist">
@@ -367,7 +367,7 @@ body:not(.world) .wpane{display:none}
       </div>
       <div class="card">
         <h2>200 possible next months</h2>
-        <p class="muted">Each row is one simulated 30 days from the same model. Red: damaging shaking here that day. Grey: an M6+ somewhere nearby.</p>
+        <p class="muted">To see how different the next month could look, each row shows 30 days simulated from the same model. Red marks damaging shaking here that day, while grey marks an M6+ somewhere nearby.</p>
         <div class="chart" id="sims"></div>
         <p class="muted" id="simNote"></p>
       </div>
@@ -377,7 +377,7 @@ body:not(.world) .wpane{display:none}
       </div>
       <div class="card">
         <h2>Around you</h2>
-        <p class="muted">We have no data on these, so tick what applies. It changes the advice on where to wait, not the numbers.</p>
+        <p class="muted">We don't have local data for these hazards, so tick any you can see around you. Your choices help tailor the advice on where to wait; the shaking estimates stay the same.</p>
         <div class="chips" id="around">
           <label><input type="checkbox" value="tall"> Tall buildings</label>
           <label><input type="checkbox" value="walls"> Brick walls, facades</label>
@@ -393,7 +393,7 @@ body:not(.world) .wpane{display:none}
     <section class="pane" id="pane-events" hidden>
       <button class="btn" id="evWorld">Back to the world map</button>
       <h2>Earthquakes</h2>
-      <p class="muted"><span class="nseq">13</span> past earthquakes. The three from 2026 were still going when we downloaded the data.</p>
+      <p class="muted">These <span class="nseq">13</span> recorded sequences let you replay what happened. The three from 2026 were still active when we downloaded the data.</p>
       <ul class="evlist" id="evlist"></ul>
       <h2 style="margin-top:6px">Largest aftershocks so far</h2>
       <ul class="evlist" id="aftlist"></ul>
@@ -415,7 +415,7 @@ body:not(.world) .wpane{display:none}
       </div>
       <div class="card">
         <h2>Safety check-in</h2>
-        <p class="muted">Optional. Mark yourself safe, or ask for help, at your pin. Only people who can edit this page see check-ins, and you can remove yours.</p>
+        <p class="muted">If you want to check in, you can mark yourself safe or ask for help at your pin. Only people who can edit this page see check-ins, and you can remove yours at any time.</p>
         <div class="row"><input type="text" id="ciNote" maxlength="80" placeholder="Short note (optional)" aria-label="Check-in note"></div>
         <div class="row"><button class="btn safe" id="ciSafe">I'm safe here</button><button class="btn help" id="ciHelp">I need help here</button><button class="btn" id="ciDel">Remove mine</button></div>
         <p class="muted" id="ciStatus">Connecting…</p>
@@ -425,30 +425,30 @@ body:not(.world) .wpane{display:none}
 
     <section class="pane" id="pane-sources" hidden>
       <h2>Where every number comes from</h2>
-      <p class="muted">Each source, and what we did with it.</p>
+      <p class="muted">Follow each figure back to its source, then see how we used that data in the forecast.</p>
       <table class="ledger" id="ledger"></table>
       <details class="method"><summary>How the forecast at your spot works</summary>
-        <p>1. <b>How many.</b> Reasenberg–Jones aftershock model fitted to events at or before the selected time. This prototype uses one prior everywhere; USGS operational forecasts use regional parameters and more detailed completeness handling.</p>
-        <p>2. <b>Where.</b> Past epicentres are source proxies with a 6 km distance smoothing term and fixed 10 km depth. This is a simplified spatial model.</p>
-        <p>3. <b>How hard.</b> The Allen–Wald–Worden (2012) active-crust intensity equation, including scatter, integrated over a normalised M5–8.5 magnitude distribution. Smaller aftershocks and sources beyond 400 km are excluded.</p>
-        <p>4. <b>Your ground.</b> A soil term fitted to ShakeMaps: <code>ΔMMI = <span class="kv"></span> × log10(Vs30/760)</code>.</p>
-        <p>5. <b>Your building.</b> Damage threshold from the Modified Mercalli scale, or for "typical local building", from the USGS PAGER casualty model for that country. It drops one level if this spot already shook at that level, or if the ground-failure model gives at least 10% liquefaction.</p>
-        <p>6. <b>Simulated futures.</b> 200 Monte Carlo runs from the same posterior and shaking model as the formula. Their frequencies vary because the sample is small. This Reasenberg–Jones implementation does not model secondary triggering (ETAS).</p>
-        <p>7. <b>Planned exposure.</b> Integrate the aftershock rate over your selected 5-minute to 24-hour interval. The projected start is when that whole interval falls below your chosen limit, assuming the model continues unchanged.</p>
-        <p>8. <b>Compare places.</b> Both pins use A's effective intensity threshold, the same replay time, duration and shaking equation. Only location-dependent shaking inputs differ. The pins are not verified shelters or building assessments.</p>
-        <p>9. <b>Saved checks.</b> One check per earthquake sequence stays in this browser. The explanation compares replay times, known catalogue entries, locations, assumptions and data/model versions. It does not fetch live warnings or news.</p>
-        <p>10. <b>Live earthquakes.</b> Quakes opened from the globe use the same model with data fetched from USGS when you open them: the catalogue (re-checked every 2 minutes while open), the ShakeMap and the PAGER report. Ground-failure maps are not loaded, and early ShakeMaps are often automatic and later revised. Not an official USGS forecast.</p>
-        <p><b>Replay limits (case studies).</b> The catalogue contains later revisions, the mainshock ShakeMap may have been processed years later, and the soil coefficient was fitted using these sequences. This is a retrospective illustration, not a real-time hindcast or independent validation of local shaking.</p>
-        <p><b>Prototype only, not safety advice.</b> Not an official forecast or a street-level survey. Whether a building is safe to enter is decided by a structural inspection and local authorities.</p>
+        <p>1. <b>How many.</b> First, we fit a Reasenberg–Jones aftershock model to events at or before your selected time. This prototype uses one prior everywhere, while USGS operational forecasts use regional parameters and more detailed handling of missing events.</p>
+        <p>2. <b>Where.</b> We then use past epicentres as proxies for future source locations, with a 6 km distance smoothing term and a fixed 10 km depth. Together, these form a simplified spatial model.</p>
+        <p>3. <b>How hard.</b> To estimate shaking at your spot, we use the Allen–Wald–Worden (2012) active-crust intensity equation, including its scatter, and integrate over a normalised M5–8.5 magnitude distribution. This leaves out smaller aftershocks and sources beyond 400 km.</p>
+        <p>4. <b>Your ground.</b> We also account for local ground conditions with a soil term fitted to ShakeMaps: <code>ΔMMI = <span class="kv"></span> × log10(Vs30/760)</code>.</p>
+        <p>5. <b>Your building.</b> We choose a damage threshold from the Modified Mercalli scale or, for "typical local building", from the country's USGS PAGER casualty model. To represent possible weakening, the threshold drops one level if mainshock shaking here was near that level, or if the ground-failure model gives at least 10% liquefaction.</p>
+        <p>6. <b>Simulated futures.</b> Using the same posterior and shaking model as the formula, we run 200 Monte Carlo simulations. Their frequencies vary because the sample is small, and this Reasenberg–Jones implementation does not model secondary triggering (ETAS).</p>
+        <p>7. <b>Planned exposure.</b> For your chosen stay, we integrate the aftershock rate over the whole 5-minute to 24-hour interval. We then project when the chance during that interval falls below your limit, assuming the model continues unchanged.</p>
+        <p>8. <b>Compare places.</b> When you add B, both pins use A's effective intensity threshold, along with the same replay time, duration and shaking equation. That lets you compare the location-dependent shaking inputs on the same basis. The pins are not verified shelters or building assessments.</p>
+        <p>9. <b>Saved checks.</b> If you save a check, it stays in this browser, with one check per earthquake sequence. When you return, the explanation compares times, known catalogue entries, locations, assumptions and data/model versions so you can see what changed. Live warnings and news are not included.</p>
+        <p>10. <b>Live earthquakes.</b> For quakes opened from the globe, we use the same model with the USGS catalogue, ShakeMap and PAGER report. All three are checked for revisions every 2 minutes while the quake is open. Ground-failure maps are not loaded, and because early ShakeMaps are often automatic, later revisions can change the estimate. This is not an official USGS forecast.</p>
+        <p><b>Replay limits (case studies).</b> Although the timeline filters earthquake origin times, the catalogue contains later revisions, the mainshock ShakeMap may have been processed years later, and the soil coefficient was fitted using these sequences. The replay therefore illustrates past sequences; it cannot reconstruct a real-time forecast or independently validate local shaking.</p>
+        <p><b>Using the result.</b> These are prototype estimates, with local detail limited by the input grids. Whether a building is safe to enter still needs a structural inspection and local authority guidance.</p>
       </details>
     </section>
 
     <section class="pane" id="pane-accuracy" hidden>
       <div class="card"><h2>Does it forecast how many aftershocks?</h2>
-        <p class="muted">At 0.5–60 days after each mainshock, forecast regional M5+/M6+ occurrence over the next 7 days using events whose origin times precede that moment. Uses a revised catalogue; overlapping windows are not independent. This does not validate local shaking or building damage.</p>
+        <p class="muted">To check the rate model, we make seven-day regional M5+/M6+ forecasts at 0.5–60 days after each mainshock, using only events with earlier origin times. Because the catalogue contains revisions and the forecast windows overlap, these are retrospective, correlated checks. They do not validate local shaking or building damage.</p>
         <table id="bt"></table><p class="muted" id="btNote"></p></div>
       <div class="card"><h2>Does it predict how hard they shake?</h2>
-        <p class="muted">The felt-report equation compared with USGS ShakeMaps of 26 real aftershocks. A negative gap means the equation predicted stronger shaking.</p>
+        <p class="muted">We also compare the intensity equation with USGS ShakeMaps of 26 real aftershocks. In this table, a negative gap means the equation predicted stronger shaking than the ShakeMap.</p>
         <table id="aft"></table><p class="muted" id="aftNote"></p></div>
     </section>
   </aside>
@@ -479,7 +479,7 @@ body:not(.world) .wpane{display:none}
         <div id="askLog" aria-live="polite"></div>
         <div id="askSuggest"><button type="button" class="btn">What if I'm only inside for 20 minutes?</button><button type="button" class="btn">Why is the risk at this level here?</button><button type="button" class="btn">When does it drop below my limit?</button></div>
         <form class="askrow" id="askForm"><input type="text" id="askInput" maxlength="300" autocomplete="off" placeholder="Ask a question about this spot" aria-label="Question about this forecast"><button class="btn primary" id="askBtn">Ask</button></form>
-        <p class="askfine">Answered by Google Gemini using this page's forecast; what it checked is listed under each answer. It can be wrong, and it cannot clear a building for entry.</p>
+        <p class="askfine">Gemini uses this page's forecast to answer, and you can see what it checked beneath each reply. It can still make mistakes, so its answers cannot clear a building for entry.</p>
       </section>
       <button class="askopen" id="askOpen" aria-expanded="false" aria-controls="askPanel" title="Ask about this forecast" aria-label="Ask about this forecast"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 4.5h16v11.5H10l-5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
     </div>
@@ -643,23 +643,23 @@ function update(){
   $('place').textContent=loc.name;$('coords').textContent=`${loc.lat.toFixed(3)}°, ${loc.lon.toFixed(3)}°, ${Math.round(Math.hypot(sp.x,sp.y))} km from the epicentre`;
   // verdict
   const v=$('verdict'),tolTxt=$('tol').selectedOptions[0].text,lvl=R(sp.thr);
-  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Below your limit</span><p class="big">Below your limit for ${exposureLabel()}</p><p>Chance of intensity ${lvl}+ shaking here from M5+ aftershocks over ${exposureLabel()}: ${chance(exposure.probability)}. Your limit: ${tolTxt}.</p>`}
-  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Not within 400 days</p><p>The chance stays above ${tolTxt} for every start time we checked.</p>`}
-  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Below your limit from ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>That is ${dur(re)} away. Starting now, the chance of intensity ${lvl}+ shaking over ${exposureLabel()} is ${chance(exposure.probability)} (your limit: ${tolTxt}).</p>`}
-  $('exposureNote').textContent=`${chance(exposure.probability)} for this stay; ${chance(exposure.range.low)} to ${chance(exposure.range.high)} given the uncertainty in aftershock rates alone.`;
+  if(re===0){v.className='verdict ok';v.innerHTML=`<span class="status">${ICON.ok} Below your limit</span><p class="big">Below your limit for ${exposureLabel()}</p><p>Over ${exposureLabel()}, the estimated chance of intensity ${lvl}+ shaking here from M5+ aftershocks is ${chance(exposure.probability)}, which is below your chosen limit of ${tolTxt}.</p>`}
+  else if(re===Infinity){v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Not within 400 days</p><p>For your chosen stay, the chance stays above ${tolTxt} at every start time we checked over the next 400 days.</p>`}
+  else{v.className='verdict wait';v.innerHTML=`<span class="status">${ICON.wait} Above your limit</span><p class="big">Below your limit from ${fmtDT(new Date(nowDate.getTime()+re*864e5))}</p><p>That is ${dur(re)} from the selected time. If you start now, the estimated chance of intensity ${lvl}+ shaking over ${exposureLabel()} is ${chance(exposure.probability)}, which is above your limit of ${tolTxt}.</p>`}
+  $('exposureNote').textContent=`The estimate for this stay is ${chance(exposure.probability)}. Allowing for uncertainty in aftershock rates alone gives a range of ${chance(exposure.range.low)} to ${chance(exposure.range.high)}.`;
   $('tolHint').textContent=`Applies to the whole ${exposureLabel()}.`;
   $('curveTitle').textContent=`Chance over ${exposureLabel()}, by when you start`;
   if(reveal){const near=S.events.filter(e=>e[0]>now&&e[1]>=5).map(e=>{const [x,y]=km(e[2],e[3]);const d=Math.hypot(x-sp.x,y-sp.y);return{e,d,mmi:SHAKE.mu(e[1],Math.sqrt(d*d+100))+SHAKE.site(sp.gv.vs)+(calib?SHAKE.BIAS:0)}}).filter(o=>o.mmi>=sp.thr-0.5).sort((a,b)=>a.e[0]-b.e[0]);
     const remaining=Math.max(0,S.daysAvailable-now);
     v.insertAdjacentHTML('beforeend',`<p><b>What happened next:</b> ${near.length?`an M${near[0].e[1]} hit ${Math.round(near[0].d)} km away ${dur(near[0].e[0]-now)} later, with modelled intensity ${near[0].mmi.toFixed(1)} here.`:remaining<.001?'nothing yet; this is the latest data.':`no later M5+ quake is estimated to have shaken this spot near intensity ${lvl} in the next ${dur(remaining)}. That does not mean nothing was damaged.`}</p>`)}
-  v.insertAdjacentHTML('beforeend',`<p class="fine">Not clearance to go back in: that needs a building inspection. New quakes will change this.</p>`);
+  v.insertAdjacentHTML('beforeend',`<p class="fine">Building entry still needs an inspection, and new quakes can change this estimate.</p>`);
   // odds
   $('oddsTitle').textContent=`Intensity ${lvl}+ shaking from M5+ aftershocks`;
   $('odds').innerHTML=[['next 24 h',p24],['next 7 days',p7],['next 30 days',p30]].map(([k,p])=>`<div class="odd"><span class="v">${pct(p)}</span><span class="k">${k}</span></div>`).join('');
   const range=SHAKE.parameterRange(f,cp,sp.qv,0,1);
-  $('uncertainty').textContent=`Next 24 hours: ${pct(range.low)} to ${pct(range.high)} from the aftershock-rate uncertainty alone. Ground, building and model errors would widen it.`;
+  $('uncertainty').textContent=`For the next 24 hours, uncertainty in aftershock rates alone gives a range of ${pct(range.low)} to ${pct(range.high)}. Ground, building and model errors would add to that uncertainty.`;
   const qAlt=SHAKE.q(src,sp.x,sp.y,sp.gv.vs,sp.thr,!calib),p7alt=SHAKE.probQ(f,cp,qAlt,0,7);
-  $('alt').innerHTML=`With the ${calib?'standard':'adjusted'} shaking equation: ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
+  $('alt').innerHTML=`Using the ${calib?'standard':'adjusted'} shaking equation gives ${pct(p7alt)} over 7 days. <button class="src" data-src="shake">source</button>`;
   renderFactors();renderAround();
   const key=[S.key,$('bld').value,thrB.toFixed(2),calib,Math.round(Math.log(now)*30)].join('|');
   if(key!==heatKey&&!playing){heat=computeHeat(f,cp,src,calib);heatKey=key}
@@ -785,7 +785,7 @@ function drawSims(){const box=$('sims');box.innerHTML='';const sim=simulate(),W=
   const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Simulated futures'},box);const cw=(W-m.l-m.r)/30;
   sim.rows.slice(0,show).forEach((row,i)=>row.forEach((v,d)=>{el('rect',{x:m.l+d*cw+.5,y:m.t+i*(ch+gap),width:Math.max(1,cw-1),height:ch,fill:v===2?PAL.red:v===1?'#9aa3ad':'#eceef1'},svg)}));
   const ax=el('g',{class:'axis'},svg);for(const d of [0,7,14,21,29])el('text',{x:m.l+d*cw+cw/2,y:H-6,'text-anchor':'middle'},ax).textContent=d===0?'day 1':'day '+(d+1);
-  $('simNote').innerHTML=`Damaging shaking here in <b>${sim.hits} of ${sim.n}</b> simulated months (${pct(sim.hits/sim.n)}). The formula gives ${pct(cur.p30)}; the gap is sampling noise, and agreement is not evidence of accuracy.`}
+  $('simNote').innerHTML=`Damaging shaking occurs here in <b>${sim.hits} of ${sim.n}</b> simulated months (${pct(sim.hits/sim.n)}), compared with ${pct(cur.p30)} from the formula. Since both use the same model, the gap is sampling noise; their agreement does not establish accuracy.`}
 
 // ---------- side lists ----------
 function renderEvents(){$('evlist').innerHTML=SEQ.map((s,i)=>`<li data-i="${i}" ${s===S?'aria-current="true"':''}><span class="m">${s.M.toFixed(1)}</span><span class="t">${s.label}${s.key.endsWith('26')?' (ongoing)':''}</span><span class="s">${fmtDate(new Date(s.t0))}, ${s.events.length} quakes of M4 or more</span></li>`).join('');
@@ -795,9 +795,9 @@ function renderAftList(now){const t0=Date.parse(S.t0);const big=S.events.filter(
   document.querySelectorAll('#aftlist li[data-la]').forEach(li=>li.onclick=()=>map.setView([+li.dataset.la,+li.dataset.lo],Math.max(map.getZoom(),9)))}
 function renderPeople(){const sp=cur.sp;const near=TOWNS.towns.map(t=>({t,d:Math.hypot((t[1]-loc.lat)*110.57,(t[2]-loc.lon)*111.32*G.c)})).filter(o=>o.d<=15).sort((a,b)=>a.d-b.d);
   const pop=near.reduce((a,o)=>a+o.t[3],0);
-  $('nearPeople').innerHTML=near.length?`<p class="p">About <b>${fmtN(pop)}</b> people live in the ${near.length} town${near.length>1?'s':''} within 15 km of your pin.</p><table><tr><th>Town</th><th class="num">People</th><th class="num">Distance</th></tr>${near.slice(0,6).map(o=>`<tr><td>${o.t[0]}</td><td class="num">${fmtN(o.t[3])}</td><td class="num">${o.d.toFixed(1)} km</td></tr>`).join('')}</table><p class="muted">Town populations from GeoNames. Rural homes outside towns aren't counted.</p>`:'<p class="p">No listed towns within 15 km of your pin.</p>';
+  $('nearPeople').innerHTML=near.length?`<p class="p">About <b>${fmtN(pop)}</b> people live in the ${near.length} town${near.length>1?'s':''} within 15 km of your pin.</p><table><tr><th>Town</th><th class="num">People</th><th class="num">Distance</th></tr>${near.slice(0,6).map(o=>`<tr><td>${o.t[0]}</td><td class="num">${fmtN(o.t[3])}</td><td class="num">${o.d.toFixed(1)} km</td></tr>`).join('')}</table><p class="muted">These population figures come from GeoNames and cover listed towns, so rural homes outside them are not counted.</p>`:'<p class="p">No listed towns within 15 km of your pin.</p>';
   const ts=TOWNS.towns.filter(t=>t.p7!=null);const exp=ts.reduce((a,t)=>a+t[3]*t.p7,0),hi=ts.filter(t=>t.p7>=0.1);
-  $('atRisk').innerHTML=`<p class="p">Across the ${ts.length} largest towns in the area, the forecast expects about <b>${fmtN(exp)}</b> people to feel damaging shaking for their local buildings in the next 7 days.${hi.length?` ${hi.length} town${hi.length>1?'s have':' has'} a 1-in-10 chance or higher: ${hi.slice(0,5).map(t=>t[0]).join(', ')}.`:''}</p><p class="muted">Each town's population times its 7-day chance, as on the map.</p>`}
+  $('atRisk').innerHTML=`<p class="p">Across the ${ts.length} largest towns in the area, the forecast expects about <b>${fmtN(exp)}</b> people to feel damaging shaking for their local buildings in the next 7 days.${hi.length?` ${hi.length} town${hi.length>1?'s have':' has'} a 1-in-10 chance or higher: ${hi.slice(0,5).map(t=>t[0]).join(', ')}.`:''}</p><p class="muted">We calculate this by multiplying each town's population by its 7-day shaking chance, using the same estimates as the map.</p>`}
 function renderPager(){const p=EX[S.key]&&EX[S.key].pager;
   const warnings=[...(S.warnings||[]),S.refreshError?'Live updates are delayed; the last successful data is shown.':''].filter(Boolean).join(' ');
   if(!p||!p.exposure||!p.exposure.length){$('pagerNote').textContent='No USGS PAGER exposure figures are available for this earthquake.'+(warnings?' '+warnings:'');$('pagerExp').innerHTML='';return}
@@ -894,27 +894,27 @@ const rateTxt=p=>'1 in '+Number((1/p).toPrecision(2)).toLocaleString();
 const STEPS=[
  {t:'6 Feb 2023, 04:17. An M7.8 hits southern Türkiye.',
   go(){resetChoices();goSeq('turkey');setLayer('mmi');setDays(1/24);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.8});selectTab('spot')},
-  b:()=>`<p>The purple is how hard the ground shook. About <b>${fmtN(pagerAtLeast(8))} people</b> felt severe shaking or worse.</p><p>Within hours, millions are outside in winter, asking one question: <b>when is it safe to go back in?</b> Nobody can tell them.</p>`},
- {t:'Pick a spot. Get an answer.',
+  b:()=>`<p>The purple shading shows the strongest mainshock shaking, with about <b>${fmtN(pagerAtLeast(8))} people</b> exposed to severe shaking or worse.</p><p>As people wait outside in the winter cold, they face a difficult question: <b>when is it safe to go back in?</b> To explore part of that decision, we can start with the chance of more shaking.</p>`},
+ {t:'Start with a place and a time.',
   go(){setLayer('risk');setDays(0.3);goTown('Kahramanmaraş');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>Seven hours in, for a typical local building in <b>${esc(loc.name)}</b>: a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>The shading is that 7-day chance everywhere. The panel on the left gives a <b>projected time</b> when modelled shaking drops below your limit; an inspection still determines re-entry.</p>`},
+  b:()=>`<p>Start in <b>${esc(loc.name)}</b>, about seven hours after the mainshock. For a typical local building, the model estimates a <b>${pct(cur.p24)}</b> chance of damaging shaking in the next 24 hours.</p><p>To see how the estimate varies across the area, the map shows the 7-day chance. Meanwhile, the left panel gives a <b>projected time</b> when the chance during your chosen stay falls below your limit. Building entry still needs an inspection.</p>`},
  {t:'Then, nine hours after the first quake…',
   async go(){setLayer('risk');goTown('Elbistan');setDays(0.3);update();map.flyTo([38.1,37.15],8,{duration:.6});
     await animateDays(0.3,0.5,2600);
     tourPopup=L.popup({closeButton:false,autoPan:false}).setLatLng([38.011,37.196]).setContent('<div class="pp-h">M7.5, 9 hours later</div>A second huge quake, 90 km north.').openOn(map)},
-  b:()=>`<p>An <b>M7.5</b> struck near Elbistan. Two hours before it, the model gave an M7+ anywhere in the region about a <b>${pct(MODEL.prob(MODEL.fit(S.events,0.3),7,0,1))}</b> chance in the next 24 hours: unlikely, but far from zero.</p><p>This is why a single "all clear" is dangerous, and why the forecast updates as every new quake arrives.</p>`},
- {t:'Same town, different ground.',
+  b:()=>`<p>Then an <b>M7.5</b> struck near Elbistan. Two hours earlier, the model put the chance of an M7+ somewhere in the region over the next 24 hours at about <b>${pct(MODEL.prob(MODEL.fit(S.events,0.3),7,0,1))}</b>. That was unlikely, but far from zero.</p><p>Because a large aftershock can change the outlook, the estimate needs to be recalculated as new quakes arrive. A single "all clear" cannot settle whether a building is safe.</p>`},
+ {t:'Now look at the ground beneath the town.',
   go(){if(tourPopup){map.closePopup(tourPopup);tourPopup=null}setLayer('vs');setDays(1);goTown('Kâhta');update();map.flyTo([loc.lat,loc.lon],11,{duration:.8});selectTab('spot');L.circle([loc.lat,loc.lon],{radius:3000,color:PAL.red,weight:2,dashArray:'6 5',fill:false,interactive:false}).addTo(tourLayer)},
-  b:()=>{return `<p>Darker brown is softer ground, which shakes harder. Around <b>Kâhta</b>, firm and soft ground sit side by side, and parts of town shook harder than others in the mainshock.</p><p>Inside the dashed 3 km circle, the 7-day chance of damaging shaking ranges from <b>${localRangeText()}</b>. A city-wide warning can't capture that.</p>`}},
- {t:'Same shaking, different countries.',
+  b:()=>{return `<p>Timing is only part of the picture. Around <b>Kâhta</b>, firm and soft ground sit side by side. The darker brown marks softer ground, which can amplify shaking.</p><p>Those local differences feed into the estimate: inside the dashed 3 km circle, the 7-day chance of damaging shaking ranges from <b>${localRangeText()}</b>. That is one reason location matters even within the same town.</p>`}},
+ {t:'The building assumptions matter too.',
   go(){setLayer('risk');goSeq('noto');setDays(1);goTown('Wajima');update();map.flyTo([loc.lat,loc.lon],8,{duration:.8})},
-  b:()=>`<p>The USGS PAGER model estimates intensity VIII fatality rates of about <b>${rateTxt(fatRate('TR',8))}</b> in Türkiye and <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>This prototype converts those rates to intensity thresholds: <b>${R(countryThr('JP'))}</b> in Japan and <b>${R(countryThr('TR'))}</b> in Türkiye. This is our heuristic, not a measure of an individual building or its inspection status.</p>`},
- {t:'Does it actually work?',
+  b:()=>`<p>We also need a way to choose a shaking threshold. Here, we use the USGS PAGER model, which estimates intensity VIII fatality rates of about <b>${rateTxt(fatRate('TR',8))}</b> in Türkiye and <b>${rateTxt(fatRate('JP',8))}</b> in Japan.</p><p>We use those rates to set prototype intensity thresholds of <b>${R(countryThr('JP'))}</b> in Japan and <b>${R(countryThr('TR'))}</b> in Türkiye. These thresholds are our design choice; they do not describe an individual building's condition or inspection status.</p>`},
+ {t:'How well do these estimates hold up?',
   go(){goSeq('turkey');setLayer('risk');setDays(1);goTown('Kahramanmaraş');update();map.flyToBounds(G.bounds.pad(-0.15),{duration:.6});selectTab('accuracy')},
-  b:()=>{const st=VALIDATION.summarize(validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL)),5);return `<p>We scored ${st.forecasts} complete seven-day forecast windows across ${st.sequences} of the ${SEQ.length} earthquakes, using earlier origin times in a revised catalogue. For M5+ the model scores <b>${skillTxt(5)}</b> (0 = the other-sequence reference, 1 = perfect).</p><p>M6+ occurrence performs worse than the reference. This does not validate local shaking, damage or safe entry.</p>`}},
- {t:'Built for the people waiting outside.',
+  b:()=>{const st=VALIDATION.summarize(validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL)),5);return `<p>To check the rate model, we scored ${st.forecasts} complete seven-day forecast windows across ${st.sequences} of the ${SEQ.length} earthquakes, using earlier origin times in a revised catalogue. For M5+, the skill score is <b>${skillTxt(5)}</b>, where 0 matches the other-sequence reference and 1 is perfect.</p><p>For M6+, though, the model performs worse than that reference. These results concern regional occurrence, so they do not validate local shaking, building damage or safe entry.</p>`}},
+ {t:'Bring it back to the people waiting outside.',
   go(){setLayer('risk');selectTab('people');update()},
-  b:()=>`<p>Population per town, how many people are at risk this week, and opt-in <b>"I'm safe" / "I need help"</b> check-ins on a shared map.</p><p>The world map shows live USGS earthquakes, checked every 2 minutes; any with a ShakeMap opens the same forecast. A validated operational forecast is future work.</p>`}
+  b:()=>`<p>With those limits in mind, the People tab brings the estimate back to the communities affected. You can see town populations and estimated exposure this week, with optional <b>"I'm safe" / "I need help"</b> check-ins where the shared service is available.</p><p>From here, you can return to the world map to explore live USGS earthquakes, checked every 2 minutes. Any quake with a ShakeMap opens the same forecast, although operational validation remains future work.</p>`}
 ];
 let skillCache={};
 function skillTxt(M){if(skillCache[M]!=null)return skillCache[M];const rows=validationRows||(validationRows=VALIDATION.backtest(SEQ,MODEL));return skillCache[M]=VALIDATION.summarize(rows,M).heldOutSkill.toFixed(2)}

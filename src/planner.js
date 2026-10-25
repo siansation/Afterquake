@@ -32,7 +32,7 @@ function coastDistance(lat,lon){
 }
 function renderComparison(){
   comparisonLayer.clearLayers();
-  if(!comparisonLocation){$('comparisonResult').innerHTML='<p class="muted">Compare the same shaking intensity and time at two places. Neither pin is a verified shelter.</p>';return}
+  if(!comparisonLocation){$('comparisonResult').innerHTML='<p class="muted">Add a second place to compare the same shaking intensity and time at both pins. You will still need separate checks for shelter safety.</p>';return}
   const a=loc,b=comparisonLocation,bg=gridAt(b.lat,b.lon);
   if(!bg||!bg.vs){resetComparison();$('comparisonResult').textContent='The comparison point has no model data. Choose B again.';return}
   const [bx,by]=km(b.lat,b.lon);
@@ -55,7 +55,7 @@ function renderComparison(){
   ];
   const delta=eb.probability-ea.probability;
   const difference=chance(ea.probability)===chance(eb.probability)?'The exposure estimates are equal at the displayed precision.':`${delta<0?'B':'A'} has the lower modelled shaking estimate for this interval.`;
-  $('comparisonResult').innerHTML=`<p class="p">${SCENARIO.distanceKm(a,b).toFixed(1)} km apart. Intensity <b>${R(cur.sp.thr)}+</b> at both, same replay time.</p><table class="compare-table"><thead><tr><th scope="col">Measure</th><th scope="col">A: ${esc(a.name)}</th><th scope="col" class="comparison-b">B: ${esc(b.name)}</th></tr></thead><tbody>${rows.map(([k,v,w])=>`<tr><th scope="row">${esc(k)}</th><td>${esc(v)}</td><td>${esc(w)}</td></tr>`).join('')}</tbody></table><p class="p">${difference}</p><p class="muted">Shaking estimates cover M5+ aftershocks. Building, route and shelter safety need separate checks. Coast proximity is not a tsunami forecast.</p>`;
+  $('comparisonResult').innerHTML=`<p class="p">The pins are ${SCENARIO.distanceKm(a,b).toFixed(1)} km apart. To compare them on the same basis, both use intensity <b>${R(cur.sp.thr)}+</b> and the same replay time.</p><table class="compare-table"><thead><tr><th scope="col">Measure</th><th scope="col">A: ${esc(a.name)}</th><th scope="col" class="comparison-b">B: ${esc(b.name)}</th></tr></thead><tbody>${rows.map(([k,v,w])=>`<tr><th scope="row">${esc(k)}</th><td>${esc(v)}</td><td>${esc(w)}</td></tr>`).join('')}</tbody></table><p class="p">${difference}</p><p class="muted">These shaking estimates cover M5+ aftershocks. To assess building, route or shelter safety, you will still need separate checks. Coast proximity alone is not a tsunami forecast.</p>`;
   L.marker([b.lat,b.lon],{icon:comparisonIcon,title:'Comparison B: '+b.name,keyboard:true})
     .bindPopup(`<div class="pp-h">B: ${esc(b.name)}</div>${chance(eb.probability)} chance of intensity ${R(cur.sp.thr)}+ shaking in ${exposureLabel()}.<br><span class="pp-k">Same intensity and replay time as A. Not shelter clearance.</span>`).addTo(comparisonLayer);
 }
@@ -94,17 +94,17 @@ function renderChanges(){
   const previous=savedChecks[S.key],current=currentCheck(),diff=SCENARIO.changes(previous,current);
   $('forgetCheck').disabled=!previous;$('restoreCheck').disabled=!previous;$('changesFeedback').textContent=checkFeedback;
   if(diff.status==='missing'){
-    $('changesResult').innerHTML='<p class="p">Save your spot A now, then move the replay timeline or change a setting to see what affected the estimate. Saved checks stay in this browser.</p>';return;
+    $('changesResult').innerHTML='<p class="p">Save a check for spot A, then move the timeline or change a setting to see how the estimate responds. Your saved check stays in this browser so you can return to it later.</p>';return;
   }
   const savedDate=new Date(previous.at||Date.parse(S.t0)+previous.now*864e5);
   const earlier=`${chance(previous.probability)} over ${SCENARIO.durationLabel(previous.minutes)}`;
   const latest=`${chance(current.probability)} over ${SCENARIO.durationLabel(current.minutes)}`;
-  const summary=diff.status==='same'?'No inputs changed since your saved check.':`Saved estimate: ${earlier}. Current estimate: ${latest}.`;
+  const summary=diff.status==='same'?'No inputs changed since your saved check.':`Your saved estimate was ${earlier}, compared with ${latest} now.`;
   $('changesResult').innerHTML=`<p class="muted">Compared with ${esc(previous.location.name)} at ${fmtDT(savedDate)} in the replay.</p><p class="p">${summary}</p>${diff.assumptionsChanged?'<p class="muted">The location or settings changed, so these are different scenarios.</p>':''}${diff.reasons.length?`<ul class="changes-list">${diff.reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:''}<p class="muted">Changes refer to this ${S.live?'live sequence':'recorded replay'} and its inputs. This panel does not receive alerts or local news.</p>`;
 }
 $('saveCheck').onclick=()=>{
   if(!cur.f)return;savedChecks[S.key]=currentCheck();
-  checkFeedback=persistChecks()?'Check saved on this browser. Future comparisons use this replay moment.':'Check saved for this session. Browser storage is unavailable.';renderChanges();
+  checkFeedback=persistChecks()?'Check saved in this browser, so future comparisons will use this replay moment.':'Check saved for this session because browser storage is unavailable.';renderChanges();
 };
 $('forgetCheck').onclick=()=>{
   delete savedChecks[S.key];const persisted=persistChecks();

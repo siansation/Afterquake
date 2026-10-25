@@ -1,6 +1,6 @@
 # Aftershock Re-entry: 5-minute pitch
 
-**One line:** After a big earthquake, millions of people sleep outside because nobody can tell them when it's safe to go back in. We use recorded USGS data to explore aftershock shaking near a chosen spot, with explicit uncertainty and limits.
+**One line:** After a big earthquake, people face a difficult choice about going back inside, so we use USGS data to help them understand how the chance of more shaking changes near their chosen spot.
 
 **Theme fit:** *Time*: risk fades over hours and days, and we turn it into a time to act. *Data for prediction and decision making*: a forecast becomes a projected threshold-crossing time at a chosen risk level, checked against what really happened.
 
@@ -16,28 +16,28 @@
 
 | Time | Screen | Say |
 |---|---|---|
-| **0:00–0:30** | Welcome screen | "February 2023. An M7.8 earthquake hits Türkiye and Syria. Over 50,000 people die, and in the following nights millions sleep outside in freezing weather. They all ask the same question: *when is it safe to go back in?* Entry still needs inspection and authority guidance. We explore one part of that decision: the chance of more shaking." |
-| **0:30–0:55** | Story 1: mainshock shaking | "This is the actual USGS shaking map. About 2.7 million people felt severe shaking or worse. Every one of them has a different answer, because it depends on where they are and what they live in." |
-| **0:55–1:25** | Story 2: pick a spot | "Pick a spot, say Kahramanmaraş, seven hours in. For a typical local building read the updated next-24-hour shaking probability on screen. Instead of a percentage, we give a **time**: when this model falls below a chosen limit. This is not building clearance." |
-| **1:25–2:05** | Story 3: the M7.5 | "Watch the clock. Nine hours after the first quake, an M7.5 hit near Elbistan. Our rate fit excludes events with later origin times, but the catalogue contains subsequent revisions, and two hours before it, it put an M7+ that day at about 1 in 60. Unlikely, but not zero. That's exactly why a one-off 'all clear' is dangerous and the forecast has to update with every new quake." |
-| **2:05–2:40** | Story 4: Kâhta, 3 km circle | "Our estimate also depends on local ground conditions. Soft ground shakes harder. Inside this 3 km circle, read the updated 7-day range on screen. The input grid is about 1 km here; this is not a street survey or validated damage estimate." |
-| **2:40–3:10** | Story 5: Japan | "USGS PAGER models population fatality rates by country and shaking intensity. Our prototype converts those modelled rates into different intensity thresholds. This is a heuristic, not an individual building assessment or a measured level of preparedness." |
-| **3:10–3:50** | Story 6: Accuracy tab | "Does it work? We scored 93 complete regional forecast windows across 12 sequences using a revised catalogue. M5+ skill is 0.55 against a reference estimated from the other sequences. M6+ skill is -0.01, slightly worse than that reference. These checks do not validate point shaking, damage or safe entry." |
-| **3:50–4:25** | Story 7: People tab | "It's built for the people waiting outside: who's at risk this week, town by town, and opt-in 'I'm safe' / 'I need help' check-ins on a shared map." |
-| **4:25–5:00** | Back to the globe (**World map**) | "And this isn't just history. This globe is live from USGS, checked every two minutes. Click any recent quake with a ShakeMap and you get the same forecast for it, right now. Under the hood: the USGS earthquake catalogue, ShakeMaps, ground-failure maps and PAGER casualty models, all free and public, plus a simplified model from the Reasenberg-Jones family. USGS operational forecasts use regional parameters and more detailed handling of missing early events. Operational validation remains future work. Every number on screen links to its source. Aftershock Re-entry: from data to a decision you can act on." |
+| **0:00–0:30** | Welcome screen | "In February 2023, an M7.8 earthquake hit Türkiye and Syria. Over 50,000 people died, and in the following nights millions slept outside in freezing weather. As they waited, they faced the same question: *when is it safe to go back in?* That still needs inspection and authority guidance, so we explore one part of the decision: the chance of more shaking." |
+| **0:30–0:55** | Story 1: mainshock shaking | "To understand the scale, start with the USGS shaking map. About 2.7 million people felt severe shaking or worse. But the outlook varies from place to place, because it depends on where people are and what they live in." |
+| **0:55–1:25** | Story 2: pick a spot | "So let's start in Kahramanmaraş, about seven hours after the mainshock. The panel gives the next-24-hour shaking estimate for a typical local building. From there, it projects a **time** when the model falls below the person's chosen limit. That helps explain the changing aftershock risk, while building entry still needs an inspection." |
+| **1:25–2:05** | Story 3: the M7.5 | "Now watch what happens as the clock moves forward. Nine hours after the first quake, an M7.5 hit near Elbistan. Two hours earlier, the model put an M7+ that day at about 1 in 60. Although later events are excluded from the fit, the catalogue does contain subsequent revisions. Even with that limitation, the example shows why a low chance is not an 'all clear', and why the estimate has to update as new quakes arrive." |
+| **2:05–2:40** | Story 4: Kâhta, 3 km circle | "Timing is only part of the picture, though. Around Kâhta, softer ground sits beside firmer ground, so the model gives different shaking estimates within this 3 km circle. You can see the current 7-day range on screen. With an input grid of about 1 km here, this is a neighbourhood comparison; it cannot replace a street survey or validate building damage." |
+| **2:40–3:10** | Story 5: Japan | "The building assumptions matter too, which brings us to Japan. USGS PAGER models population fatality rates by country and shaking intensity, and our prototype converts those rates into intensity thresholds. Because that conversion is our own rule, it cannot assess an individual building or measure a country's preparedness." |
+| **3:10–3:50** | Story 6: Accuracy tab | "That raises the next question: how well does the model perform? We scored 93 complete regional forecast windows across 12 sequences using a revised catalogue. For M5+, skill is 0.55 against a reference estimated from the other sequences. For M6+, though, it is -0.01, slightly worse than that reference. So these checks tell us about regional occurrence; they do not validate point shaking, damage or safe entry." |
+| **3:50–4:25** | Story 7: People tab | "With those limits in mind, we can bring the estimate back to the people waiting outside. The People tab shows town populations and estimated exposure over the coming week. Where the shared check-in service is available, people can also mark themselves safe or ask for help." |
+| **4:25–5:00** | Back to the globe (**World map**) | "From here, we can return to the globe and explore recent earthquakes from USGS, checked every two minutes. Open one with a ShakeMap to use the same model with current data. The sources explain how the public catalogue, shaking maps and PAGER models feed into each estimate. It still needs operational validation, but this prototype lets people explore how the chance of more shaking changes with their location, time and plans." |
 
 If you're running long, cut step 7 and say its line over step 6.
 
 ## Likely questions
 
 **Isn't telling people it's safe dangerous?**
-A model threshold crossing is not permission to enter. Building safety needs an inspection and local authority guidance. We forecast the chance of *more shaking* and show it at the risk level the person chooses. The app says this on every verdict.
+Building entry needs an inspection and local authority guidance, so crossing a model threshold cannot give permission to enter. We estimate the chance of *more shaking* at the risk level the person chooses, and keep that distinction beside every verdict.
 
 **Doesn't USGS already do this?**
 USGS publishes regional aftershock odds, like "a 1 in 3 chance of an M6+ this week somewhere in the area". We turn that into a time for a specific spot, building type and country, adding soil, how hard that spot already shook, liquefaction, and local building vulnerability.
 
 **How do you know it works?**
-Two checks, both in the Accuracy tab: 93 complete regional seven-day forecast windows across 12 sequences (M5+ skill 0.55; M6+ -0.01 against a reference from the other sequences), and in-sample comparisons against 26 aftershock ShakeMaps. The latter are not independent validation of local shaking.
+The Accuracy tab brings together two checks: 93 complete regional seven-day forecast windows across 12 sequences (M5+ skill 0.55; M6+ -0.01 against a reference from the other sequences), and comparisons against 26 aftershock ShakeMaps. Because the ShakeMap comparisons use the same events involved in development, they do not independently validate local shaking.
 
 **How precise is "street level"?**
 Neighbourhood level: about 1 km in Türkiye and 2–4 km elsewhere, set by the USGS ShakeMap grids. Finer soil maps exist for some cities and could plug straight in.
@@ -55,7 +55,7 @@ Opt-in only. Only people with contributor access to the page can see them, and y
 Yes. The globe reads the USGS feed of M4.5+ quakes from the last 30 days every two minutes. Opening a quake downloads its catalogue, ShakeMap and PAGER report straight from USGS, and checks for revisions to all three while it is open. Failed updates are labelled and the last successful data stays visible. Only quakes with a ShakeMap (usually M5.5+) get a forecast, ground-failure maps are not loaded for live quakes yet, and it is not an official USGS forecast.
 
 **Can I trust the chatbot?**
-It's Gemini, but it doesn't make numbers up: it can only answer by calling our forecast (the same model as the panel), and under each answer it lists exactly what it checked. Its instructions forbid saying a building is safe to enter. It can still phrase things badly, which is why the checks are shown.
+Gemini calls the same forecast model as the panel, then lists what it checked beneath each answer. Its instructions forbid saying a building is safe to enter, but it can still misread or misphrase a result. That is why the checks are shown alongside the reply.
 
 **What would you build next?**
 Ground-failure maps for live quakes, finer city soil maps, building data from OpenStreetMap, SMS/WhatsApp alerts when your re-entry time arrives, and multiple languages.
