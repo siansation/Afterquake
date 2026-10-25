@@ -60,6 +60,8 @@ test('local language: Gemini translates first, then ElevenLabs speaks the transl
     assert.equal(r.code,200);assert.equal(calls.length,2);
     assert.equal(calls[0].init.headers['x-goog-api-key'],'g-key');
     const g=JSON.parse(calls[0].init.body);assert.match(g.systemInstruction.parts[0].text,/Turkish/);assert.match(g.systemInstruction.parts[0].text,/Keep every number/);
+    assert.match(g.systemInstruction.parts[0].text,/short, everyday sentences/);
+    assert.match(g.systemInstruction.parts[0].text,/Preserve safety conditions exactly/);
     assert.equal(g.contents[0].parts[0].text,EN);
     const el=JSON.parse(calls[1].init.body);assert.equal(el.text,tr);assert.equal(el.language_code,'tr');
     assert.equal(r.body.translated,true);assert.equal(r.body.transcript,tr);assert.equal(r.body.language,'Turkish');

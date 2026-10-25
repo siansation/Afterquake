@@ -1,15 +1,15 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {harness,storageKey}=require('../test-support/planner-harness.js');
+const {harness}=require('../test-support/access-harness.js');
 const VIEW=require('../src/view-state.js');
 function shared(){return {v:1,event:{kind:'case',id:'example'},a:{lat:0,lon:0,name:'Town A'},b:{lat:.1,lon:.2,name:'Town B'},
   minutes:10,building:'7',tolerance:.001,calibrated:true,at:'2023-02-06T12:34:56.789Z',dataAt:'recorded'}}
 
-test('share copies a validated URL with both pins and exact selected time',async()=>{
+test('share copies one place and the exact selected time',async()=>{
   let copied;const h=harness({access:true,clipboard:{writeText:async value=>{copied=value}},href:'https://afterquake.test/?discard=secret'});
-  h.run('chooseComparison(.1,.2,"Town B")');await h.node('shareView').onclick();
+  await h.node('shareView').onclick();
   const state=VIEW.parse(new URL(copied).hash);
-  assert.equal(state.a.name,'Town A');assert.equal(state.b.name,'Town B');assert.equal(state.at,h.ctx.cur.nowDate.toISOString());
+  assert.equal(state.a.name,'Town A');assert.equal(state.b,null);assert.equal(state.calibrated,false);assert.equal(state.at,h.ctx.cur.nowDate.toISOString());
   assert.equal(new URL(copied).search,'');assert.ok(h.node('shareStatus').textContent.includes('copied'));
 });
 test('clipboard denial gives manual copying, and standalone files explain the hosted requirement',async()=>{
@@ -18,34 +18,18 @@ test('clipboard denial gives manual copying, and standalone files explain the ho
   const file=harness({access:true,href:'file:///example/index.html'});await file.node('shareView').onclick();
   assert.ok(file.node('shareStatus').textContent.includes('hosted app'));
 });
-test('restoring a saved setup restores A/B and settings but keeps the current time',()=>{
-  const h=harness({access:true});h.node('exposure').value='10';h.ctx.update();h.run('chooseComparison(.1,.2,"Town B")');h.node('saveCheck').onclick();
-  h.ctx.loc={lat:1,lon:1,name:'Elsewhere'};h.node('exposure').value='480';h.node('bld').value='9';h.node('shk').value='1';h.ctx.setTol('.1');h.advance(2);
-  const currentTime=h.ctx.cur.nowDate.toISOString();h.node('restoreCheck').onclick();
-  assert.equal(h.ctx.loc.name,'Town A');assert.equal(h.run('comparisonLocation.name'),'Town B');
-  assert.equal(h.node('exposure').value,'10');assert.equal(h.node('bld').value,'local');assert.equal(h.node('shk').value,'0');assert.equal(h.ctx.cur.tol,.01);
-  assert.equal(h.ctx.cur.nowDate.toISOString(),currentTime);assert.equal(h.ctx.replayTimeOverride,null);
-  assert.ok(h.node('changesFeedback').textContent.includes('current forecast time was kept'));
-  assert.equal(JSON.parse(h.storage.get(storageKey)).example.now,1);
+test('sharing validates the primary pin before applying any settings',()=>{
+  const h=harness({access:true});
+  assert.throws(()=>h.run('applyViewSetup('+JSON.stringify({...shared(),a:{lat:30,lon:30,name:'Outside'}})+')'),/outside the current map/);
+  assert.equal(h.node('exposure').value,'1440');assert.equal(h.ctx.loc.name,'Town A');
 });
-test('legacy checks restore without an absolute timestamp or comparison pin',()=>{
-  const first=harness();first.node('saveCheck').onclick();const old=JSON.parse(first.storage.get(storageKey));
-  delete old.example.at;delete old.example.origin;delete old.example.comparison;
-  const h=harness({access:true,stored:JSON.stringify(old)});h.advance(2);const time=h.ctx.cur.nowDate.toISOString();
-  h.node('restoreCheck').onclick();assert.equal(h.ctx.cur.nowDate.toISOString(),time);assert.equal(h.run('comparisonLocation'),null);
-});
-test('restoration validates every pin before applying any settings',()=>{
-  const first=harness();first.node('saveCheck').onclick();const saved=JSON.parse(first.storage.get(storageKey));
-  saved.example.comparison={lat:30,lon:30,name:'Unavailable'};saved.example.minutes=10;
-  const h=harness({access:true,stored:JSON.stringify(saved)});h.node('restoreCheck').onclick();
-  assert.equal(h.node('exposure').value,'1440');assert.ok(h.node('changesFeedback').textContent.includes('outside the current shaking grid'));
-});
-test('opening a shared case freezes the requested UTC time and applies the two-pin view',async()=>{
+
+test('older shared links retain their main place and time using the standard estimate',async()=>{
   const view=shared(),h=harness({access:true,hash:VIEW.fragment(view)});
   assert.equal(await h.run('openSharedView()'),true);
   assert.equal(h.ctx.cur.nowDate.toISOString(),view.at);assert.equal(h.ctx.replayTimeOverride,Date.parse(view.at));
-  assert.equal(h.node('exposure').value,'10');assert.equal(h.node('bld').value,'7');assert.equal(h.run('comparisonLocation.name'),'Town B');
-  assert.ok(h.node('sharedNotice').textContent.includes('Recalculated'));
+  assert.equal(h.node('exposure').value,'10');assert.equal(h.node('bld').value,'7');assert.equal(h.ctx.cur.calib,false);
+  assert.ok(h.node('sharedNotice').textContent.includes('older link now shows its main place'));
 });
 test('bad links and missing case studies fail visibly without changing the setup',async()=>{
   for(const hash of ['#view=invalid',VIEW.fragment({...shared(),event:{kind:'case',id:'missing'}})]){

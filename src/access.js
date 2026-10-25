@@ -1,39 +1,28 @@
-// Explicit sharing, saved setup restoration, and device-provided speech.
+// Single-place sharing and short spoken summaries.
 // Shared links carry inputs and an absolute time; figures are recalculated on arrival.
 let shareOpenToken=0;
 function currentView(){
-  return VIEW_STATE.clean({v:1,event:{kind:S.live?'live':'case',id:S.live?S.id:S.key},a:loc,b:comparisonLocation,
-    minutes:cur.exposure.minutes,building:$('bld').value,tolerance:cur.tol,calibrated:cur.calib,
+  return VIEW_STATE.clean({v:1,event:{kind:S.live?'live':'case',id:S.live?S.id:S.key},a:loc,b:null,
+    minutes:cur.exposure.minutes,building:$('bld').value,tolerance:cur.tol,calibrated:false,
     at:cur.nowDate.toISOString(),dataAt:S.live?S.fetchedAt:D.fetchedAt});
 }
-function applyViewSetup(input,{keepTime=false}={}){
-  const view=VIEW_STATE.clean(input),wrap=p=>({...p,lon:p.lon+360*Math.round((S.lon-p.lon)/360)});
-  const a=wrap(view.a),b=view.b?wrap(view.b):null;
-  // Validate both pins before changing anything; a newer grid may cover a different area.
-  if(!gridAt(a.lat,a.lon)?.vs||(b&&!gridAt(b.lat,b.lon)?.vs))throw new Error('A saved pin is outside the current shaking grid. The setup was not applied.');
+function applyViewSetup(input){
+  const view=VIEW_STATE.clean(input),a={...view.a,lon:view.a.lon+360*Math.round((S.lon-view.a.lon)/360)};
+  if(!gridAt(a.lat,a.lon)?.vs)throw new Error('This place is outside the current map. Choose a place inside it.');
   if(playing)$('play').click();if(tourOn)endTour();
   setLoc(a.lat,a.lon,a.name,false);$('bld').value=view.building;buildBuildingOptions();
-  $('exposure').value=String(view.minutes);$('shk').value=view.calibrated?'1':'0';setTol(String(view.tolerance));
-  comparisonLocation=b;$('comparisonTown').value=b?b.name:'';$('clearComparison').disabled=!b;setComparisonPicking(false);
-  const clamped=!keepTime&&setAbsoluteReplayTime(Date.parse(view.at));
-  heatKey='';update();selectTab('spot');
-  if(b)map.fitBounds(L.latLngBounds([[a.lat,a.lon],[b.lat,b.lon]]).pad(.15));else map.setView([a.lat,a.lon],Math.max(map.getZoom(),9));
-  return {clamped};
+  $('exposure').value=String(view.minutes);setTol(String(view.tolerance));
+  const clamped=setAbsoluteReplayTime(Date.parse(view.at));
+  heatKey='';update();selectTab('spot');map.setView([a.lat,a.lon],Math.max(map.getZoom(),9));
+  // Older links still open their primary place; removed comparison and adjusted
+  // model controls must not silently change the current standard estimate.
+  return {clamped,legacy:!!view.b||view.calibrated};
 }
-$('restoreCheck').onclick=()=>{
-  const saved=savedChecks[S.key];if(!saved)return;
-  try{
-    // Legacy checks did not store absolute time or B. Restore their location/settings
-    // while leaving the CURRENT time and live-following state intact.
-    const view=VIEW_STATE.fromCheck({...saved,at:saved.at||new Date(Date.parse(S.t0)+saved.now*864e5).toISOString()});
-    applyViewSetup(view,{keepTime:true});checkFeedback='Saved location and settings restored. The current forecast time was kept.';renderChanges();
-  }catch(e){checkFeedback=e.message;renderChanges()}
-};
 $('shareView').onclick=async()=>{
   try{
     const link=VIEW_STATE.url(location.href,currentView());$('shareURL').value=link;$('shareLinkBox').hidden=false;
-    if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(link);$('shareStatus').textContent='Link copied. It includes both pins, settings and the selected time.';return}catch(e){/* Manual copying remains available. */}}
-    $('shareURL').focus();$('shareURL').select();$('shareStatus').textContent='Copy the selected link. It includes both pins, settings and the selected time.';
+    if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(link);$('shareStatus').textContent='Link copied. It includes this place and the selected time.';return}catch(e){/* Manual copying remains available. */}}
+    $('shareURL').focus();$('shareURL').select();$('shareStatus').textContent='Copy the selected link. It includes this place and the selected time.';
   }catch(e){$('shareStatus').textContent=e.message}
 };
 async function openSharedView(){
@@ -49,7 +38,7 @@ async function openSharedView(){
     }
     if(token!==shareOpenToken)return false;
     const result=applyViewSetup(view);
-    $('sharedNotice').textContent=`Shared view opened at ${fmtDT(cur.nowDate)}. Recalculated using the available data; figures can differ after data revisions.${result.clamped?' The shared time was outside the available timeline and was moved to its nearest end.':''}`;
+    $('sharedNotice').textContent=`Shared place opened at ${fmtDT(cur.nowDate)}. Estimates use the latest available data.${result.clamped?' The selected time was moved inside the available timeline.':''}${result.legacy?' This older link now shows its main place using the standard estimate.':''}`;
     return true;
   }catch(e){if(token===shareOpenToken)$('sharedNotice').textContent=e.message;return false}
 }
@@ -86,7 +75,7 @@ async function probeCloudVoice(){
     const info=await r.json();if(!info||!info.configured)return;
     voiceCloud.ok=true;voiceCloud.languages=Array.isArray(info.languages)?info.languages:[{code:'en',name:'English'}];
     populateLanguages();updateSpokenSummary();
-    $('speechStatus').textContent=voiceCloud.languages.some(l=>l.code==='zh')?'Natural voice by ElevenLabs. Choose English, Chinese or the local language.':'Natural voice by ElevenLabs. Choose a spoken language below.';
+    $('speechStatus').textContent=voiceCloud.languages.some(l=>l.code==='zh')?'Choose English, Chinese or the local language.':'Choose a spoken language below.';
   }catch(e){/* Static hosting or offline: device voices remain. */}
 }
 function stopSummary(message='Reading stopped.'){
@@ -94,7 +83,7 @@ function stopSummary(message='Reading stopped.'){
   if(active&&activeSpeech.audio){try{activeSpeech.audio.pause()}catch(e){}if(activeSpeech.url&&typeof URL!=='undefined')URL.revokeObjectURL?.(activeSpeech.url)}
   else if(active&&speechSupported)speechSynthesis.cancel();
   activeSpeech=null;
-  $('stopSummary').disabled=true;
+  $('stopSummary').disabled=true;$('stopSummary').hidden=true;
   if(active)$('speechStatus').textContent=message;
 }
 function speechVoices(){
@@ -109,32 +98,30 @@ function populateVoices(){
 function updateSpokenSummary(){
   if(!cur.f)return;
   $('readSummary').disabled=!(speechSupported||voiceCloud.ok)||playing||tourOn;
-  const decision=cur.re===0?'The model is below your chosen risk limit for this exposure.':cur.re===Infinity?'The model does not fall below your chosen limit within its four hundred day search.':`The projected start below your limit is ${fmtDT(new Date(cur.nowDate.getTime()+cur.re*864e5))}, assuming the model continues unchanged.`;
   const delayed=S.live&&(S.refreshError||Date.now()-Date.parse(S.fetchedAt)>POLL_MS*2);
-  const freshness=S.live?`${delayed?'Updates are delayed. Using the last successful data. ':''}Catalogue through ${fmtDT(new Date(S.fetchedAt))}. ${(S.warnings||[]).join(' ')}`:`Recorded case study data, downloaded ${fmtDate(new Date(D.fetchedAt))}.`;
-  const summary=SPOKEN.summary({place:loc.name,earthquake:S.label,time:fmtDT(cur.nowDate),duration:exposureLabel(),
-    probability:chance(cur.exposure.probability),low:chance(cur.exposure.range.low),high:chance(cur.exposure.range.high),decision,freshness});
+  const summary=SPOKEN.summary({place:loc.name,duration:exposureLabel(),probability:chance(cur.exposure.probability),
+    recorded:!S.live,delayed,hazards:typeof observedHazards==='function'?observedHazards():[]});
   if(summary!==lastSummary){stopSummary('The forecast changed. Press Read summary to hear the updated figures.');lastSummary=summary;$('spokenText').textContent=summary;populateLanguages()}
 }
-$('readSummary').disabled=!speechSupported;$('stopSummary').disabled=true;
+$('readSummary').disabled=!speechSupported;$('stopSummary').disabled=true;$('stopSummary').hidden=true;
 if(!speechSupported)$('speechStatus').textContent='Speech is unavailable in this browser. The text summary is available below.';
 else{
   populateVoices();speechSynthesis.addEventListener?.('voiceschanged',populateVoices);
-  $('speechStatus').textContent='English summary using your browser or device voices.';
+  $('speechStatus').textContent='Choose Read summary to hear the key steps.';
 }
 function readWithDevice(prefix=''){
   if(!speechSupported){$('speechStatus').textContent=prefix+'Read the text summary below.';return}
   const token=++speechToken,utterance=new SpeechSynthesisUtterance(lastSummary);
   const voice=speechVoices().find(v=>v.voiceURI===$('summaryVoice').value);
   if(voice)utterance.voice=voice;utterance.lang=voice?.lang||'en-GB';utterance.rate=+$('summarySpeed').value||.9;
-  activeSpeech=utterance;$('stopSummary').disabled=false;$('speechStatus').textContent=prefix+'Reading the current summary. Changes to the forecast stop playback.';
-  utterance.onend=()=>{if(token===speechToken){activeSpeech=null;$('stopSummary').disabled=true;$('speechStatus').textContent='Summary finished.'}};
-  utterance.onerror=()=>{if(token===speechToken){activeSpeech=null;$('stopSummary').disabled=true;$('speechStatus').textContent='Could not play speech. Read the text summary below.'}};
+  activeSpeech=utterance;$('stopSummary').disabled=false;$('stopSummary').hidden=false;$('speechStatus').textContent=prefix+'Reading the current summary. Changes to the forecast stop playback.';
+  utterance.onend=()=>{if(token===speechToken){activeSpeech=null;$('stopSummary').disabled=true;$('stopSummary').hidden=true;$('speechStatus').textContent='Summary finished.'}};
+  utterance.onerror=()=>{if(token===speechToken){activeSpeech=null;$('stopSummary').disabled=true;$('stopSummary').hidden=true;$('speechStatus').textContent='Could not play speech. Read the text summary below.'}};
   try{speechSynthesis.speak(utterance)}catch(e){utterance.onerror()}
 }
 async function readWithCloud(){
   const token=++speechToken,lang=$('summaryLang').value||'en',text=lastSummary,key=lang+'\n'+text;
-  $('stopSummary').disabled=false;activeSpeech={pending:true};
+  $('stopSummary').disabled=false;$('stopSummary').hidden=false;activeSpeech={pending:true};
   $('speechStatus').textContent=lang==='en'?'Preparing the natural voice...':'Translating and preparing the natural voice...';
   let clip=voiceCloud.cache.get(key);
   if(!clip){
@@ -144,7 +131,7 @@ async function readWithCloud(){
       if(!r.ok||!data.audio)throw new Error(data.error||'The natural voice is unavailable right now.');
       clip=data;if(voiceCloud.cache.size>20)voiceCloud.cache.clear();voiceCloud.cache.set(key,clip);
     }catch(e){
-      if(token!==speechToken)return;activeSpeech=null;$('stopSummary').disabled=true;
+      if(token!==speechToken)return;activeSpeech=null;$('stopSummary').disabled=true;$('stopSummary').hidden=true;
       readWithDevice(`${e.message} Using your device voice instead. `);return;
     }
   }
@@ -153,7 +140,7 @@ async function readWithCloud(){
   const audio=new Audio(url);audio.playbackRate=(+$('summarySpeed').value||.9)/.9;
   activeSpeech={audio,url};
   if(clip.translated){$('spokenText').textContent=`${clip.transcript}\n\nEnglish: ${text}`;if($('spokenText').style)$('spokenText').style.whiteSpace='pre-line'}
-  const done=message=>{if(token!==speechToken)return;activeSpeech=null;$('stopSummary').disabled=true;URL.revokeObjectURL(url);$('speechStatus').textContent=message};
+  const done=message=>{if(token!==speechToken)return;activeSpeech=null;$('stopSummary').disabled=true;$('stopSummary').hidden=true;URL.revokeObjectURL(url);$('speechStatus').textContent=message};
   audio.onended=()=>done('Summary finished.');
   audio.onerror=()=>done('Could not play the audio. Read the text summary below.');
   $('speechStatus').textContent=`${clip.note?clip.note+' ':''}Reading in ${clip.language||'English'} with an ElevenLabs voice. Changes to the forecast stop playback.`;

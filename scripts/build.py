@@ -58,7 +58,7 @@ out = (template
        .replace('__SPOKEN__', spoken)
        .replace('__FORECAST_CACHE__', forecast_cache)
        .replace('__HEATMAP__', heatmap)
-       .replace('__PLANNER__', read('src', 'planner.js'))
+       .replace('__PLACES__', read('src', 'places.js'))
        .replace('__ASSISTANT__', read('src', 'assistant.js'))
        .replace('__CHECKINS__', read('src', 'checkins.js'))
        .replace('__ACCESS__', read('src', 'access.js'))

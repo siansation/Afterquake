@@ -37,7 +37,7 @@ function renderTiger(){
   const total=d.buckets.reduce((n,b)=>n+b.n4,0);
   if(!total&&!S.live){card.hidden=true;return}
   card.hidden=false;
-  if(!visibleCharts.has('tigerChart'))return;
+  if(!card.open||!visibleCharts.has('tigerChart'))return;
   const stamp=[S.key,cur.now,d.buckets.length,TIGER.fetchedAt,$('tigerChart').clientWidth].join('|');if(stamp===TIGER.drawnFor)return;TIGER.drawnFor=stamp;
   // Re-bin hourly buckets so the chart keeps at most about 72 bars.
   const w=tigerWindow(),t0=w.t0,spanH=Math.max(1,(Math.min(Date.parse(w.until),S.live?Date.now():Infinity)-t0)/36e5);

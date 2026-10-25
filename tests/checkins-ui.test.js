@@ -55,6 +55,8 @@ test('two browsers join the same group, share statuses and remove only their own
   b.node('ciGroupInput').value=group;await b.node('ciJoin').onclick();
   // The click handler starts a read without returning its promise; complete one explicitly.
   await b.run('refreshCheckins()');
+  assert.equal(b.node('ciSetup').hidden,true);assert.equal(b.node('ciPosting').hidden,false);
+  assert.ok(b.node('ciLocation').textContent.includes('Check your pin'));
   assert.notEqual(a.run('ci.owner'),b.run('ci.owner'));assert.equal(b.run('ci.group'),group);
   a.node('ciNote').value='<img src=x onerror=alert(1)>';await a.run('checkIn("safe")');await b.run('checkIn("help")');await a.run('refreshCheckins()');
   assert.equal(a.run('ci.items.length'),2);assert.equal(a.run('ci.items.filter(d=>d.mine).length'),1);

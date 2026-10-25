@@ -27,8 +27,10 @@ async function openLive(it){
 function renderDataStatus(){
   if(!S)return;
   $('liveActions').hidden=!S.live;
-  if(!S.live){$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
+  if(!S.live){$('dataNotice').textContent='Recorded example. This is not a live forecast.';$('dataNotice').classList.toggle('data-delayed',false);$('dataStatus').classList.toggle('data-delayed',false);$('dataStatus').textContent=`Recorded data, downloaded ${fmtDate(new Date(D.fetchedAt))}; ${(G.dlat*111).toFixed(1)} km grid.`;return}
   const age=Date.now()-Date.parse(S.fetchedAt),delayed=!!S.refreshError||age>POLL_MS*2;
+  $('dataNotice').textContent=delayed?`Updates delayed. Last data from ${fmtClock(new Date(S.fetchedAt))}. Follow local officials for current instructions.`:`Live estimate. Updated ${fmtClock(new Date(S.fetchedAt))}.`;
+  $('dataNotice').classList.toggle('data-delayed',delayed);
   const text=[`Catalogue through ${fmtDT(new Date(S.fetchedAt))}.`,
     `Shaking products checked ${fmtDT(new Date(S.checkedAt||S.fetchedAt))}; ShakeMap ${G.version||'version unavailable'}${G.status?', '+G.status:''}.`,
     delayed?'Updates delayed. Showing the last successful data.':'Checks every 2 minutes.',
@@ -60,15 +62,13 @@ async function refreshLive(){
       const a=wrap(loc);
       if(gridAt(a.lat,a.lon)?.vs)setLoc(a.lat,a.lon,a.name,false);
       else{defaultSpot();seq.warnings.push('The previous A pin is outside the revised grid; a new initial spot is shown.')}
-      if(comparisonLocation){const b=wrap(comparisonLocation);if(gridAt(b.lat,b.lon)?.vs)comparisonLocation=b;
-        else{resetComparison();$('comparisonStatus').textContent='The previous B pin is outside the revised grid. Choose B again.'}}
       buildBuildingOptions();
     }
     timelineBounds();
     if(following){replayTimeOverride=null;$('now').value=1000}else setAbsoluteReplayTime(absoluteTime);
     // Invalidate on every successful refresh, including magnitude/location revisions
     // that leave the event count unchanged. The old count-only check missed these.
-    invalidateForecast();renderHeader();renderLedger();renderPager();renderEvents();update();return seq;
+    invalidateForecast();renderHeader();renderLedger();renderPager();update();return seq;
   }catch(e){
     if(S===seq){seq.refreshError=e.message||'Could not reach USGS.';renderDataStatus();renderPager();updateSpokenSummary()}
     return null;

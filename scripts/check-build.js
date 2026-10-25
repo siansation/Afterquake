@@ -27,16 +27,17 @@ assert.ok(!/<script[^>]+src=/.test(html), 'Standalone app still needs a remote s
 // Design guard (docs/DESIGN.md): the app's own styles, markup and scripts must not bring back stock AI-template patterns.
 // Scans whole source files (every <style> block, inline styles, JS-built markup, canvas drawing), not just one block.
 // Leaflet's CSS is only a placeholder in the template, so it is not scanned.
-for (const file of ['src/template.html', 'src/globe.js', 'src/planner.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js', 'src/checkins.js', 'src/timeseries.js', 'src/livemoment.js']) {
+for (const file of ['src/template.html', 'src/globe.js', 'src/places.js', 'src/assistant.js', 'src/access.js', 'src/live-controls.js', 'src/checkins.js', 'src/timeseries.js', 'src/livemoment.js']) {
   const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   for (const [re, what] of [[/text-transform\s*:\s*uppercase/i, 'uppercase eyebrow labels'], [/letter-spacing/i, 'tracked-out labels'],
     [/monospace|--mono/i, 'monospace for non-code text'], [/gradient\(|create(Linear|Radial)Gradient/i, 'decorative gradients'],
     [/backdrop-filter/i, 'glass panels'], [/@keyframes|animation\s*:/i, 'decorative animation'],
     [/ · |▶|◀/, '"A · B" meta strings or glyph buttons']]) assert.ok(!re.test(src), `Design guard: no ${what} in ${file} (see docs/DESIGN.md)`);
 }
-for (const id of ['exposure', 'comparisonTown', 'pickComparison', 'comparisonResult', 'saveCheck', 'restoreCheck', 'changesResult', 'askForm', 'askInput', 'askLog', 'shareView', 'shareURL', 'readSummary', 'stopSummary', 'spokenText', 'refreshLive', 'followLive', 'ciCreate', 'ciJoin', 'ciCopy', 'ciSafe', 'ciHelp', 'ciDel', 'ciActivity']) {
+for (const id of ['exposure', 'verdict', 'dataNotice', 'forecastDetails', 'askForm', 'askInput', 'askLog', 'shareView', 'shareURL', 'readSummary', 'stopSummary', 'spokenText', 'refreshLive', 'followLive', 'ciCreate', 'ciJoin', 'ciCopy', 'ciSafe', 'ciHelp', 'ciDel', 'ciActivity']) {
   assert.ok(ids.includes(id), `Missing planning control ${id}`);
 }
+for (const id of ['comparisonCard', 'savedCheckCard', 'simsOptions', 'shk', 'pane-events', 'pane-accuracy']) assert.ok(!ids.includes(id), `Removed tool returned: ${id}`);
 // Execute the bundled numerical modules in a browser-like global scope with no
 // CommonJS require/module. Syntax checks alone cannot catch a missed build-time
 // replacement of the fitted soil coefficient or a stale generated model module.

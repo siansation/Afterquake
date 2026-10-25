@@ -1,6 +1,6 @@
 // "Ask about this forecast": a Gemini assistant (via /api/chat) that answers by calling the tools below.
 // The tools run here, on the page's own model and data, so every figure in an answer comes from the forecast.
-// This file is inlined into the main UI script, like planner.js, so it shares the map and forecast state.
+// This file is inlined into the main UI script so it shares the map and forecast state.
 // Tool names and descriptions are declared once, in api/chat.js.
 const ASK = { history: [], key: null, busy: false };
 const ASK_BUILDINGS = { local: 'local', modern: '9', concrete: '8', brick: '7', damaged: '6' };
@@ -36,6 +36,7 @@ function forecastFor(lat, lon, name, minutes, bld) {
 const stayMinutes = a => Math.round(a.stay_minutes || cur.exposure.minutes);
 
 const ASK_TOOLS = {
+  quick_summary: () => ({summary:lastSummary}),
   current_forecast: () => forecastFor(loc.lat, loc.lon, loc.name, cur.exposure.minutes, $('bld').value),
   forecast_at: a => {
     let lat = a.lat, lon = a.lon, name;
@@ -64,10 +65,10 @@ const ASK_TOOLS = {
   },
   people_at_risk: () => {
     const near = TOWNS.towns.map(t => ({ t, d: Math.hypot((t[1] - loc.lat) * 110.57, (t[2] - loc.lon) * 111.32 * G.c) })).filter(o => o.d <= 15).sort((a, b) => a.d - b.d);
-    const scored = TOWNS.towns.filter(t => t.p7 != null), pager = EX[S.key] && EX[S.key].pager;
+    const scored = townRisks(), pager = EX[S.key] && EX[S.key].pager;
     return { near_pin: { towns_within_15_km: near.length, people: Math.round(near.reduce((a, o) => a + o.t[3], 0)), closest: near.slice(0, 5).map(o => ({ town: o.t[0], people: o.t[3], km: +o.d.toFixed(1) })) },
-      towns_with_highest_7_day_chance: [...scored].sort((a, b) => b.p7 - a.p7).slice(0, 6).map(t => ({ town: t[0], people: t[3], chance_7_days: pct(t.p7) })),
-      expected_people_with_damaging_shaking_7_days: Math.round(scored.reduce((a, t) => a + t[3] * t.p7, 0)),
+      towns_with_highest_7_day_chance: [...scored].sort((a, b) => b.p7 - a.p7).slice(0, 6).map(item => ({ town: item.town[0], people: item.town[3], chance_7_days: pct(item.p7) })),
+      expected_people_with_damaging_shaking_7_days: Math.round(scored.reduce((a, item) => a + item.town[3] * item.p7, 0)),
       mainshock_exposure_pager: pager && pager.exposure ? pager.exposure.filter(r => r[2] > 0 && r[0] >= 3.5).map(r => ({ intensity: R((r[0] + r[1]) / 2), people: r[2] })) : 'no PAGER estimate',
       note: 'Town populations are point counts from GeoNames; rural homes are not included.' };
   },
@@ -85,7 +86,7 @@ const ASK_TOOLS = {
 
 function describeCall(name, args, out) {
   const err = out && out.error ? ` (${out.error})` : '';
-  const what = { current_forecast: `forecast at ${out && out.place || loc.name}${out && out.stay ? `, ${out.stay}` : ''}`,
+  const what = { quick_summary: 'the short summary and next steps', current_forecast: `forecast at ${out && out.place || loc.name}${out && out.stay ? `, ${out.stay}` : ''}`,
     forecast_at: `forecast at ${out && out.place || args.place || 'another spot'}${out && out.stay ? `, ${out.stay}` : ''}${args.building ? `, ${args.building} building` : ''}`,
     risk_over_time: 'how the chance changes with a later start', danger_factors: 'what drives the risk at your pin',
     aftershocks_so_far: `aftershocks of M${Number.isFinite(args.min_magnitude) ? args.min_magnitude : 5}+ so far`, people_at_risk: 'people nearby and at risk',
@@ -95,7 +96,7 @@ function describeCall(name, args, out) {
 function askContext() {
   return [`Earthquake: M${S.M.toFixed(1)} ${S.label}, ${fmtDate(new Date(S.t0))} (${S.live ? 'live USGS data' : 'recorded case study'})`,
     `Replay time: ${fmtDT(cur.nowDate)}, ${dur(cur.now)} after the mainshock`,
-    `Pin (spot A): ${loc.name}, ${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}`,
+    `Selected place: ${loc.name}, ${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}`,
     `Settings: ${$('bld').selectedOptions[0].text}; stay ${exposureLabel()}; risk limit ${limitLabel()}`].join('\n');
 }
 // Keep the conversation short, and always starting with a question (not a tool result).
@@ -111,7 +112,7 @@ function addAskEntry(q) {
   const a = el.querySelector('.ask-a');
   return {
     answer(text, checked) { a.className = 'ask-a'; a.innerHTML = askHtml(text);
-      if (checked.length) el.insertAdjacentHTML('beforeend', `<p class="ask-checked">Checked: ${checked.map(esc).join('; ')}</p>`); $('askLog').scrollTop = $('askLog').scrollHeight },
+      if (checked.length) el.insertAdjacentHTML('beforeend', `<details class="ask-checked"><summary>What this answer used</summary><p>${checked.map(esc).join('; ')}</p></details>`); $('askLog').scrollTop = $('askLog').scrollHeight },
     fail(msg) { a.className = 'ask-a ask-err'; a.textContent = msg },
   };
 }

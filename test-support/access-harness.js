@@ -1,4 +1,4 @@
-// Unit checks for browser controller behaviour with DOM/map/storage test doubles.
+// Browser sharing and speech controls, with DOM/map/storage test doubles.
 // These verify interactions and persistence, not visual layout or real Leaflet input.
 const test=require('node:test');
 const assert=require('node:assert/strict');
@@ -8,7 +8,7 @@ const vm=require('node:vm');
 const MODEL=require('../src/model.js');
 const SHAKE=require('../src/shake.js');
 const SCENARIO=require('../src/scenario.js');
-const code=fs.readFileSync(path.join(__dirname,'../src/planner.js'),'utf8');
+const code=fs.readFileSync(path.join(__dirname,'../src/places.js'),'utf8');
 const storageKey='afterquake.saved-checks.v1';
 
 function harness({stored=null,blocked=false,access=false,speech=true,clipboard=null,href="https://afterquake.test/",hash="",globals={}}={}){
@@ -24,7 +24,7 @@ function harness({stored=null,blocked=false,access=false,speech=true,clipboard=n
   const seq={key:'example',t0:'2023-02-06T00:00:00Z',events:[[0,7.5,0,0],[.1,5.2,.1,.1],[1.5,5.8,.2,.2]]};
   const location={lat:0,lon:0,name:'Town A'},q=SHAKE.q([0,0],0,0,760,7,false);
   const f=MODEL.fit(seq.events,1),cp=SHAKE.compact(f);
-  const ctx=vm.createContext({SCENARIO,SHAKE,MODEL,L,$:node,loc:location,S:seq,SEQ:[seq],
+  const ctx=vm.createContext({SCENARIO,SHAKE,MODEL,L,document:{querySelectorAll:()=>[]},SPOKEN:require('../src/spoken.js'),$:node,loc:location,S:seq,SEQ:[seq],
     G:{coast:[],version:1,processed:'2023-02-07'},EX:{},D:{fetchedAt:'2026-10-24T17:32:53.517Z'},
     cur:{f,cp,now:1,sp:{qv:q,thr:7,gv:{vs:760,mmi:6,liq:0,ls:null}},src:[0,0],calib:false,tol:.01,
       exposure:SCENARIO.exposure(SHAKE,f,cp,q,1440),p24:SHAKE.probQ(f,cp,q,0,1)},
@@ -49,7 +49,7 @@ function harness({stored=null,blocked=false,access=false,speech=true,clipboard=n
     if(ctx.replayTimeOverride!=null)ctx.cur.now=(ctx.replayTimeOverride-Date.parse(ctx.S.t0))/864e5;
     ctx.cur.nowDate=new Date(Date.parse(ctx.S.t0)+ctx.cur.now*864e5);
     ctx.cur.exposure=SCENARIO.exposure(SHAKE,ctx.cur.f,ctx.cur.cp,ctx.cur.sp.qv,+node('exposure').value);
-    ctx.cur.calib=node('shk').value==='1';ctx.cur.tol=+node('tol').value||ctx.cur.tol;
+    ctx.cur.calib=false;ctx.cur.tol=+node('tol').value||ctx.cur.tol;
     if(access)vm.runInContext('updateSpokenSummary()',ctx);
   };
   if(speech){ctx.speechSynthesis=synth;ctx.SpeechSynthesisUtterance=class{constructor(text){this.text=text}}}

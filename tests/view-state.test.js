@@ -25,16 +25,20 @@ test('untrusted links reject unsupported settings, coordinates, IDs and timestam
   assert.throws(()=>VIEW.url('file:///local/index.html',view()),/hosted app/);
   assert.throws(()=>VIEW.url('javascript:alert(1)',view()));
 });
-test('saved setups can produce views, including the optional second pin',()=>{
-  const input=view({event:{kind:'live',id:'usTest'}});
-  const saved={sequence:'live:usTest',location:input.a,comparison:input.b,minutes:input.minutes,building:input.building,
-    tolerance:input.tolerance,calibrated:input.calibrated,at:input.at,dataVersion:input.dataAt};
-  assert.deepEqual(VIEW.fromCheck(saved),input);
+test('spoken summaries prioritise one estimate and actions in at most 60 words',()=>{
+  const input={place:'Town A',duration:'10 minutes',probability:'0.005%',recorded:true,
+    low:'<0.0001%',high:'1.2%',decision:'Below the limit from next week',time:'12:00 UTC'};
+  const text=SPOKEN.summary(input);
+  for(const phrase of ['Recorded example','0.005 percent','10 minutes','drop, cover and hold on','If outside','Wait for a building inspection'])assert.ok(text.includes(phrase));
+  assert.ok(text.split(/\s+/).length<=60);
+  for(const obsolete of ['0.0001','1.2','12:00','next week','posterior','threshold'])assert.ok(!text.includes(obsolete));
+  assert.ok(!/safe to enter|go back inside/i.test(text));
 });
-test('spoken summary uses supplied figures verbatim, warns early and includes no building clearance',()=>{
-  const s=SPOKEN.summary({place:'Town A',earthquake:'Test earthquake',time:'12:00 UTC',duration:'10 minutes',probability:'0.005%',low:'<0.0001%',high:'1.2%',
-    decision:'The model is above the chosen limit.',freshness:'Updates are delayed. Using last successful data.'});
-  for(const text of ['0.005 percent','less than 0.0001 percent','1.2 percent','10 minutes','12:00 UTC','Building entry needs an inspection'])assert.ok(s.includes(text));
-  assert.ok(s.indexOf('Updates are delayed')<s.indexOf('estimated chance'));
-  assert.ok(!/safe to enter|go back inside/i.test(s));
+
+test('delayed data comes before the estimate and observed hazards change the action',()=>{
+  const text=SPOKEN.summary({place:'Town A',duration:'24 hours',probability:'<0.0001%',delayed:true,hazards:['slope']});
+  assert.ok(text.indexOf('Updates are delayed')<text.indexOf('estimated chance'));
+  assert.ok(text.includes('less than 0.0001 percent'));assert.ok(text.includes('steep slopes'));
+  assert.ok(text.split(/\s+/).length<=70);
+  assert.ok(SPOKEN.actions(['trees']).some(action=>action.includes('trees')));
 });

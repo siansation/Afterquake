@@ -65,8 +65,10 @@ async function initCheckins(){
   }catch(e){ci.error=e.name==='AbortError'?'Could not reach the check-in service. Try connecting again.':e.message}
   finally{ci.connecting=false;renderCheckins()}
 }
+function renderCheckinLocation(){if(loc)$('ciLocation').textContent=`Posting at ${loc.name}. Check your pin on the map before sharing.`}
 function renderCheckins(){
   ciLayer.clearLayers();const joined=ci.ready&&!!ci.group;
+  $('ciSetup').hidden=joined;$('ciPosting').hidden=!joined;$('ciGroupOptions').hidden=!ci.group;renderCheckinLocation();
   $('ciCreate').disabled=!ci.ready||ci.busy;$('ciJoin').disabled=!ci.ready||ci.busy;
   $('ciCopy').disabled=!joined||ci.busy;$('ciLeave').disabled=!ci.group||ci.busy;
   $('ciReconnect').hidden=ci.ready;$('ciReconnect').disabled=ci.connecting;$('ciRefresh').disabled=!joined||ci.busy;
@@ -75,7 +77,7 @@ function renderCheckins(){
   $('ciDel').disabled=!joined||ci.busy||!items.some(d=>d.mine);
   const storage=ci.sessionOnly?' Browser storage is blocked, so you can edit your entry only during this visit.':'';
   const checked=ci.payload?` Last checked ${fmtDT(new Date(ci.payload.checkedAt))}.`:'';
-  $('ciStatus').textContent=(ci.error||ci.message||(joined?'Group joined. Check-ins show current posts, even when the forecast timeline is rewound.':ci.ready?'Create a group or join one using an invite link.':'Connecting to shared check-ins...'))+checked+storage;
+  $('ciStatus').textContent=(ci.error||ci.message||(joined?'Showing current check-ins for your group.':ci.ready?'Create or join a group to share your status.':'Connecting to shared check-ins...'))+checked+storage;
   $('ciStatus').classList.toggle('data-delayed',!!ci.error);
   $('ciSummary').textContent=joined&&ci.payload?`${ci.payload.counts.safe} marked safe; ${ci.payload.counts.help} need help.${ci.payload.limited?' Showing up to 200 recent posts, including yours.':''}`:'';
   if(!joined){$('ciList').innerHTML='';$('ciActivity').innerHTML='';return}

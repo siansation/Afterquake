@@ -14,11 +14,17 @@ Rules:
 - Never say or imply that a building is safe to enter. The forecast only covers the chance of more shaking. Whether a building can be re-entered is decided by a structural inspection and local authorities. Say this briefly whenever someone asks about going back inside.
 - If someone describes an emergency, injury or being trapped, tell them to contact local emergency services first.
 - Make clear these are model estimates with uncertainty, without repeating long caveats.
-- Be brief and plain: two to five sentences, UK spelling, no headings. Quote the figures the tools give, as given.
+- For a summary or "what should I do?", call quick_summary and use its brief text. Do not append model settings, probability ranges, background or a second disclaimer. Translate it faithfully if another language was requested.
+- For other questions, lead with the useful answer or next step. Use two or three short sentences, normally no more than 60 words. Give more detail only if explicitly requested. Use everyday words, UK spelling, no headings or long lists.
+- Use at most one relevant probability with its timeframe unless the user asks to compare figures. Do not recite every tool field or use terms such as posterior, MMI, Vs30 or calibration unless asked to explain them.
+- Keep any delayed-data warning or recorded-example label. Never present a historical replay as a current warning.
+- Keep safety conditions clear: indoor and outdoor actions differ. Do not suggest running outside during shaking. Do not invent evacuation routes, shelters, local warnings or emergency phone numbers.
+- Quote the figures the tools give, as given. A projected lower chance is never permission to re-enter.
 - When a tool reports an error (for example a place outside the mapped area), explain it simply.`;
 
 // Shared with src/assistant.js, which implements each one in the browser.
 const TOOLS = [
+  { name: 'quick_summary', description: 'The short, action-focused summary for this spot: one estimate, its timeframe, important data warnings and practical safety steps. Use for summary, readout and what-should-I-do requests. Return its text without expanding it.', parameters: { type: 'object', properties: {} } },
   { name: 'current_forecast', description: 'The forecast at the pin the user has placed, with their current settings (building, length of stay, risk limit, replay time).', parameters: { type: 'object', properties: {} } },
   { name: 'forecast_at', description: 'Forecast at another place or with different settings, without changing the page. Give a town name or coordinates inside the mapped area; leave both out to use the user\'s pin with the other settings changed.',
     parameters: { type: 'object', properties: {
@@ -75,7 +81,7 @@ function request(contents, context) {
     contents,
     tools: [{ functionDeclarations: TOOLS }],
     toolConfig: { functionCallingConfig: { mode: fresh ? 'ANY' : 'AUTO' } },
-    generationConfig: { temperature: 0.2, maxOutputTokens: 700, thinkingConfig: { thinkingLevel: THINKING } },
+    generationConfig: { temperature: 0.2, maxOutputTokens: 450, thinkingConfig: { thinkingLevel: THINKING } },
   };
 }
 

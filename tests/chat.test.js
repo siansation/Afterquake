@@ -35,6 +35,10 @@ test('the request carries the rules, the page context and the tools',()=>{
   assert.match(r.systemInstruction.parts[0].text,/Never say or imply that a building is safe to enter/);
   assert.match(r.systemInstruction.parts[0].text,/M7\.8 test/);
   assert.equal(r.tools[0].functionDeclarations.length,chat.TOOLS.length);
+  assert.ok(r.tools[0].functionDeclarations.some(tool=>tool.name==='quick_summary'));
+  assert.match(r.systemInstruction.parts[0].text,/normally no more than 60 words/);
+  assert.match(r.systemInstruction.parts[0].text,/Do not append model settings/);
+  assert.match(r.systemInstruction.parts[0].text,/historical replay as a current warning/);
 });
 
 test('a new question must start with a tool call; after tool results Gemini may answer',()=>{

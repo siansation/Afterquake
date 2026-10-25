@@ -114,7 +114,7 @@ function renderLiveCheck(){
   if(!c){box.hidden=true;return}
   const verdict=c.observed<c.lo?'Fewer than the model expected.':c.observed>c.hi?'More than the model expected: this sequence is more active than the model\'s starting assumptions.':'Within the range the model expected.';
   box.hidden=false;
-  box.innerHTML=`<h2>Live forecast check</h2><p class="p">At ${esc(fmtDT(c.since))}, using only quakes recorded up to then, the model expected about <b>${c.mean.toFixed(1)}</b> aftershocks of M5 or more in the next 24 hours (90% range ${c.lo} to ${c.hi}). USGS has recorded <b>${c.observed}</b> since.</p><p class="muted">${verdict} Recomputed every time USGS data updates.</p>`;
+  box.innerHTML=`<summary>Check against recent aftershocks</summary><p class="p">At ${esc(fmtDT(c.since))}, using only quakes recorded up to then, the model expected about <b>${c.mean.toFixed(1)}</b> aftershocks of M5 or more in the next 24 hours (90% range ${c.lo} to ${c.hi}). USGS has recorded <b>${c.observed}</b> since.</p><p class="muted">${verdict} Recomputed every time USGS data updates.</p>`;
 }
 setInterval(()=>{if(!document.hidden)renderLiveCheck()},15000);
 

@@ -1,8 +1,8 @@
-# Aftershock Re-entry
+# Afterquake
 
 **After a big earthquake, how does the estimated risk of further shaking change?**
 
-Aftershock Re-entry estimates the chance of shaking above a chosen intensity at a location over an exposure you choose, plus the next 24 hours, 7 days and 30 days. It projects when the chance during your chosen exposure falls below a limit. It uses bundled USGS data for 13 earthquakes and a simplified Reasenberg-Jones model. It is a retrospective prototype; building inspection and local authorities determine whether entry is safe.
+Afterquake helps people understand further shaking at their chosen place, hear a short summary and check in with a group. The main screen shows one estimate and practical steps; charts and model details are optional. It uses public USGS data and a simplified aftershock model. It cannot inspect a building or give permission to re-enter.
 
 Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
@@ -14,7 +14,7 @@ Built at OxHack 2026 (themes: time; data for prediction and decision making).
 
 Open `index.html` in a browser. It's one self-contained file (about 10 MB, with the data, map libraries and world outlines inside). The 13 case studies work offline; the live world view needs internet to reach USGS. The fonts also need internet, and fall back to system fonts without it.
 
-- **Story** (top right) runs a 7-step guided demo of the Türkiye 2023 sequence. Use **→ / ←** or a presentation clicker to move between steps, and **Esc** to exit.
+- **Story** (top right) runs a 5-step guided demo of the Türkiye 2023 sequence. Use **→ / ←** or a presentation clicker to move between steps, and **Esc** to exit.
 - The page opens on the **live globe**: drag to spin, scroll to zoom, click a quake, then **Open the forecast**. **World map** in the header comes back to it.
 - **Help** reopens the welcome screen. **Space** plays the timeline. **Fullscreen** is for presenting.
 
@@ -31,12 +31,10 @@ It also works on GitHub Pages: in the repo's **Settings → Pages**, choose **De
 - **Join on your phone.** Shows a QR code with a short link (`#j=<earthquake>.<group>`). Scanning it opens the same earthquake on a phone, joins the check-in group and lands on the check-in buttons; check-ins on the presenting screen refresh every 3 seconds while presenting. Without the check-in service, the code simply opens the same forecast.
 - **Map-first console.** Click anywhere, or search a town, to set your spot. Play the timeline to watch the sequence unfold. Aftershocks are coloured by age, as on USGS maps.
 - **Exposure duration.** Choose 5, 10 or 30 minutes, 1 hour, 8 hours or 24 hours. The probability, parameter range, projected start and curve use that entire interval. The 24-hour, 7-day and 30-day context figures remain available.
-- **Compare two places.** Keep your spot A and choose B on the map or by town search. Compare shaking over the selected duration, ground softness, mainshock intensity, modelled ground-failure extent and coast proximity. Both places use the same intensity threshold; neither is a verified shelter.
-- **Since your saved check.** Save a check, then move the replay timeline, change assumptions or return after a data update. The explanation distinguishes elapsed time, newly visible events, revised past entries, location/settings changes and data/model updates. **Restore saved setup** restores A, B and settings while keeping the current forecast time and the saved baseline. Checks remain in this browser, with a session-only fallback if storage is blocked. This is not a live news or alert feed.
-- **Share a comparison.** **Share view** copies a link containing the earthquake, both pins, settings and exact selected UTC time. Opening it recalculates the figures using the available data, so later revisions can change the result. Links require an HTTP(S)-hosted copy; clipboard restrictions fall back to manual copying. The link includes the coordinates and place names you choose to share.
-- **Read the figures aloud.** **Read summary** uses English voices supplied by the browser or device, with stop and speed controls and a text transcript. It reads the calculated figures directly, includes stale-data warnings and stops if the forecast changes. No speech API key is needed; available voices depend on the device.
-- **Forecast at your spot.** Modelled intensity exceedance from M5+ aftershocks, a projected threshold-crossing time, and a curve of how the estimate changes. A 90% parameter range describes fitted rate uncertainty, excluding other model errors.
-- **200 simulated futures.** Monte Carlo runs from the same posterior and marked Poisson process as the displayed formula. This model does not simulate secondary triggering (ETAS).
+- **Read summary.** A short readout in English, Chinese or the earthquake's local language, with stop and speed controls and a transcript. It uses one calculated estimate, labels recorded or delayed data, and gives practical next steps. The hosted voice uses ElevenLabs and Gemini; device English speech remains the fallback.
+- **Optional forecast detail.** Explore the next 24 hours, 7 days and 30 days, the uncertainty range, and how estimates change with time. A projected lower chance is not a re-entry time.
+- **Quick summary.** One estimate with its timeframe, followed by three practical safety steps. Recorded examples and delayed data are labelled. Model ranges, settings and projected entry times are left out of the readout.
+- **Share this place.** Share the selected place, timeframe and replay time. Older links open their main place using the standard estimate.
 - **Danger factors.** Distance to aftershock activity, ground softness (Vs30), how hard your spot already shook, liquefaction and landslide models, a country fatality proxy (USGS PAGER; not building fragility), and distance to the coast (tsunami).
 - **People.** Population near you, people at risk this week, and the official count of people who felt each shaking level.
 - **Ask about this forecast.** A chat bubble in the bottom-left corner of the forecast map, answered by Google Gemini. Gemini calls the page's own forecast as tools (forecast at a place or for a different stay, how the risk changes over time, danger factors, aftershocks so far, people at risk, method and limits), and each answer lists what it checked. Its instructions prohibit clearing a building for entry. It needs the configured assistant API (see [the assistant](#the-assistant)).
@@ -68,9 +66,9 @@ On the bundled catalogue, 93 complete seven-day forecast windows can be scored a
 
 Lower Brier is better; negative skill means worse than the reference. For each forecast, the reference frequency excludes its entire earthquake sequence. This is a retrospective comparison, not a chronological holdout; overlapping windows are correlated. The old pooled baseline gives skills 0.51 and -0.09 but uses the evaluated outcomes to estimate the reference frequency.
 
-The 26 aftershock ShakeMap comparisons are in-sample diagnostics, not independent calibration. The optional -0.90 intensity offset is an event-average gap; it is not evidence that the unadjusted equation is always conservative. The soil term was fitted to mainshock grids using a different distance formulation and then transferred to the aftershock equation.
+The 26 aftershock ShakeMap comparisons are in-sample diagnostics, not independent calibration. The historical -0.90 intensity offset (no longer offered in the interface) is an event-average gap; it is not evidence that the unadjusted equation is always conservative. The soil term was fitted to mainshock grids using a different distance formulation and then transferred to the aftershock equation.
 
-See [the model audit](docs/model-audit.md) for numerical fixes, evidence, sources and remaining scientific limits. The CLI and the Accuracy tab share the validation implementation.
+See [the model audit](docs/model-audit.md) for numerical fixes, evidence, sources and remaining scientific limits. The CLI and the optional checks under About share the validation implementation.
 
 ```bash
 npm test
@@ -91,9 +89,9 @@ src/shake.js               shaking, uncertainty ranges and consistent Monte Carl
 src/forecast-cache.js      current-fit reuse with explicit live-data invalidation
 src/heatmap.js             cancellable map shading in short batches
 src/validation.js          regional occurrence checks shared by the UI and CLI
-src/scenario.js            duration estimates and saved-check change explanations
-src/planner.js             browser controls for comparison pins and local saved checks
-src/view-state.js          validated share-link inputs and saved-setup conversion
+src/scenario.js            duration estimates, probability labels and geographic distance
+src/places.js              shared place helpers and the short action card
+src/view-state.js          validated share-link inputs, including older links
 src/spoken.js              deterministic captions from the current calculated figures
 src/access.js              sharing, restore and device speech controls
 src/live-controls.js       version-aware live refresh and visible update status
@@ -107,13 +105,12 @@ db/checkins.sql            current entries and a TimescaleDB status-history hype
 src/globe.js               world view: canvas globe drawn with d3-geo
 src/live.js                live USGS feed and per-quake loader for the browser (mirrors fetch_usgs.mjs)
 tests/forecast.test.js      numerical, simulation and data-integrity regression tests
-tests/scenario.test.js      exposure windows, threshold crossings and change attribution
-tests/planner.test.js       controller workflows with DOM/map/storage test doubles
+tests/scenario.test.js      exposure windows, threshold crossings and distances
 tests/live.test.js          live loader: grid parsing, 180° handling, coast clipping, PAGER
 tests/live-refresh.test.js  revised products, retries, timeouts and invalid responses
 tests/live-controls.test.js refresh caching, time/pin preservation and navigation races
 tests/view-state.test.js    share-link validation and deterministic summary wording
-tests/access.test.js        sharing, restore and speech controller workflows
+tests/access.test.js        sharing and speech controller workflows
 tests/chat.test.js          assistant endpoint: input validation, tool list, error handling, rate limit
 data/                      everything the app embeds
   sequences.json           catalogue + ShakeMap grids (MMI, Vs30) for 13 quakes
@@ -176,7 +173,7 @@ npm run build      # writes index.html
 
 To rebuild only the page after editing `src/`, run `npm install` and then `npm run build`.
 
-The globe opens without fitting a case study or running the accuracy backtest. Charts are drawn as they come into view, and comparison, saved checks and simulated months sit in expandable sections. Map shading runs in short, cancellable batches; the displayed figures still use the complete posterior. Display changes reuse the current fit, while live-data revisions clear it and the map caches. Background tabs pause polling and playback.
+The main navigation is Your area, Check in and About. Spoken summaries use one calculated estimate and three short safety steps; uncertainty ranges and model settings stay in optional detail. Comparison pins, saved-check history, simulation galleries and the alternative shaking-model switch have been removed. Older links still open their primary place using the standard estimate. The globe opens without fitting a case study or running the accuracy backtest. Charts are drawn as they come into view, and risk trends, population context and model checks sit in optional details. Map shading runs in short, cancellable batches; the displayed figures still use the complete posterior. Display changes reuse the current fit, while live-data revisions clear it and the map caches. Background tabs pause polling and playback.
 
 `scripts/fetch_usgs.mjs` is a Node port of the browser code that produced the shipped data. Every other script was checked to reproduce the files in `data/` exactly. To add an earthquake, append its USGS event ID to `MAINS` in `fetch_usgs.mjs` and its country to `SEQC` in `prep_population.js`.
 

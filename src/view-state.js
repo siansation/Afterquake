@@ -28,13 +28,6 @@ const VIEW_STATE=(()=>{
     u.username='';u.password='';u.search='';
     u.hash=fragment(s);return u.href;
   }
-  function fromCheck(s){
-    const live=s.sequence.startsWith('live:');
-    return clean({v:1,event:{kind:live?'live':'case',id:live?s.sequence.slice(5):s.sequence},a:s.location,b:s.comparison||null,
-      minutes:s.minutes,building:s.building,tolerance:s.tolerance,calibrated:s.calibrated,
-      // New saved checks record absolute time so later origin revisions do not move it.
-      at:s.at,dataAt:s.dataVersion});
-  }
-  return {clean,parse,fragment,url,fromCheck,point,lon180};
+  return {clean,parse,fragment,url,point,lon180};
 })();
 if(typeof module!=='undefined')module.exports=VIEW_STATE;
