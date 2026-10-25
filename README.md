@@ -1,8 +1,8 @@
-# Afterquake
+# AfterQuake
 
 **After a big earthquake, how does the estimated risk of further shaking change?**
 
-Afterquake helps people understand further shaking at their chosen place, hear a short summary and check in with a group. The main screen shows one estimate and practical steps; charts and model details are optional. It uses public USGS data and a simplified aftershock model. It cannot inspect a building or give permission to re-enter.
+AfterQuake helps people understand further shaking at their chosen place, hear a short summary and check in with a group. The main screen shows one estimate and practical steps; charts and model details are optional. It uses public USGS data and a simplified aftershock model. It cannot inspect a building or give permission to re-enter.
 
 Built at OxHack 2026 (themes: time; data for prediction and decision making).
 

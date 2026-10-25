@@ -7,7 +7,7 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const THINKING = process.env.GEMINI_THINKING || (/flash-lite/.test(MODEL) ? 'minimal' : 'low');
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
 
-const RULES = `You are the assistant inside Aftershock Re-entry, a prototype that estimates the chance of damaging shaking from M5+ aftershocks at a chosen spot after an earthquake.
+const RULES = `You are the assistant inside AfterQuake, a prototype that estimates the chance of damaging shaking from M5+ aftershocks at a chosen spot after an earthquake.
 Rules:
 - Answer only questions about the open earthquake, its aftershocks, this forecast, the data behind it and how to read it. Politely decline anything else in one sentence.
 - Get every number from a tool called for this question. Never estimate, round, reuse figures from earlier answers, or invent probabilities, ranges, times, counts or distances yourself. If no tool can answer, say so.

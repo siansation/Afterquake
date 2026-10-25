@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Afterquake</title>
+<title>AfterQuake</title>
+<meta name="application-name" content="AfterQuake">
+<meta name="description" content="Understand aftershocks at your chosen place, hear a short summary and check in with your group using AfterQuake.">
+<meta property="og:title" content="AfterQuake">
+<meta property="og:description" content="Understand aftershocks at your chosen place, hear a short summary and check in with your group using AfterQuake.">
+<meta property="og:type" content="website">
 <meta name="robots" content="noindex, nofollow">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -940,7 +945,7 @@ body:not(.world) .wpane{display:none}
 <body>
 
 <header class="top">
-  <div class="brand">Afterquake</div>
+  <div class="brand">AfterQuake</div>
   <div class="evsum"><span class="mag" id="hMag">7.8</span><span class="evtxt" id="hTxt"></span></div>
   <span class="note" id="hNote"></span>
   <button class="hbtn" id="worldBtn">World map</button>
@@ -969,7 +974,7 @@ body:not(.world) .wpane{display:none}
 <div class="welcome" id="welcome" hidden role="dialog" aria-modal="true" aria-labelledby="wTitle">
   <div class="wbox">
     <h1 id="wTitle">After an earthquake, what should you do next?</h1>
-    <p class="lead">Choose your area, hear the key steps, and check in with your group.</p>
+    <p class="lead">AfterQuake helps you understand aftershocks and stay connected with your group.</p>
     <ol>
       <li><b>Choose an earthquake</b> on the globe, or follow the Türkiye story.</li>
       <li><b>Pick your place</b> on the map, then press Read summary for a short estimate and next steps.</li>
@@ -1114,7 +1119,7 @@ body:not(.world) .wpane{display:none}
 
     <section class="pane" id="pane-sources" hidden>
       <h2>About these estimates</h2>
-      <p class="p">Afterquake estimates further shaking using public USGS earthquake data. It cannot inspect a building or give an all-clear. Early data can change. Check the selected date when exploring past earthquakes.</p>
+      <p class="p">AfterQuake estimates further shaking using public USGS earthquake data. It cannot inspect a building or give an all-clear. Early data can change. Check the selected date when exploring past earthquakes.</p>
       <p class="p">For safety instructions, follow local officials. Our short guidance draws on <a href="https://www.usgs.gov/faqs/what-should-i-do-during-earthquake" target="_blank" rel="noopener">USGS earthquake guidance</a> and <a href="https://www.cdc.gov/earthquakes/safety/stay-safe-after-an-earthquake.html" target="_blank" rel="noopener">CDC guidance after an earthquake</a>.</p>
       <details class="card tool-options"><summary>Data status</summary><p class="muted" id="dataStatus"></p><p class="coords" id="coords"></p></details>
       <details class="card tool-options" id="sourcesDetails"><summary>Data sources</summary><table class="ledger" id="ledger"></table></details>

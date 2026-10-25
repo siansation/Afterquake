@@ -1,4 +1,4 @@
-# Afterquake model and data audit
+# AfterQuake model and data audit
 
 Reviewed 25 October 2026, including upstream changes through `8ac2827` and the version 3.2 refresh, sharing and speech controls.
 The source snapshot was downloaded from USGS at `2026-10-24T17:32:53.517Z`.

@@ -1,5 +1,5 @@
 {
-  "name": "aftershock-reentry",
+  "name": "afterquake",
   "version": "3.3.0",
   "private": true,
   "description": "Aftershock shaking estimates for live USGS earthquakes and recorded case studies, with explicit uncertainty, source provenance and model validation limits.",

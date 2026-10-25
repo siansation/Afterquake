@@ -1,6 +1,6 @@
 # Aftershock time series with Tiger Data
 
-Aftershocks are a time series: their rate jumps after a big earthquake and then decays roughly as 1/t (Omori's law). Afterquake stores every USGS earthquake it sees in Tiger Data and charts the observed hourly rate against the forecast model's expected rate, in the **Aftershock rate from Tiger Data** card on the **Your spot** tab.
+Aftershocks are a time series: their rate jumps after a big earthquake and then decays roughly as 1/t (Omori's law). AfterQuake stores every USGS earthquake it sees in Tiger Data and charts the observed hourly rate against the forecast model's expected rate, in the **Aftershock rate from Tiger Data** card on the **Your spot** tab.
 
 ## What is stored
 

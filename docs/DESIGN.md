@@ -1,6 +1,6 @@
 # Design direction
 
-Aftershock Re-entry should look like a tool a hazard agency would publish, not like a generated template. Two earlier looks were rejected for reading as AI-made: the original dashboard (monospace labels, uppercase eyebrow headings, rounded cards with coloured edges, pulsing animation) and a "newspaper" redesign (cream paper, serif headlines, terracotta accent, hairline rules). The second is a well-known fallback for AI tools once the obvious defaults are banned, and terracotta near `#D97757` is Claude's own accent colour.
+AfterQuake should look like a tool a hazard agency would publish, not like a generated template. Two earlier looks were rejected for reading as AI-made: the original dashboard (monospace labels, uppercase eyebrow headings, rounded cards with coloured edges, pulsing animation) and a "newspaper" redesign (cream paper, serif headlines, terracotta accent, hairline rules). The second is a well-known fallback for AI tools once the obvious defaults are banned, and terracotta near `#D97757` is Claude's own accent colour.
 
 So the look comes from the product's own field, not from a style.
 

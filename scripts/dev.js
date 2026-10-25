@@ -25,7 +25,7 @@ function createDevServer({checkins=require('../api/checkins'),chat=require('../a
 if(require.main===module){
   const env=path.join(__dirname,'..','.env.local');if(fs.existsSync(env))process.loadEnvFile(env);
   const server=createDevServer(),port=Number(process.env.AFTERQUAKE_PORT||3000);
-  server.listen(port,'127.0.0.1',()=>console.log(`Afterquake: http://127.0.0.1:${server.address().port}`));
+  server.listen(port,'127.0.0.1',()=>console.log(`AfterQuake: http://127.0.0.1:${server.address().port}`));
   server.on('error',()=>{console.error('Could not start the local server. Check AFTERQUAKE_PORT or close another server on that port.');process.exitCode=1});
 }
 module.exports={createDevServer};
